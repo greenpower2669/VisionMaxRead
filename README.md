@@ -10,7 +10,7 @@ Lecteur Android natif en français, avec OCR, voix et masquage **sur le téléph
 4. Tu peux aussi coller du texte, partager une image/du texte vers VisionMaxRead, ou utiliser l’action Android sur un texte sélectionné.
 5. Les textes reconnus sont conservés après masquage si l’historique automatique est activé. **Garder masqué** enregistre un texte saisi/collé. **Voir le masquage** prépare un aperçu modifiable avant copie/partage.
 
-Aucune permission INTERNET. Modèles inclus : PaddleOCR PP-OCRv6 Small, Supertonic 3 (F1/M1), BERT NER multilingue quantifié. Les modèles pèsent 610 Mo ; l’APK complet environ 740 Mo. Prévoir environ 2 Go libres : certains modèles sont copiés dans l’espace privé lors de leur première utilisation. Le premier traitement peut être lent. Le sélecteur de photos Android peut proposer des images cloud : choisis une image réellement disponible sur le téléphone pour l’usage hors ligne.
+Aucune permission INTERNET. Modèles inclus : PaddleOCR PP-OCRv6 Small, Supertonic 3 (F1/M1), BERT NER multilingue quantifié. Les modèles pèsent 610 Mo ; l’APK complet environ 531 Mo. Prévoir environ 2 Go libres : certains modèles sont copiés dans l’espace privé lors de leur première utilisation. Le premier traitement peut être lent. Le sélecteur de photos Android peut proposer des images cloud : choisis une image réellement disponible sur le téléphone pour l’usage hors ligne.
 
 La lecture utilise le texte original affiché. Images et textes originaux ne sont pas enregistrés par l’application. L’historique conserve uniquement la sortie du masquage local (noms, lieux, organisations, dates et coordonnées). Si le moteur échoue, rien n’est enregistré. Pas de télémétrie, sauvegarde Android désactivée, historique dans le dossier privé sans backup, maximum 100 entrées.
 
@@ -23,10 +23,11 @@ Installer JDK 17, Android SDK (platform android-36 et build-tools 36.0.0), Pytho
 ```sh
 python3 scripts/prepare_models.py
 ./gradlew :core:check :app:lintDebug :app:assembleDebug :app:bundleRelease
+bash scripts/test-archive.sh
 python3 scripts/verify_apk.py app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Les 18 assets sont verrouillés par révision immuable et SHA256 dans models.lock.json. Le build refuse les fichiers absents ou corrompus. Ils ne sont pas suivis par Git. Le SDK officiel PaddleOCR est conservé dans ppocr-sdk avec sa provenance dans THIRD_PARTY_NOTICES.md ; licences et notices incluses dans l’APK.
+Les 18 assets sont verrouillés par révision immuable et SHA256 dans models.lock.json. Le build refuse les fichiers absents, corrompus ou imprévus. Le gros modèle vocal est emballé sans perte (octets séparés par blocs puis XZ) : le décodeur Java rétablit le SHA256 ONNX d’origine, avec mémoire de décompression limitée à 32 MiB. Les modèles utilisent les mêmes poids ; leur première extraction demande un peu de CPU. Ils ne sont pas suivis par Git. Le SDK officiel PaddleOCR est conservé dans ppocr-sdk avec sa provenance dans THIRD_PARTY_NOTICES.md ; licences et notices incluses dans l’APK.
 
 APK : app/build/outputs/apk/debug/app-debug.apk, signé avec la clé de test Android. AAB : app/build/outputs/bundle/release/app-release.aab, **non signé**, nécessite la clé d’upload pour publication. Changer la clé APK demandera une désinstallation/réinstallation ; l’historique privé sera alors perdu. Aucun déploiement ni fusion automatique.
 
@@ -34,10 +35,10 @@ APK : app/build/outputs/apk/debug/app-debug.apk, signé avec la clé de test And
 
 - 47 contrôles Java : masquage/chevauchement/offsets Unicode, découpage sans perte, tokenizer cased, annulation audio, indépendance caméra/document/historique.
 - Test réel des modèles sur CPU desktop : ligne française imprimée reconnue exactement (accents), détection sur page synthétique, entités françaises PER/LOC, signal vocal Supertonic fini et non nul.
-- Compilation APK/AAB et analyse statique Android ; vérification des hashes dans l’APK, signature, ARM64 et absence de permission INTERNET.
+- Compilation APK/AAB et analyse statique Android ; vérification des hashes dans l’APK, signature, restauration exacte du modèle compressé, ARM64 et absence de permission INTERNET.
 
 Pour reproduire les essais des modèles : installer scripts/smoke-requirements.txt puis exécuter python3 scripts/smoke_models.py (police DejaVu Sans nécessaire).
 
-À vérifier sur téléphone en mode avion : autorisation caméra et reprise, netteté/orientation, import galerie, OCR réel/manuscrit, prononciation française et volume, arrêt pendant préparation/lecture, appel ou perte de focus audio, historique après effacement et désactivation/réactivation, temps et mémoire. L’essai desktop ne prouve pas ces comportements matériels.
+À vérifier sur téléphone en mode avion et avec grande police : autorisation caméra et reprise, netteté/orientation, import galerie, OCR réel/manuscrit, prononciation française et volume, arrêt pendant préparation/lecture, appel ou perte de focus audio, historique après effacement et désactivation/réactivation, temps et mémoire. L’essai desktop ne prouve pas ces comportements matériels.
 
 Restent pour une évolution : suppression individuelle d’une entrée (tout effacer disponible) et orientation des tablettes dont l’affichage naturel est paysage. Voir todo.md et les cinq mémoires à la racine.

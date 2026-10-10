@@ -3,7 +3,8 @@
 Requires pip install -r scripts/smoke-requirements.txt
 This validates model contracts on desktop, not Android camera/audio or handwriting quality.
 """
-import pathlib,json,unicodedata,gc
+import pathlib,json,unicodedata,gc,tempfile
+from model_pack import decoded_chunks
 import numpy as np
 import onnxruntime as ort
 from PIL import Image,ImageDraw,ImageFont
@@ -12,7 +13,15 @@ from transformers import BertTokenizer
 root=pathlib.Path(__file__).resolve().parent.parent/'app/src/main/assets/models'
 options=ort.SessionOptions();options.intra_op_num_threads=2
 
-def session(path):return ort.InferenceSession(str(root/path),sess_options=options,providers=['CPUExecutionProvider'])
+temporary=tempfile.TemporaryDirectory()
+def session(path):
+ p=root/path
+ if not p.exists() and p.with_suffix(p.suffix+'.xz').exists():
+  target=pathlib.Path(temporary.name)/p.name
+  with p.with_suffix(p.suffix+'.xz').open('rb') as r,target.open('wb') as w:
+   for block in decoded_chunks(r,True):w.write(block)
+  p=target
+ return ort.InferenceSession(str(p),sess_options=options,providers=['CPUExecutionProvider'])
 # Printed French recognition and detector activation on a clean synthetic page.
 font=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',40)
 line='Bonjour, été en français.'

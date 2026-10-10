@@ -26,7 +26,8 @@ final class ModelFiles {
         if(file.isFile()&&file.length()==entry.getLong("size"))return file;
         File parent=file.getParentFile();if(!parent.isDirectory()&&!parent.mkdirs())throw new IOException("Espace modèles indisponible");
         File temp=new File(file.getPath()+".part");MessageDigest hash=MessageDigest.getInstance("SHA-256");
-        try(InputStream in=context.getAssets().open("models/"+path);FileOutputStream out=new FileOutputStream(temp)){
+        boolean packed=entry.optString("packaging").equals("xz-shuffle4");
+        try(InputStream in=ModelArchive.open(context.getAssets().open("models/"+path+(packed?".xz":"")),packed);FileOutputStream out=new FileOutputStream(temp)){
             byte[] buf=new byte[65536];int n;while((n=in.read(buf))!=-1){out.write(buf,0,n);hash.update(buf,0,n);}out.getFD().sync();
         }catch(Exception e){temp.delete();throw e;}
         StringBuilder hex=new StringBuilder();for(byte b:hash.digest())hex.append(String.format(Locale.ROOT,"%02x",b&255));

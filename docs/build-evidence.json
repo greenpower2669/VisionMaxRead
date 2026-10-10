@@ -5,7 +5,7 @@
   "build_result": "BUILD SUCCESSFUL",
   "core_contract_checks": 47,
   "lint_errors": 0,
-  "lint_warning_count": 37,
+  "lint_warning_count": 36,
   "models": {
     "count": 18,
     "bytes": 609645027,
@@ -26,13 +26,15 @@
   "artifacts": [
     {
       "name": "VisionMaxRead-0.1.0.apk",
-      "bytes": 741194193,
-      "sha256": "2230cbada3fff1792e18ae10841ebaa44772f876ca9becc7f57973b82417814e"
+      "bytes": 531168786,
+      "sha256": "bf4a6af4e8eddf50bde1834473b171b85ba0844a36fae7e86d21cea3590cef3a"
     },
     {
       "name": "VisionMaxRead-0.1.0-unsigned.aab",
-      "bytes": 708848685,
-      "sha256": "0527f2d2e376ef297e80ff61cffd5486dad8d7be6a1c69d5014201a1b8559ada"
+      "bytes": 525254807,
+      "sha256": "35d7f80aa8b0a02ba75fdf5d1f1aa6373eb5e805f5648d416ed234d5f8892c91"
     }
-  ]
+  ],
+  "model_packaging": "lossless VMR1 byte lanes + XZ for vector estimator; restored ONNX SHA256 verified in Java and APK",
+  "archive_contracts": "Java fixture and actual 256534781-byte model passed, including truncated archive rejection"
 }

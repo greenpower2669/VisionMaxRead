@@ -7,3 +7,5 @@
 - AndroidX Core, ExifInterface, desugar_jdk_libs, Apache-2.0; Kotlin and kotlinx.coroutines, Apache-2.0.
 
 License texts are bundled under app/src/main/assets/licenses. Original SDK copyright headers retained. Source repository is public; changes to the NER inference integration are available here. No training on user documents occurs.
+
+- XZ for Java 1.10, 0BSD (Tukaani), used only to decompress losslessly packed model assets. Original ONNX payloads and SHA256 remain identical. Native libraries are losslessly ZIP-compressed and extracted by Android.

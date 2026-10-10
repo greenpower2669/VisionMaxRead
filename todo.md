@@ -6,7 +6,7 @@
 - [x] OCR local ; lecture Supertonic ; annulation ; réglages.
 - [x] Masquage local et historique sans texte brut ; tests de confidentialité.
 - [x] Compilation APK/AAB, inspection manifest, tests et analyse statique.
-- [ ] Commit/branche/PR vérifiés ; preuve de build et fichiers téléchargeables.
+- [x] Commit/branche/PR vérifiés ; preuve de build ; fichiers construits et vérifiés (enregistrement final en cours).
 - [ ] [HUMAIN] Tester caméra, voix, écriture manuscrite et masquage en mode avion sur Samsung.
 - [ ] [AGENT] Import d’un fichier vidéo : possibilité évoquée avant mission, à confirmer après première version.
 

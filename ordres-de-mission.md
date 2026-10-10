@@ -1,7 +1,7 @@
 # Ordres de mission — VisionMaxRead
 
 ## VMR-001 — Application Android d’aide à la lecture (Fab, 11 octobre 2026)
-**État : Première version construite ; essai téléphone à effectuer.** Autorisation explicite : « Ok on code ça VisionMaxRead le repo est créé […] on y va ».
+**État : Première version construite et vérifiée ; livraison des fichiers, essai téléphone à effectuer.** Autorisation explicite : « Ok on code ça VisionMaxRead le repo est créé […] on y va ».
 
 - Reconnaître du texte dans des images ; français ; fonctionnement hors ligne.
 - Caméra : prévisualisation vidéo basse résolution pour viser seulement.
