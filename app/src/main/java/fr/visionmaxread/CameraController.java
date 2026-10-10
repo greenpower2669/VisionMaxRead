@@ -14,26 +14,26 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 /** No frame-by-frame OCR. The TextureView uses a small stream; capture uses a separate JPEG stream. */
 final class CameraController {
-    interface Listener { void captured(byte[] jpeg);void error(String message); }
+    interface Listener { void captured(byte[] jpeg,long document);void error(String message); }
     private final Context context;private final TextureView view;private final Listener listener;
     private final HandlerThread thread=new HandlerThread("Camera");private final Handler handler;
     private final AtomicLong generation=new AtomicLong();
     private CameraDevice device;private CameraCaptureSession session;private ImageReader reader;private Surface previewSurface;
-    private int sensorRotation;private boolean front;private volatile boolean wanted;
+    private long document;private int sensorRotation;private boolean front;private volatile boolean wanted;
     CameraController(Context context,TextureView view,Listener listener){
         this.context=context;this.view=view;this.listener=listener;thread.start();handler=new Handler(thread.getLooper());
         view.setSurfaceTextureListener(new TextureView.SurfaceTextureListener(){
-            public void onSurfaceTextureAvailable(SurfaceTexture surface,int w,int h){if(wanted)start();}
+            public void onSurfaceTextureAvailable(SurfaceTexture surface,int w,int h){if(wanted)start(document);}
             public void onSurfaceTextureSizeChanged(SurfaceTexture surface,int w,int h){}
             public boolean onSurfaceTextureDestroyed(SurfaceTexture surface){stop();return true;}
             public void onSurfaceTextureUpdated(SurfaceTexture surface){}
         });
     }
-    void start(){wanted=true;long ticket=generation.incrementAndGet();if(view.isAvailable())handler.post(()->open(ticket));}
+    void start(long document){this.document=document;wanted=true;long ticket=generation.incrementAndGet();if(view.isAvailable())handler.post(()->open(ticket,document));}
     void stop(){wanted=false;generation.incrementAndGet();handler.post(this::closeCamera);}
     void destroy(){stop();handler.post(thread::quitSafely);}
     private boolean current(long ticket){return wanted&&generation.get()==ticket;}
-    private void open(long ticket){
+    private void open(long ticket,long document){
         closeCamera();if(!current(ticket)||context.checkSelfPermission(Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED)return;
         try{
             CameraManager manager=(CameraManager)context.getSystemService(Context.CAMERA_SERVICE);String chosen=null;
@@ -50,7 +50,7 @@ final class CameraController {
                 try(Image image=source.acquireLatestImage()){
                     if(image==null||!current(ticket))return;
                     ByteBuffer buffer=image.getPlanes()[0].getBuffer();byte[] bytes=new byte[buffer.remaining()];buffer.get(bytes);
-                    wanted=false;listener.captured(bytes);
+                    wanted=false;listener.captured(bytes,document);
                 }catch(Exception e){if(current(ticket))listener.error("La photo n’a pas pu être capturée.");}
                 finally{closeCamera();}
             },handler);

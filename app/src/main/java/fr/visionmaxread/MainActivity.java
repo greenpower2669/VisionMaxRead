@@ -29,8 +29,8 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);prefs=getSharedPreferences("settings",MODE_PRIVATE);history=new HistoryStore(this);textSp=prefs.getInt("textSize",24);
         buildUi();camera=new CameraController(this,preview,new CameraController.Listener(){
-            public void captured(byte[] jpeg){ui(()->{if(cameraMode){cameraMode=false;processImage(()->ImageLoader.fromJpeg(jpeg));}});}
-            public void error(String message){ui(()->{status.setText(message);freeze.setEnabled(true);});}
+            public void captured(byte[] jpeg,long ticket){ui(()->{if(cameraMode&&documents.current(ticket)){cameraMode=false;processImage(()->ImageLoader.fromJpeg(jpeg));}});}
+            public void error(String message){ui(()->{if(cameraMode){status.setText(message);freeze.setEnabled(true);}});}
         });
         incoming(getIntent());
     }
@@ -44,7 +44,7 @@ public final class MainActivity extends Activity {
         setContentView(outer);outer.requestApplyInsets();
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);outer.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);scroll.addView(content);
-        TextView title=label("VisionMaxRead",28);title.setTypeface(null,Typeface.BOLD);title.setAccessibilityHeading(true);content.addView(title);
+        TextView title=label("VisionMaxRead",28);title.setTypeface(null,Typeface.BOLD);if(Build.VERSION.SDK_INT>=28)title.setAccessibilityHeading(true);content.addView(title);
         content.addView(label("Voir le texte. L’écouter. Hors ligne.",16));
         row(content,button("Caméra",INK,this::startCamera),button("Photo",INK,this::choosePhoto),button("Texte",INK,this::manualText));
         imageArea=new FrameLayout(this);imageArea.setBackgroundColor(Color.BLACK);content.addView(imageArea,new LinearLayout.LayoutParams(-1,dp(270)));
@@ -65,11 +65,11 @@ public final class MainActivity extends Activity {
     private long newDocument(){stopReading();camera.stop();cameraMode=false;documentTicket=documents.next();maskedPreview="";return documentTicket;}
     private void startCamera(){
         newDocument();cameraMode=true;imageArea.setVisibility(View.VISIBLE);preview.setVisibility(View.VISIBLE);frozen.setVisibility(View.GONE);freeze.setVisibility(View.VISIBLE);freeze.setEnabled(true);setText("");status.setText("Vise le texte puis appuie sur Figer l’image.");
-        if(checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED)camera.start();else requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION);
+        if(checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED)camera.start(documentTicket);else requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION);
     }
     private void choosePhoto(){newDocument();Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE);try{startActivityForResult(pick,PHOTO);}catch(ActivityNotFoundException e){status.setText("Aucun sélecteur de photos disponible.");}}
     private void manualText(){newDocument();imageArea.setVisibility(View.GONE);freeze.setVisibility(View.GONE);status.setText("Colle ou écris ton texte, puis appuie sur Lire.");text.requestFocus();}
-    @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results){super.onRequestPermissionsResult(request,permissions,results);if(request==CAMERA_PERMISSION&&cameraMode){if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED)camera.start();else{freeze.setEnabled(false);status.setText("Caméra refusée. Photo et Texte restent disponibles.");}}}
+    @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results){super.onRequestPermissionsResult(request,permissions,results);if(request==CAMERA_PERMISSION&&cameraMode){if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED)camera.start(documentTicket);else{freeze.setEnabled(false);status.setText("Caméra refusée. Photo et Texte restent disponibles.");}}}
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request==PHOTO&&result==RESULT_OK&&data!=null&&data.getData()!=null){Uri uri=data.getData();processImage(()->ImageLoader.fromUri(this,uri));}}
     interface LoadImage{Bitmap get()throws Exception;}
     private void processImage(LoadImage source){
@@ -154,6 +154,7 @@ public final class MainActivity extends Activity {
         }
     }
     private void ui(Runnable action){runOnUiThread(()->{if(!destroyed)action.run();});}
-    @Override protected void onPause(){super.onPause();if(camera!=null)camera.stop();cameraMode=false;if(freeze!=null)freeze.setEnabled(false);stopReading();}
+    @Override protected void onPause(){super.onPause();if(camera!=null)camera.stop();if(freeze!=null)freeze.setEnabled(false);stopReading();}
+    @Override protected void onResume(){super.onResume();if(cameraMode&&camera!=null&&checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED){camera.start(documentTicket);freeze.setEnabled(true);}}
     @Override protected void onDestroy(){destroyed=true;documents.next();speech.next();voice.stop();if(camera!=null)camera.destroy();worker.shutdownNow();super.onDestroy();}
 }

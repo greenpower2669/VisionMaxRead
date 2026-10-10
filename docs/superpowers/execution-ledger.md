@@ -14,3 +14,7 @@ Task 3: Java Android Supertonic port (8 steps, seed 2026, F1/M1), quantized mult
 Build diagnosis: Java tools ignore the environment HTTP proxy; Python downloads succeed. SDK binaries obtained from the official package index; retry Gradle with explicit JVM proxy properties.
 
 Ruling: test APK signed with Android debug key, release AAB unsigned until an upload key is supplied — allows immediate installation without creating/publishing a production identity — cost if wrong: reinstall needed when changing signing key. CI only builds artifacts, never releases or merges.
+
+Model smoke tests PASS on desktop CPU: exact synthetic French printed line (accents included); detector activation; French PER/LOC classification; Supertonic French waveform 2.19s RMS 0.0436. This does not validate Android audio/camera nor cursive handwriting.
+CI run 1 failed before compiling: setup-android v3 requests removed package `tools`. Use the runner’s existing sdkmanager and request only pinned platform/build-tools. Local AGP defaults build-tools 35 even with compileSdk 36: explicitly pin 36.0.0 in both Android modules.
+Camera lifecycle adjusted: document ticket accompanies capture to ignore old frames after retake; camera can restart after permission dialog/resume. API 28 heading guarded for Android 26.

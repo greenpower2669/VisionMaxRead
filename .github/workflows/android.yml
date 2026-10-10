@@ -16,10 +16,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
       - name: Install Android SDK
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+        run: |
+          sdkmanager_path=$(python3 -c 'import os,pathlib; print(next(pathlib.Path(os.environ["ANDROID_HOME"]).glob("cmdline-tools/*/bin/sdkmanager")))')
+          "$sdkmanager_path" 'platforms;android-36' 'build-tools;36.0.0'
       - name: Prepare pinned offline models
         run: python3 scripts/prepare_models.py
       - name: Tests, lint, APK and AAB
