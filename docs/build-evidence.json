@@ -1,0 +1,38 @@
+{
+  "version": "0.1.0",
+  "target": "Android26-36 ARM64 portrait phone",
+  "build_command": ":core:check :app:lintDebug :app:assembleDebug :app:bundleRelease",
+  "build_result": "BUILD SUCCESSFUL",
+  "core_contract_checks": 47,
+  "lint_errors": 0,
+  "lint_warning_count": 37,
+  "models": {
+    "count": 18,
+    "bytes": 609645027,
+    "apk_hashes_verified": true
+  },
+  "apk_signed": "Android debug test key",
+  "aab_signed": false,
+  "network_permission": false,
+  "zip_alignment": "16 KiB passed",
+  "native_ELF_alignment": "all LOAD segments >=16 KiB",
+  "desktop_smoke": [
+    "exact French printed OCR with accents",
+    "detector activation",
+    "French PER/LOC",
+    "Supertonic French waveform 2.19s RMS 0.0436"
+  ],
+  "phone_verified": false,
+  "artifacts": [
+    {
+      "name": "VisionMaxRead-0.1.0.apk",
+      "bytes": 741194193,
+      "sha256": "2230cbada3fff1792e18ae10841ebaa44772f876ca9becc7f57973b82417814e"
+    },
+    {
+      "name": "VisionMaxRead-0.1.0-unsigned.aab",
+      "bytes": 708848685,
+      "sha256": "0527f2d2e376ef297e80ff61cffd5486dad8d7be6a1c69d5014201a1b8559ada"
+    }
+  ]
+}

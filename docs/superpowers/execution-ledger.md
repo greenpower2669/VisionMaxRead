@@ -18,3 +18,10 @@ Ruling: test APK signed with Android debug key, release AAB unsigned until an up
 Model smoke tests PASS on desktop CPU: exact synthetic French printed line (accents included); detector activation; French PER/LOC classification; Supertonic French waveform 2.19s RMS 0.0436. This does not validate Android audio/camera nor cursive handwriting.
 CI run 1 failed before compiling: setup-android v3 requests removed package `tools`. Use the runner’s existing sdkmanager and request only pinned platform/build-tools. Local AGP defaults build-tools 35 even with compileSdk 36: explicitly pin 36.0.0 in both Android modules.
 Camera lifecycle adjusted: document ticket accompanies capture to ignore old frames after retake; camera can restart after permission dialog/resume. API 28 heading guarded for Android 26.
+
+Final review: fresh context gpt-6-astra. Two Important findings, no Critical. Final fixed audio-focus operation cancellation — cancellation test RED→GREEN. Final fixed history/source ticket interference — ReaderSessions clear/edit/capture tests RED→GREEN. Suite 47 checks. UI cancellation now returns to Lire; independent document/source/history scopes preserve current text and camera while cancelling old history writes.
+Final: minor (deferred): individual history entry deletion (whole history deletion works).
+Final: minor (deferred): natural-landscape tablets/display rotation support; first version targets portrait phones.
+Final: Ruling: camera HAL, handwriting/French voice quality, memory/performance on Samsung and empirical NER recall require device trials — do not claim them from desktop tests — cost if wrong: phone-specific corrections after first trial.
+
+Tasks 1–3: complete, core 47 checks and desktop real-model smoke green. Task 4 build verification complete: final Gradle build exit 0, 47 checks, lint 0 errors/37 warnings, signed APK contains all immutable model hashes, no INTERNET, ARM64 only, ZIP and ELF 16 KiB verified; AAB unsigned. Full fingerprints in docs/build-evidence.json. User-device trials remain human work. Final branch/file delivery in progress.

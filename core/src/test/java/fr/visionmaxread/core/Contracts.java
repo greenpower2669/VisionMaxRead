@@ -27,6 +27,19 @@ public final class Contracts {
         check(tokens.get(0).id==3 && tokens.get(3).id==6,"accents and greedy subword");
         check(tokens.get(2).start==9 && tokens.get(3).end==15,"whole-word original offsets");
         check(tokens.get(6).end-tokens.get(6).start==2,"unknown emoji offsets");
+        Cancellation operation=new Cancellation(()->false);operation.cancel();
+        check(operation.cancelled(),"audio focus loss cancels synthesis and writes even while source is current");
+        boolean cancelled=false;try{operation.check();}catch(java.util.concurrent.CancellationException e){cancelled=true;}
+        check(cancelled,"next inference step cannot run after focus loss");
+        ReaderSessions sessions=new ReaderSessions();long document=sessions.replaceSource(),source=sessions.sourceTicket(),privacy=sessions.historyTicket();
+        sessions.clearHistory();
+        check(sessions.documentCurrent(document),"clear history preserves current text");
+        check(sessions.sourceCurrent(source),"clear history preserves live camera capture");
+        check(!sessions.maskCurrent(document,privacy),"clear invalidates pending masked save");
+        check(sessions.maskCurrent(sessions.documentTicket(),sessions.historyTicket()),"explicit save works after clear or disabling auto history");
+        sessions.editText();check(sessions.sourceCurrent(source),"text edits leave an explicit camera freeze valid");
+        check(!sessions.documentCurrent(document),"text edits invalidate old OCR/masking result");
+        sessions.replaceSource();check(!sessions.sourceCurrent(source),"source switch drops old camera frame");
         System.out.println("PASS "+checks+" contract checks");
     }
 }

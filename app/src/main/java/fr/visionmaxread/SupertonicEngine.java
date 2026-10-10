@@ -9,11 +9,13 @@ import java.util.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import fr.visionmaxread.core.TextChunks;
+import fr.visionmaxread.core.Cancellation;
 /** Android port of the official Supertonic 3 CPU pipeline. No Android/cloud TTS fallback. */
 final class SupertonicEngine {
     private volatile AudioTrack playing;
     void stop(){AudioTrack t=playing;if(t!=null)try{t.pause();t.flush();}catch(IllegalStateException ignored){}}
     void speak(Context context,String text,String voice,float speed,ModelFiles files,BooleanSupplier cancelled,Consumer<String> status) throws Exception {
+        Cancellation operation=new Cancellation(cancelled);
         OrtEnvironment env=OrtEnvironment.getEnvironment();
         JSONObject config=new JSONObject(files.readAsset("models/tts/onnx/tts.json"));
         int rate=config.getJSONObject("ae").getInt("sample_rate"),chunk=config.getJSONObject("ae").getInt("base_chunk_size")*config.getJSONObject("ttl").getInt("chunk_compress_factor");
@@ -23,21 +25,21 @@ final class SupertonicEngine {
         List<OrtSession> sessions=new ArrayList<>();
         AudioManager manager=(AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
         AudioAttributes attrs=new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build();
-        AudioFocusRequest focus=new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attrs).setOnAudioFocusChangeListener(change->{if(change<0)stop();}).build();
+        AudioFocusRequest focus=new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attrs).setOnAudioFocusChangeListener(change->{if(change<0){operation.cancel();stop();}}).build();
         boolean focused=false;
         try(OrtSession.SessionOptions options=new OrtSession.SessionOptions();
             OnnxTensor styleTtl=style(env,styles.getJSONObject("style_ttl"));
             OnnxTensor styleDp=style(env,styles.getJSONObject("style_dp"))){
             options.setIntraOpNumThreads(2);options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
             for(String name:new String[]{"duration_predictor","text_encoder","vector_estimator","vocoder"}){
-                check(cancelled);sessions.add(env.createSession(files.file("tts/onnx/"+name+".onnx").getPath(),options));
+                operation.check();sessions.add(env.createSession(files.file("tts/onnx/"+name+".onnx").getPath(),options));
             }
-            check(cancelled);
+            operation.check();
             if(manager.requestAudioFocus(focus)!=AudioManager.AUDIOFOCUS_REQUEST_GRANTED)throw new IllegalStateException("Lecture audio indisponible");
             focused=true;
             List<String> chunks=TextChunks.split(text,240);int count=0;
             for(String segment:chunks){
-                check(cancelled);if(segment.trim().isEmpty())continue;
+                operation.check();if(segment.trim().isEmpty())continue;
                 status.accept("Préparation de la voix · passage "+(++count)+" / "+chunks.size());
                 String processed=normalize(segment);int[] cps=processed.codePoints().toArray();
                 long[][] ids=new long[1][cps.length];float[][][] mask=new float[1][1][cps.length];
@@ -57,17 +59,17 @@ final class SupertonicEngine {
                         OnnxTensor total=OnnxTensor.createTensor(env,new float[]{8})){
                         OnnxTensor embedded=(OnnxTensor)encoded.get(0);
                         for(int step=0;step<8;step++){
-                            check(cancelled);
+                            operation.check();
                             try(OnnxTensor noisy=OnnxTensor.createTensor(env,latent);OnnxTensor current=OnnxTensor.createTensor(env,new float[]{step});
                                 OrtSession.Result result=sessions.get(2).run(Map.of("noisy_latent",noisy,"text_emb",embedded,"style_ttl",styleTtl,"latent_mask",lm,"text_mask",textMask,"current_step",current,"total_step",total))){
                                 latent=(float[][][])result.get(0).getValue();
                             }
                         }
-                        check(cancelled);
+                        operation.check();
                         try(OnnxTensor finalLatent=OnnxTensor.createTensor(env,latent);OrtSession.Result result=sessions.get(3).run(Map.of("latent",finalLatent))){
-                            float[][] wav=(float[][])result.get(0).getValue();check(cancelled);
+                            float[][] wav=(float[][])result.get(0).getValue();operation.check();
                             status.accept("Lecture · passage "+count+" / "+chunks.size());
-                            play(wav[0],Math.min(samples,wav[0].length),rate,attrs,cancelled);
+                            play(wav[0],Math.min(samples,wav[0].length),rate,attrs,operation::cancelled);
                         }
                     }
                 }
@@ -84,7 +86,7 @@ final class SupertonicEngine {
         playing=track;
         try{
             check(cancelled);track.play();int offset=0;
-            while(offset<pcm.length){check(cancelled);int n=track.write(pcm,offset,Math.min(4096,pcm.length-offset),AudioTrack.WRITE_NON_BLOCKING);if(n<0)throw new IllegalStateException("Erreur audio");offset+=n;if(n==0)Thread.sleep(10);}
+            while(offset<pcm.length){check(cancelled);if(track.getPlayState()!=AudioTrack.PLAYSTATE_PLAYING)throw new java.util.concurrent.CancellationException();int n=track.write(pcm,offset,Math.min(4096,pcm.length-offset),AudioTrack.WRITE_NON_BLOCKING);if(n<0)throw new IllegalStateException("Erreur audio");offset+=n;if(n==0)Thread.sleep(10);}
             while(Integer.toUnsignedLong(track.getPlaybackHeadPosition())<pcm.length){check(cancelled);if(track.getPlayState()!=AudioTrack.PLAYSTATE_PLAYING)throw new java.util.concurrent.CancellationException();Thread.sleep(20);}
         }finally{playing=null;track.release();}
     }

@@ -6,3 +6,4 @@ app/src/main/assets/models/
 *.jks
 *.keystore
 __pycache__/
+.kotlin/
