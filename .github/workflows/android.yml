@@ -1,0 +1,43 @@
+name: Android offline build
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install Android SDK
+        run: |
+          sdkmanager_path=$(python3 -c 'import os,pathlib; print(next(pathlib.Path(os.environ["ANDROID_HOME"]).glob("cmdline-tools/*/bin/sdkmanager")))')
+          "$sdkmanager_path" 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Prepare pinned offline models
+        run: python3 scripts/prepare_models.py
+      - name: Tests, lint, APK and AAB
+        run: ./gradlew :core:check :app:lintDebug :app:assembleDebug :app:bundleRelease --no-daemon
+      - name: Lossless archive contract
+        run: bash scripts/test-archive.sh
+      - name: Verify installable APK
+        run: python3 scripts/verify_apk.py app/build/outputs/apk/debug/app-debug.apk
+      - name: Name artifacts
+        run: |
+          mkdir artifacts
+          cp app/build/outputs/apk/debug/app-debug.apk artifacts/VisionMaxRead-0.1.0.apk
+          cp app/build/outputs/bundle/release/app-release.aab artifacts/VisionMaxRead-0.1.0-unsigned.aab
+          cp app/build/reports/lint-results-debug.html artifacts/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VisionMaxRead-0.1.0
+          path: artifacts/
+          retention-days: 14

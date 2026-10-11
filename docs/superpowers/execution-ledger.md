@@ -1,0 +1,33 @@
+# Journal d’exécution
+
+- BASE : 3b0b10a9dc16ef0d2e8ff3e1f9bf4b8e1e34d05e, dépôt initial LICENSE uniquement.
+- Décision : l’ordre explicite de coder autorise l’implémentation de la première version décrite ; pas de nouvelle demande de permission pour les choix réversibles.
+- Décision : garder le texte original en mémoire pour lecture fidèle, et ne persister que sa version masquée ; interprétation annoncée à Fab.
+- Décision : caméra native Camera2, capture JPEG séparée de l’aperçu basse résolution.
+- En cours : outillage et références locales ; aucun test téléphone effectué.
+
+Task 1: core tests RED (entity not masked), then GREEN: 34 checks. Gradle/Java/SDK installed in scratch; apt unavailable, standalone JDK used. Shared interfaces: SDK consumes asset paths, engines consume immutable model manifest; UI uses generation tickets to drop stale results.
+
+Task 1: tokenizer RED (no tokens), GREEN 38 checks. Model lock completed: 18 assets, 609,645,027 bytes, pinned HF revisions and SHA256. Official model weights explain the real distribution size; OCR-only size does not include speech/NER/runtime.
+Task 2: Camera2 separates ~640×480 preview from <=12MP JPEG; EXIF import decode bound 2560; OCR SDK releases sessions after each operation. Image and original text remain in memory.
+Task 3: Java Android Supertonic port (8 steps, seed 2026, F1/M1), quantized multilingual BERT NER with 254-token windows/30-token overlap, French regex complement, masked-only AtomicFile history. Tests on device still pending.
+Build diagnosis: Java tools ignore the environment HTTP proxy; Python downloads succeed. SDK binaries obtained from the official package index; retry Gradle with explicit JVM proxy properties.
+
+Ruling: test APK signed with Android debug key, release AAB unsigned until an upload key is supplied — allows immediate installation without creating/publishing a production identity — cost if wrong: reinstall needed when changing signing key. CI only builds artifacts, never releases or merges.
+
+Model smoke tests PASS on desktop CPU: exact synthetic French printed line (accents included); detector activation; French PER/LOC classification; Supertonic French waveform 2.19s RMS 0.0436. This does not validate Android audio/camera nor cursive handwriting.
+CI run 1 failed before compiling: setup-android v3 requests removed package `tools`. Use the runner’s existing sdkmanager and request only pinned platform/build-tools. Local AGP defaults build-tools 35 even with compileSdk 36: explicitly pin 36.0.0 in both Android modules.
+Camera lifecycle adjusted: document ticket accompanies capture to ignore old frames after retake; camera can restart after permission dialog/resume. API 28 heading guarded for Android 26.
+
+Final review: fresh context gpt-6-astra. Two Important findings, no Critical. Final fixed audio-focus operation cancellation — cancellation test RED→GREEN. Final fixed history/source ticket interference — ReaderSessions clear/edit/capture tests RED→GREEN. Suite 47 checks. UI cancellation now returns to Lire; independent document/source/history scopes preserve current text and camera while cancelling old history writes.
+Final: minor (deferred): individual history entry deletion (whole history deletion works).
+Final: minor (deferred): natural-landscape tablets/display rotation support; first version targets portrait phones.
+Final: Ruling: camera HAL, handwriting/French voice quality, memory/performance on Samsung and empirical NER recall require device trials — do not claim them from desktop tests — cost if wrong: phone-specific corrections after first trial.
+
+Tasks 1–3: complete, core 47 checks and desktop real-model smoke green. Task 4 build verification complete: final Gradle build exit 0, 47 checks, lint 0 errors/37 warnings, signed APK contains all immutable model hashes, no INTERNET, ARM64 only, ZIP and ELF 16 KiB verified; AAB unsigned. Full fingerprints in docs/build-evidence.json. User-device trials remain human work. Final branch/file delivery in progress.
+
+Delivery packaging: Library limit 512 MiB blocked the original APK before transfer. APK whitelist regression found two incomplete download staging files accidentally included; test RED, staging excluded/cleaned and whitelist GREEN. Ordinary ZIP compression was still 549,218,289 bytes. Ruling: losslessly pack the largest ONNX with 64KiB byte lanes + XZ (decoder memory cap 32MiB), preserving original SHA256 and voice model — reduce transfer size without model quantization — cost if wrong: first-use model extraction requires extra CPU, verified byte restoration protects model correctness. Java decoder contract RED→GREEN, including truncated archive rejection; actual model verification and final build in progress.
+
+Final packed delivery build exit 0, lint 0 errors, core 47 checks unchanged/green. Java restores exact full model SHA256 (256,534,781 bytes), rejects truncation; APK exact asset whitelist and original hashes pass, signature/ARM64/no INTERNET/ZIP alignment verified. Final APK 531,168,786 bytes; AAB unsigned 525,254,807 bytes; both fit 512MiB transfer limit. Lossless model bytes match all previously exercised model smoke tests. Fingerprints updated in docs/build-evidence.json.
+
+Delivery complete: both final artifacts saved successfully and available for download. Remote PR source tree matched the local verified build source tree (4ba8b7a06efae5809f58238b6cf6370b3b31968c). This final documentation update does not change the binaries. User-device trials and the recorded minor deferrals remain pending; main remains unchanged.
