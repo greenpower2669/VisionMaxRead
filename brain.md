@@ -15,3 +15,12 @@ Code caméra/OCR/voix/NER/historique créé sur feature/android-offline-reader-v
 
 ## Livraison vérifiée
 Build local APK/AAB réussi après corrections de revue. 47 contrôles Java, lint 0 erreur (37 avertissements), tous les SHA256 modèles vérifiés dans APK, aucune permission INTERNET, signature debug vérifiée, alignement ZIP/ELF 16 KiB. APK final 531 168 786 octets, AAB unsigned 525 254 807 octets. Compression sans perte d’un modèle, décodeur borné à 32MiB et vérifié sur ses 256 534 781 octets ; aucun poids changé. Source/API actuelle : voir docs/build-evidence.json. Deux corrections importantes validées RED→GREEN (focus audio, scopes d’historique/source). Portrait téléphone ; aucune validation matérielle annoncée.
+
+## Contrat du prototype VMR-002 (branche d'essai)
+L'accord « On test? » autorise un **prototype** de comparaison, pas le remplacement définitif du moteur OCR ni une release. Préférer une mesure instrumentée PaddleOCR/ML Kit latin **embarquée** (hors ligne) sur le **même bitmap**, suivie d'un essai distinct d'un modèle vision/langage. La version stable et les cinq mémoires projet restent canoniques. APK debug séparé sous `fr.visionmaxread.ocrtest` pour éviter d'écraser le stable ; numéro 0.2.0-test. Ne jamais présenter ML Kit OCR comme « multimodal ». Aucun modèle VLM téléchargé par l'application ; benchmark ne persiste pas le texte brut. État réel build/téléphone à vérifier via CI. Voir `docs/VMR-002-essai-ocr.md`.
+
+## Distribution VMR-003 approuvée
+Fab autorise maintenant explicitement la **préversion de test avec APK direct**, sans merge `main`. Le binaire publié doit provenir uniquement du run vert `38316437083` / SHA `53356ee7`, app ID de test `fr.visionmaxread.ocrtest`, archive source GitHub décompressée **dans GitHub Actions** (non sur le téléphone). Seul l'APK debug signé sera joint à la préversion `v0.2.0-ocr-test`. La publication est conditionnée à la preuve du fichier sur GitHub Release et à la comparaison du SHA256 après re-téléchargement. Aucune validation terrain annoncée sans retour de Fab.
+
+## Preuve de livraison VMR-003
+La préversion APK de test `v0.2.0-ocr-test` est maintenant publiée et vérifiée sur GitHub (run `38318000959` vert). L'asset direct `VisionMaxRead-0.2.0-OCR-TEST.apk` a été re-téléchargé côté GitHub, SHA-256 confirmé `ca39674a8c408a59bcb69cdf93dd422dccd4c1c5adb8e297de8c4d0f6a69e438` (539 252 854 octets). Seul l'APK test debug est distribué ; l'usage Samsung reste à valider. La version `main` n'a pas été modifiée.

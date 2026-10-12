@@ -9,3 +9,5 @@
 License texts are bundled under app/src/main/assets/licenses. Original SDK copyright headers retained. Source repository is public; changes to the NER inference integration are available here. No training on user documents occurs.
 
 - XZ for Java 1.10, 0BSD (Tukaani), used only to decompress losslessly packed model assets. Original ONNX payloads and SHA256 remain identical. Native libraries are losslessly ZIP-compressed and extracted by Android.
+
+- Prototype VMR-002 : Google ML Kit Text Recognition v2 (bibliothèque Android `com.google.mlkit:text-recognition:16.0.1`), version latine avec modèle inclus à l'installation pour emploi hors ligne. Documentation et termes : https://developers.google.com/ml-kit/vision/text-recognition/v2/android et https://developers.google.com/ml-kit/terms. Utilisé pour comparaison uniquement, sans télémétrie applicative. Vérifier les obligations de redistribution des bibliothèques au build.

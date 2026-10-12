@@ -5,7 +5,10 @@ root=pathlib.Path(__file__).resolve().parent.parent
 apk=pathlib.Path(sys.argv[1]);sdk=pathlib.Path(os.environ.get('ANDROID_HOME',os.environ.get('ANDROID_SDK_ROOT','')))
 tools=sorted((sdk/'build-tools').glob('*'))[-1]
 result=subprocess.check_output([str(tools/'aapt'),'dump','permissions',str(apk)],text=True)
-assert 'android.permission.INTERNET' not in result and 'android.permission.CAMERA' in result
+if 'android.permission.INTERNET' in result:
+ raise AssertionError('Offline privacy regression: INTERNET permission found in merged APK manifest:\\n'+result)
+if 'android.permission.CAMERA' not in result:
+ raise AssertionError('Missing CAMERA permission in merged APK manifest:\\n'+result)
 subprocess.run([str(tools/'apksigner'),'verify',str(apk)],check=True)
 with zipfile.ZipFile(apk) as z:
  entries=json.loads((root/'models.lock.json').read_text())['files']
