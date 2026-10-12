@@ -7,11 +7,14 @@ android {
         applicationId 'fr.visionmaxread'
         minSdk 26
         targetSdk 36
-        versionCode 1
-        versionName '0.1.0'
+        versionCode 2
+        versionName '0.2.0-test'
         ndk { abiFilters 'arm64-v8a' }
     }
-    buildTypes { release { minifyEnabled false } }
+    buildTypes {
+        debug { applicationIdSuffix '.ocrtest' }
+        release { minifyEnabled false }
+    }
     // Every model is loaded through AssetManager streams; stored ZIP entries are unnecessary.
     // Lossless compression preserves exact bytes; legacy packaging extracts the same native libs.
     androidResources { noCompress += ['xz'] }
@@ -31,6 +34,8 @@ dependencies {
     implementation 'org.tukaani:xz:1.10'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1'
     implementation 'androidx.exifinterface:exifinterface:1.4.1'
+    // Bundled ML Kit model works without Play Services model download.
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
 }
 tasks.register('verifyModels', Exec) { workingDir rootProject.projectDir; commandLine 'python3', 'scripts/prepare_models.py', '--verify' }
