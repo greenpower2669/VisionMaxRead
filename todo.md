@@ -14,3 +14,14 @@
 - [ ] [AGENT] Import d’un fichier vidéo : possibilité évoquée avant mission, à confirmer après première version.
 
 Prochains gestes : vérifier le build main après fusion, publier la préversion GitHub en joignant APK debug et AAB unsigned, puis tester sur téléphone en mode avion. Ne pas annoncer une Release publiée tant que l’URL /releases/tag/v0.1.0 n’existe pas.
+
+## VMR-002 — Essai OCR comparatif (13 octobre 2026)
+- [x] Créer branche `feature/ocr-ab-benchmark-v1` sans modifier main.
+- [x] Ajouter le moteur ML Kit latin **bundled**, hors ligne ; même image et temps comparatifs.
+- [x] APK de test identifié séparément (`fr.visionmaxread.ocrtest`), résultats lisibles, sans stockage de la comparaison.
+- [x] Protocole d'essai et sources : `docs/VMR-002-essai-ocr.md`.
+- [ ] [CI] Vérifier sur commit final : compilation APK debug + AAB unsigned, contrôles Java/lint, absence de permission INTERNET, hashes des modèles.
+- [ ] [HUMAIN] Télécharger l'archive de la CI puis comparer sur Samsung en mode avion trois documents non sensibles : imprimé, colonnes, manuscrit.
+- [ ] [HUMAIN] Tester séparément une vraie IA multimodale dans Google AI Edge Gallery avec modèle vision compatible ; mesurer RAM et compréhension.
+- [ ] [AGENT] Après mesures, choisir une architecture VLM réellement exécutable sur ce Samsung et la tester dans une **autre branche**, sans poids énormes ni publication automatique.
+- [ ] [HUMAIN] N'autoriser merge main ou release qu'après vérification des mesures.
