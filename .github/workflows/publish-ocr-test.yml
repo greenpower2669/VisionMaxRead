@@ -1,0 +1,99 @@
+name: Publish VisionMaxRead OCR TEST APK
+on:
+  push:
+    branches:
+      - feature/ocr-ab-benchmark-v1
+    paths:
+      - .github/workflows/publish-ocr-test.yml
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: visionmaxread-ocr-test-prerelease
+  cancel-in-progress: false
+
+jobs:
+  publish-test-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RUN_ID: '38316437083'
+      BUILD_SHA: '53356ee746dcb856cde0e37f851d12010dde74c7'
+      TAG: 'v0.2.0-ocr-test'
+      ARTIFACT_NAME: 'VisionMaxRead-0.2.0-OCR-TEST'
+      APK_NAME: 'VisionMaxRead-0.2.0-OCR-TEST.apk'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out sources for release notes
+        uses: actions/checkout@v4
+
+      - name: Verify the original build was successful and is the approved commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACTUAL_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.head_sha')"
+          STATUS="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.status')"
+          CONCLUSION="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.conclusion')"
+          test "$ACTUAL_SHA" = "$BUILD_SHA"
+          test "$STATUS" = completed
+          test "$CONCLUSION" = success
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.head_branch')" = feature/ocr-ab-benchmark-v1
+          echo "Verified source run: $RUN_ID ($BUILD_SHA)"
+
+      - name: Download verified build artifact within GitHub Actions
+        uses: actions/download-artifact@v4
+        with:
+          name: VisionMaxRead-0.2.0-OCR-TEST
+          run-id: 38316437083
+          github-token: ${{ github.token }}
+          path: dist
+
+      - name: Validate APK before publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="dist/$APK_NAME"
+          test -f "$APK"
+          test ! -L "$APK"
+          test "$(stat -c %s "$APK")" -gt 100000000
+          unzip -t "$APK" > /dev/null
+          sha256sum "$APK" | tee apk.sha256
+          echo "Only this APK (not the unsigned AAB) will be published."
+
+      - name: Publish an isolated prerelease with the direct APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="dist/$APK_NAME"
+          EXISTING_TAG_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/$TAG" --jq '.object.sha' 2>/dev/null || true)"
+          if [ -n "$EXISTING_TAG_SHA" ] && [ "$EXISTING_TAG_SHA" != "$BUILD_SHA" ]; then
+            echo "::error::Existing prerelease tag points to an unapproved commit: $EXISTING_TAG_SHA"
+            exit 1
+          fi
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            test "$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)" = true
+            gh release upload "$TAG" "$APK" --clobber
+          else
+            gh release create "$TAG" "$APK" \
+              --target "$BUILD_SHA" \
+              --title "VisionMaxRead v0.2.0 OCR TEST (Samsung)" \
+              --notes-file docs/release-notes-v0.2.0-ocr-test.md \
+              --prerelease
+          fi
+
+      - name: Verify published APK bytes and prerelease state
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)" = true
+          test "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = false
+          mkdir -p verify-download
+          gh release download "$TAG" --pattern "$APK_NAME" --dir verify-download
+          test -f "verify-download/$APK_NAME"
+          ORIGINAL_HASH="$(sha256sum "dist/$APK_NAME" | cut -d' ' -f1)"
+          PUBLISHED_HASH="$(sha256sum "verify-download/$APK_NAME" | cut -d' ' -f1)"
+          test "$ORIGINAL_HASH" = "$PUBLISHED_HASH"
+          echo "VERIFIED direct APK: $PUBLISHED_HASH"
+          echo "RELEASE_URL=https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}"

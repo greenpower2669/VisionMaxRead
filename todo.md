@@ -37,3 +37,10 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - [x] Artifact `VisionMaxRead-0.2.0-OCR-TEST` présent (ID 11777960102, ZIP d'environ 1,07 Go contenant APK de test et AAB non signé), expiration 26/10/2026 ; **aucun APK direct ni GitHub Release publiés**.
 - [ ] [AGENT] Conformément à FAB-APK-TEMP-001, prévoir si autorisé un canal de distribution directe de l'APK sans ZIP ; GitHub Actions empaquette son téléchargement et le dépôt Git standard ne convient pas à ce gros fichier. Ne pas créer de Release sans accord de Fab.
 - [ ] [HUMAIN] Installation Samsung et tests qualitatifs en mode avion non effectués.
+
+## VMR-003 — Préversion APK directe, accord Fab du 13/10/2026
+- [x] Autorisation explicite de publier une **prerelease test uniquement**, sans merge main et sans AAB unsigned : « Feu vert ».
+- [x] Run Android source `38316437083`, SHA `53356ee7`, vert complet ; artifact `11777960102` présent.
+- [x] Préparer `.github/workflows/publish-ocr-test.yml` avec permissions minimales, vérification de SHA/CI, téléchargement **dans GitHub Actions**, publication de l'APK seul, et re-téléchargement SHA256.
+- [ ] [CI] Vérifier que ce workflow a créé la Release `v0.2.0-ocr-test` avec l'asset exact `VisionMaxRead-0.2.0-OCR-TEST.apk` et hash identique.
+- [ ] [HUMAIN] Installer et valider sur Samsung en mode avion. Ne pas fusionner `main` avant autorisation distincte.

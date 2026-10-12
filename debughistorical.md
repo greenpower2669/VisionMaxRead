@@ -26,3 +26,6 @@ Premier échec : manifeste debug d'identification en conflit avec le label de la
 
 ## VMR-D008 — Correctif privacy validé CI (13 octobre 2026)
 Suite à VMR-D007, run `38316437083` **success** au SHA `53356ee7` : build Gradle/Java, lint, APK/AAB, restauration XZ et vérification de l'APK (permissions, signature et hashes) terminés. Le manifeste Android retire `android.permission.INTERNET` malgré l'ajout de dépendance ML Kit. Artefact GitHub Actions disponible, mais uniquement dans un ZIP de ~1,07 Go, donc pas conforme à l'idéal FAB-APK-TEMP-001 d'un téléchargement APK direct. Distribution directe et tests sur Samsung restent à vérifier. Aucun lien de Release inventé.
+
+## VMR-D009 — Distribution binaire inaccessible directement depuis artifact Actions
+Artifact `11777960102` du run CI vert `38316437083` : environ 1,07 Go car contient APK et AAB. Le transport via l'outil externe disponible refuse les archives au-delà de 512 MiB. Contournement durable FAB-APK-TEMP-001 : télécharger/décompresser dans **le runner GitHub Actions**, publier **seulement l'APK** comme asset de GitHub Release, vérifier SHA256 après téléchargement de cette Release. Ce changement de packaging n'altère pas le binaire testé. Publication et SHA final doivent encore être confirmés sur l'URL effective avant annonce.

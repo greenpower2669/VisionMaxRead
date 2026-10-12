@@ -31,3 +31,11 @@ Branche dédiée ; pas de fusion dans main ni de publication de release sans val
 Objectif : ne pas toucher à la version stable ; créer un comparateur local de reconnaissance PaddleOCR vs ML Kit latin (bundled), même image, durées et résultats lisibles. Préserver confidentialité et fonctionnement avion. Comparer séparément une vraie IA vision/langage via application de démonstration compatible ; aucune affirmation de multimodalité si seul OCR fonctionne.
 
 Branche : `feature/ocr-ab-benchmark-v1` ; protocole : `docs/VMR-002-essai-ocr.md`. Ne pas fusionner/releaser avant accord et résultats d'essai.
+
+## VMR-003 — Publication de la préversion APK directe (Fab, 13 octobre 2026)
+**Commande explicite : « Feu vert »** après proposition de publier VisionMaxRead OCR TEST sous forme de préversion avec APK téléchargeable directement, sans ZIP sur Samsung et **sans fusion main**.
+
+- Diffusion autorisée **uniquement** pour la variante test `fr.visionmaxread.ocrtest`, tag `v0.2.0-ocr-test`, APK direct `VisionMaxRead-0.2.0-OCR-TEST.apk` (source vérifiée au SHA `53356ee7`).
+- Réutiliser la CI verte `38316437083`, préserver l'absence de permission INTERNET ; jamais d'AAB unsigned présenté comme prêt Google Play.
+- Publier via un workflow contrôlé GitHub Actions ; re-télécharger l'asset Release et vérifier son SHA256 avant d'annoncer la livraison.
+- **Statut : publication automatisée demandée ; preuve de Release à vérifier.** Aucun merge `main`, aucun changement de signature du stable.

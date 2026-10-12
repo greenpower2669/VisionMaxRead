@@ -12,7 +12,7 @@
   - `core/` : règles et segmentation testables sans Android ; offsets et protection des callbacks périmés.
 - `ppocr-sdk/` : source Android officielle PaddleOCR adaptée ; ONNX Runtime et OpenCV ; licences/source identifiées.
 - `scripts/` : préparation et validation des modèles, tests de contrats, construction reproductible.
-- `.github/workflows/` : vérification et APK/AAB ; aucun déploiement/release automatique.
+- `.github/workflows/` : vérification et APK/AAB. Sur la seule branche expérimentale VMR-003 : workflow isolé `publish-ocr-test.yml` produisant une GitHub **prerelease** après validation du run préexistant ; aucune release du stable ni fusion automatique.
 - `docs/superpowers/` : conception, plan et journal d’exécution.
 - `app/src/main/assets/` : modèles générés localement/CI, exclus de Git ; manifest d’intégrité.
 
@@ -27,3 +27,6 @@ ModelArchive + scripts/model_pack.py : emballage VMR1/XZ du grand modèle vocal,
 
 ## VMR-002 — Garanties de manifeste de l'essai
 Les dépendances Android de ML Kit peuvent contribuer des déclarations de permissions pendant la fusion du manifeste. `app/src/main/AndroidManifest.xml` retire explicitement `android.permission.INTERNET` via `tools:node="remove"`. `scripts/verify_apk.py` inspecte le manifeste de l'APK effectivement compilé ; la CI échoue si INTERNET apparaît ou si CAMERA est absente. Une compilation réussie avant ce contrôle ne suffit pas à qualifier l'APK comme livrable.
+
+## VMR-003 — Circuit d'APK direct autorisé
+`release du test` : push du seul workflow `.github/workflows/publish-ocr-test.yml` sur `feature/ocr-ab-benchmark-v1` → vérifier run `38316437083` (conclusion et HEAD source) → `actions/download-artifact@v4` **sur runner GitHub** → sélectionner `dist/VisionMaxRead-0.2.0-OCR-TEST.apk` (jamais AAB) → GitHub Release `v0.2.0-ocr-test` taguée sur le commit **ayant construit** l'APK → re-téléchargement Release sur runner et validation SHA256. Les permissions `contents:write` sont limitées au workflow de publication dédié. Code Android, `main` et signature du stable sont inchangés.

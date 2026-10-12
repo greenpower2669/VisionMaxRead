@@ -1,6 +1,6 @@
 # VMR-002 — Protocole d'essai OCR hors ligne (branche de test)
 
-État : implémenté en code, compilation GitHub Actions et essais sur Samsung à vérifier. **Ne pas confondre avec une IA multimodale intégrée.**
+État : code et compilation GitHub Actions vérifiés (run 38316437083) ; préversion APK directe autorisée, à vérifier sur GitHub Release ; essais Samsung à faire. **Ne pas confondre avec une IA multimodale intégrée.**
 
 ## Ce que construit cette branche
 - APK de test `fr.visionmaxread.ocrtest` installable à côté du stable, sans toucher à `main`.
@@ -11,7 +11,7 @@
 - Ne pas comparer les nombres de caractères comme s'ils étaient des taux de justesse. Le premier passage inclut le démarrage à froid ; répéter pour une comparaison à chaud.
 
 ## Essai terrain recommandé
-1. Installer l'APK **OCR-TEST** depuis l'archive ZIP GitHub Actions de cette branche ; préserver la version stable. Vérifier l'espace libre ; chaque installation comporte déjà de gros modèles.
+1. Installer l'APK **OCR-TEST** depuis la GitHub **prérelease v0.2.0-ocr-test** (asset direct `VisionMaxRead-0.2.0-OCR-TEST.apk`), sans télécharger le ZIP GitHub Actions ; préserver la version stable. Vérifier l'espace libre ; chaque installation comporte déjà de gros modèles.
 2. Passer en **mode avion**, désactiver l'enregistrement d'historique pour des documents sensibles, et préparer trois images non sensibles : français imprimé, tableau / deux colonnes, manuscrit français.
 3. Importer chaque même image puis appuyer sur « Comparer les OCR (test) » ; relever les temps et relire les erreurs visibles. Refaire l'essai une deuxième fois pour séparer démarrage à froid et passage répété.
 4. Pour un **vrai essai multimodal**, installer séparément Google AI Edge Gallery et un modèle vision compatible *avant* de passer en mode avion. Ne pas intégrer de gros poids Gemma au dépôt/à l'APK : les exigences mémoire et stockage doivent être mesurées sur le téléphone. Comparer la description et l'ordre de lecture aux deux OCR.
@@ -20,7 +20,7 @@
 ## Garde-fous
 - Modèle ML Kit explicitement **bundled** (`com.google.mlkit:text-recognition:16.0.1`), **pas** la variante Play Services qui télécharge les poids.
 - Aucune permission INTERNET ; contrôle dans `scripts/verify_apk.py`.
-- Pas de merge, tag ni release de cet essai sans nouvel accord.
+- Fab a donné le 13/10/2026 son accord pour **une préversion de test uniquement**, sans merge `main` : voir VMR-003 dans `ordres-de-mission.md`.
 - Reconnaissance d'image par Gemma/LiteRT-LM : **étude séparée**, n'est pas intégrée au code de cette branche.
 - Aucun texte utilisateur stocké dans Git, logs de tests ou télémétrie.
 
