@@ -49,3 +49,6 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - [x] Run `38317719077` : téléchargement côté runner et validation ZIP/APK réussis, SHA256 APK `ca39674a8c408a59bcb69cdf93dd422dccd4c1c5adb8e297de8c4d0f6a69e438`.
 - [x] Correction du faux positif « tag existant » sur réponse API 404 JSON. 
 - [ ] [CI] Vérifier la nouvelle publication puis son re-téléchargement SHA256.
+
+- [x] Second échec de publication (run `38317821483`) : le wrapper `gh api` expose son JSON 404 brut malgré l'expression jq ; remplacement par `git ls-remote` pour détecter un tag réellement existant.
+- [ ] Confirmer nouvelle publication et hachage de l'APK re-téléchargé ; aucun lien direct annoncé avant vérification.
