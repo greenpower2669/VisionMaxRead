@@ -5,6 +5,7 @@
   - `CameraController` : Camera2, aperçu léger, capture JPEG distincte et orientation.
   - `ImageLoader` : import borné, orientation EXIF, mémoire.
   - `OcrService` : adaptation du SDK PaddleOCR, ordre de lecture, résultat texte.
+  - `MlKitOcrService` : OCR latin ML Kit modèle bundled ; uniquement dans VMR-002 sur branche d'essai.
   - `SupertonicEngine` : quatre réseaux ONNX, styles, génération/audio, interruption.
   - `LocalAnonymizer` : NER ONNX multilingue + règles ; ne persiste rien.
   - `HistoryStore` : stockage privé des seuls textes masqués, suppression.
@@ -20,3 +21,6 @@ Le thread UI ne réalise aucune inférence. Les commandes annulent la générati
 Validation : docs/build-evidence.json. ReaderSessions sépare source/document/historique ; Cancellation propage la perte de focus audio. APK/AAB dans app/build/deliverables (ignorés Git). Sources sur branche/PR, modèles régénérés depuis models.lock.json.
 
 ModelArchive + scripts/model_pack.py : emballage VMR1/XZ du grand modèle vocal, restitution exacte avant ONNX. scripts/test-archive.sh contrôle décodeur Java et erreurs de troncature ; verify_apk.py exige liste exacte des assets et hashes des octets originaux.
+
+## Branche d'essai VMR-002
+`feature/ocr-ab-benchmark-v1` : `MainActivity.compareOcr()` compare le même bitmap, chronomètre les 2 moteurs et propose lecture/choix du texte, sans stockage nouveau ; voir `docs/VMR-002-essai-ocr.md`. Application debug distincte `fr.visionmaxread.ocrtest`. Aucun VLM intégré sur cette branche.
