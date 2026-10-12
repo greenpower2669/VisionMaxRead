@@ -25,3 +25,9 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - [ ] [HUMAIN] Tester séparément une vraie IA multimodale dans Google AI Edge Gallery avec modèle vision compatible ; mesurer RAM et compréhension.
 - [ ] [AGENT] Après mesures, choisir une architecture VLM réellement exécutable sur ce Samsung et la tester dans une **autre branche**, sans poids énormes ni publication automatique.
 - [ ] [HUMAIN] N'autoriser merge main ou release qu'après vérification des mesures.
+
+## VMR-002 — Dernier état CI (13 octobre 2026)
+- [x] Le build du commit 5a43248b réussit Gradle, lint, APK/AAB et archive ; **échec de la vérification des permissions**, donc aucun APK déclaré prêt (run 38315196736).
+- [x] Contrer la permission INTERNET ajoutée potentiellement par une dépendance avec `tools:node="remove"` et diagnostic explicite dans `verify_apk.py`.
+- [ ] [CI] Confirmer sur un nouveau run `verify_apk.py`, signature debug, absence totale d'INTERNET et dépôt de l'artefact APK/AAB.
+- [ ] [AGENT] Fournir à Fab un APK direct plutôt que ZIP si le canal de livraison le permet, sans merge ni release non autorisés.
