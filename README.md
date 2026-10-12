@@ -1,5 +1,7 @@
 # VisionMaxRead
 
+> **Branche expérimentale VMR-002 (0.2.0-test)** : application de test distincte `VisionMaxRead TEST OCR` / `fr.visionmaxread.ocrtest`, non fusionnée sur main. Après capture/import d'une photo, bouton **Comparer les OCR (test)** : PaddleOCR contre ML Kit latin (modèle embarqué) sur les mêmes pixels, avec temps et textes. Ce **n'est pas un modèle multimodal** ; l'essai Gemma est séparé. Protocole : [VMR-002](docs/VMR-002-essai-ocr.md). La compilation GitHub de cette branche livre un ZIP d'artifacts contenant APK de test et AAB non signé ; ne pas publier l'AAB sur Play. Compter un espace supplémentaire pour cette installation à côté du stable. Mode avion après installation. Pas de transmission réseau.
+
 Lecteur Android natif en français, avec OCR, voix et masquage **sur le téléphone**. Android 8+ (API 26), ARM64 ; première cible : téléphone Samsung SM-A576B. Version 0.1.0, APK de test signé debug.
 
 ## Utilisation
