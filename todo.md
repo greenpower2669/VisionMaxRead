@@ -31,3 +31,9 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - [x] Contrer la permission INTERNET ajoutée potentiellement par une dépendance avec `tools:node="remove"` et diagnostic explicite dans `verify_apk.py`.
 - [ ] [CI] Confirmer sur un nouveau run `verify_apk.py`, signature debug, absence totale d'INTERNET et dépôt de l'artefact APK/AAB.
 - [ ] [AGENT] Fournir à Fab un APK direct plutôt que ZIP si le canal de livraison le permet, sans merge ni release non autorisés.
+
+## Preuve CI VMR-002 — 13 octobre 2026
+- [x] Build vert sur commit `53356ee746dcb856cde0e37f851d12010dde74c7`, run [38316437083](https://github.com/greenpower2669/VisionMaxRead/actions/runs/38316437083) : Java/Gradle, lint, APK/AAB, archive modèle, `verify_apk.py` (signature, ARM64, 18 hashes, CAMERA et **aucune permission INTERNET**).
+- [x] Artifact `VisionMaxRead-0.2.0-OCR-TEST` présent (ID 11777960102, ZIP d'environ 1,07 Go contenant APK de test et AAB non signé), expiration 26/10/2026 ; **aucun APK direct ni GitHub Release publiés**.
+- [ ] [AGENT] Conformément à FAB-APK-TEMP-001, prévoir si autorisé un canal de distribution directe de l'APK sans ZIP ; GitHub Actions empaquette son téléchargement et le dépôt Git standard ne convient pas à ce gros fichier. Ne pas créer de Release sans accord de Fab.
+- [ ] [HUMAIN] Installation Samsung et tests qualitatifs en mode avion non effectués.
