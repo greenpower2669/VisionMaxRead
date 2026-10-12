@@ -117,9 +117,9 @@ public final class MainActivity extends Activity {
                 if(!sessions.documentCurrent(ticket)||compareBitmap!=image)return;
                 compare.setEnabled(true);
                 status.setText("Comparaison terminée. Choisis le texte à examiner.");
-                String summary="Même image : "+image.getWidth()+" × "+image.getHeight()+" pixels.\\n"
-                    +"PaddleOCR : "+msA+" ms, "+a.length()+" caractères"+(errA==null?"":" ("+errA+")")+"\\n"
-                    +"ML Kit : "+msB+" ms, "+b.length()+" caractères"+(errB==null?"":" ("+errB+")")+"\\n\\n"
+                String summary="Même image : "+image.getWidth()+" × "+image.getHeight()+" pixels.\n"
+                    +"PaddleOCR : "+msA+" ms, "+a.length()+" caractères"+(errA==null?"":" ("+errA+")")+"\n"
+                    +"ML Kit : "+msB+" ms, "+b.length()+" caractères"+(errB==null?"":" ("+errB+")")+"\n\n"
                     +"Durées = initialisation + inférence, hors attente dans la file. "
                     +"Le nombre de caractères ne mesure pas l’exactitude. "
                     +"Aucun texte de comparaison n’est enregistré ni envoyé.";
