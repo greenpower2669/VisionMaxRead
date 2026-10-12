@@ -67,7 +67,7 @@ jobs:
         run: |
           set -euo pipefail
           APK="dist/$APK_NAME"
-          EXISTING_TAG_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/$TAG" --jq '.object.sha' 2>/dev/null || true)"
+          EXISTING_TAG_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/$TAG" --jq '.object.sha // ""' 2>/dev/null || true)"
           if [ -n "$EXISTING_TAG_SHA" ] && [ "$EXISTING_TAG_SHA" != "$BUILD_SHA" ]; then
             echo "::error::Existing prerelease tag points to an unapproved commit: $EXISTING_TAG_SHA"
             exit 1
