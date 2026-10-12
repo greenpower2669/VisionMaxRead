@@ -21,3 +21,6 @@ L'accord « On test? » autorise un **prototype** de comparaison, pas le remplac
 
 ## Distribution VMR-003 approuvée
 Fab autorise maintenant explicitement la **préversion de test avec APK direct**, sans merge `main`. Le binaire publié doit provenir uniquement du run vert `38316437083` / SHA `53356ee7`, app ID de test `fr.visionmaxread.ocrtest`, archive source GitHub décompressée **dans GitHub Actions** (non sur le téléphone). Seul l'APK debug signé sera joint à la préversion `v0.2.0-ocr-test`. La publication est conditionnée à la preuve du fichier sur GitHub Release et à la comparaison du SHA256 après re-téléchargement. Aucune validation terrain annoncée sans retour de Fab.
+
+## Preuve de livraison VMR-003
+La préversion APK de test `v0.2.0-ocr-test` est maintenant publiée et vérifiée sur GitHub (run `38318000959` vert). L'asset direct `VisionMaxRead-0.2.0-OCR-TEST.apk` a été re-téléchargé côté GitHub, SHA-256 confirmé `ca39674a8c408a59bcb69cdf93dd422dccd4c1c5adb8e297de8c4d0f6a69e438` (539 252 854 octets). Seul l'APK test debug est distribué ; l'usage Samsung reste à valider. La version `main` n'a pas été modifiée.

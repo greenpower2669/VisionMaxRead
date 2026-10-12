@@ -1,6 +1,6 @@
 # VMR-002 — Protocole d'essai OCR hors ligne (branche de test)
 
-État : code et compilation GitHub Actions vérifiés (run 38316437083) ; préversion APK directe autorisée, à vérifier sur GitHub Release ; essais Samsung à faire. **Ne pas confondre avec une IA multimodale intégrée.**
+État : code et compilation GitHub Actions vérifiés (run 38316437083) ; préversion APK directe **publiée et vérifiée** sur GitHub Release ; essais Samsung à faire. **Ne pas confondre avec une IA multimodale intégrée.**
 
 ## Ce que construit cette branche
 - APK de test `fr.visionmaxread.ocrtest` installable à côté du stable, sans toucher à `main`.
@@ -28,3 +28,6 @@ Sources techniques :
 - https://developers.google.com/ml-kit/vision/text-recognition/v2/android
 - https://developers.google.com/edge/litert-lm/android
 - https://github.com/google-ai-edge/gallery
+
+## APK directement disponible (VMR-003)
+La [préversion GitHub v0.2.0-ocr-test](https://github.com/greenpower2669/VisionMaxRead/releases/tag/v0.2.0-ocr-test) est publiée avec [l'APK installable directement](https://github.com/greenpower2669/VisionMaxRead/releases/download/v0.2.0-ocr-test/VisionMaxRead-0.2.0-OCR-TEST.apk), sans besoin du ZIP des Actions. Publication et SHA256 vérifiés (run 38318000959). Tests Samsung non réalisés.

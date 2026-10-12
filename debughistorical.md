@@ -35,3 +35,6 @@ Run `38317719077` : téléchargement de l'artefact de 1,07 Go dans le runner et 
 
 ## VMR-D011 — Lecture du tag Git robuste (13 octobre 2026)
 La tentative de gestion de 404 par `gh api --jq '.object.sha // ""'` n'a pas suffi : le wrapper `gh api` a encore propagé le JSON brut 404 comme chaîne non vide sur le run `38317821483`. L'APK de SHA256 `ca39674a...` est toujours validé, aucune Release créée. La vérification de référence bascule sur `git ls-remote --refs --tags origin "refs/tags/$TAG" | cut -f1` : absence du tag = chaîne vide, existence = SHA réel, sans confusion avec un corps HTTP d'erreur. Corriger uniquement le diagnostic de publication, sans reconstruction ni altération de l'APK source.
+
+## VMR-D012 — Publication directe enfin vérifiée
+Le run `38318000959` se termine **success** : la détection du tag avec `git ls-remote` a corrigé la fausse alerte des précédentes tentatives. Le runner a extrait le ZIP source de l'artefact validé (aucun transfert ZIP au téléphone), puis GitHub a publié la préversion `v0.2.0-ocr-test` avec un seul APK. La Release, non-brouillon, et son asset direct ont été confirmés par API GitHub. Re-téléchargement de l'APK depuis la Release et comparaison du SHA-256 `ca39674a8c408a59bcb69cdf93dd422dccd4c1c5adb8e297de8c4d0f6a69e438` réussis. Pas de fusion main ; aucun essai réel Samsung encore réalisé.

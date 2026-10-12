@@ -38,4 +38,4 @@ Branche : `feature/ocr-ab-benchmark-v1` ; protocole : `docs/VMR-002-essai-ocr.md
 - Diffusion autorisée **uniquement** pour la variante test `fr.visionmaxread.ocrtest`, tag `v0.2.0-ocr-test`, APK direct `VisionMaxRead-0.2.0-OCR-TEST.apk` (source vérifiée au SHA `53356ee7`).
 - Réutiliser la CI verte `38316437083`, préserver l'absence de permission INTERNET ; jamais d'AAB unsigned présenté comme prêt Google Play.
 - Publier via un workflow contrôlé GitHub Actions ; re-télécharger l'asset Release et vérifier son SHA256 avant d'annoncer la livraison.
-- **Statut : publication automatisée demandée ; preuve de Release à vérifier.** Aucun merge `main`, aucun changement de signature du stable.
+- **Statut : Livré, à valider sur Samsung.** Release de préversion publiée et vérifiée : https://github.com/greenpower2669/VisionMaxRead/releases/tag/v0.2.0-ocr-test. APK direct 539 252 854 octets, SHA-256 `ca39674a8c408a59bcb69cdf93dd422dccd4c1c5adb8e297de8c4d0f6a69e438`; run de publication `38318000959` vert, source APK du build `38316437083`. Aucun merge `main`, aucun changement de signature du stable.
