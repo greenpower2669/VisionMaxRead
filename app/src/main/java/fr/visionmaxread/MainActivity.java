@@ -24,7 +24,9 @@ public final class MainActivity extends Activity {
     private final SessionGate speech=new SessionGate();
     private final SupertonicEngine voice=new SupertonicEngine();
     private TextureView preview;private ImageView frozen;private FrameLayout imageArea;
-    private EditText text;private TextView status;private Button freeze,play;private CameraController camera;
+    // Only an in-memory reference to the displayed photo, never copied to persistent storage.
+    private Bitmap compareBitmap;
+    private EditText text;private TextView status;private Button freeze,play,compare;private CameraController camera;
     private HistoryStore history;private ModelFiles models;private SharedPreferences prefs;
     private boolean changingText,destroyed,reading,cameraMode;private String maskedPreview="";private int textSp=24;
     @Override public void onCreate(Bundle saved){
@@ -52,6 +54,7 @@ public final class MainActivity extends Activity {
         preview=new TextureView(this);preview.setContentDescription("Aperçu caméra pour viser uniquement");imageArea.addView(preview,new FrameLayout.LayoutParams(-1,-1));
         frozen=new ImageView(this);frozen.setScaleType(ImageView.ScaleType.FIT_CENTER);frozen.setContentDescription("Image figée à reconnaître");frozen.setBackgroundColor(Color.BLACK);frozen.setVisibility(View.GONE);imageArea.addView(frozen,new FrameLayout.LayoutParams(-1,-1));
         freeze=button("● Figer l’image",RED,()->{freeze.setEnabled(false);status.setText("Capture de la photo…");camera.freeze();});content.addView(freeze);freeze.setEnabled(false);
+        compare=button("Comparer les OCR (test)",TEAL,this::compareOcr);compare.setVisibility(View.GONE);compare.setEnabled(false);content.addView(compare);
         status=label("Choisis Caméra, Photo ou colle un texte.",18);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);status.setPadding(0,dp(8),0,dp(8));content.addView(status);
         text=new EditText(this);text.setHint("Le texte apparaît ici. Tu peux le corriger ou coller un texte.");text.setTextSize(textSp);text.setTextColor(INK);text.setHintTextColor(Color.rgb(74,86,95));text.setGravity(Gravity.TOP);text.setMinLines(5);text.setSingleLine(false);text.setSelectAllOnFocus(false);text.setBackgroundTintList(android.content.res.ColorStateList.valueOf(TEAL));
         text.setImeOptions(android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
@@ -64,7 +67,7 @@ public final class MainActivity extends Activity {
         play=button("▶ Lire le texte",TEAL,()->{if(reading)stopReading();else readText();});outer.addView(play,new LinearLayout.LayoutParams(-1,dp(64)));
     }
     private void font(int delta){textSp=Math.max(18,Math.min(48,textSp+delta));text.setTextSize(textSp);prefs.edit().putInt("textSize",textSp).apply();}
-    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";return sessions.replaceSource();}
+    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";compareBitmap=null;if(compare!=null){compare.setEnabled(false);compare.setVisibility(View.GONE);}return sessions.replaceSource();}
     private void startCamera(){
         newDocument();cameraMode=true;imageArea.setVisibility(View.VISIBLE);preview.setVisibility(View.VISIBLE);frozen.setVisibility(View.GONE);freeze.setVisibility(View.VISIBLE);freeze.setEnabled(true);setText("");status.setText("Vise le texte puis appuie sur Figer l’image.");
         if(checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION);
@@ -79,13 +82,73 @@ public final class MainActivity extends Activity {
         worker.execute(()->{
             try{
                 if(!sessions.documentCurrent(ticket))return;Bitmap image=source.get();if(!sessions.documentCurrent(ticket)){image.recycle();return;}
-                ui(()->{if(sessions.documentCurrent(ticket)){frozen.setImageBitmap(image);status.setText("Reconnaissance du texte sur ce téléphone…");}});
+                ui(()->{if(sessions.documentCurrent(ticket)){frozen.setImageBitmap(image);compareBitmap=image;compare.setVisibility(View.VISIBLE);compare.setEnabled(true);status.setText("Reconnaissance du texte sur ce téléphone…");}});
                 String found=new OcrService().recognize(this,image);if(!sessions.documentCurrent(ticket))return;
                 ui(()->{if(sessions.documentCurrent(ticket)){setText(found);status.setText(found.trim().isEmpty()?"Aucun texte trouvé. Essaie une image plus nette.":"Texte reconnu. Corrige-le si nécessaire, puis appuie sur Lire.");}});
                 if(!found.trim().isEmpty()&&prefs.getBoolean("history",true))maskAndSave(found,ticket,privacy,true);
             }catch(Exception|OutOfMemoryError e){ui(()->{if(sessions.documentCurrent(ticket))status.setText("Impossible de reconnaître cette image. Essaie une photo plus petite ou plus nette.");});}
         });
     }
+
+    /** Compare both real models on exactly the same bitmap and report inference time. */
+    private void compareOcr() {
+        final Bitmap image=compareBitmap;
+        final long ticket=sessions.documentTicket();
+        if(image==null||image.isRecycled()||!sessions.documentCurrent(ticket))return;
+        compare.setEnabled(false);
+        status.setText("Comparaison locale des deux moteurs…");
+        worker.execute(()->{
+            String paddleText="",mlText="";
+            String paddleError=null,mlError=null;
+            long t0=SystemClock.elapsedRealtime();
+            try { paddleText=new OcrService().recognize(this,image); }
+            catch(Exception|OutOfMemoryError e) { paddleError="Échec du moteur PaddleOCR"; }
+            long paddleMs=SystemClock.elapsedRealtime()-t0;
+            if(!sessions.documentCurrent(ticket)||destroyed)return;
+            t0=SystemClock.elapsedRealtime();
+            try (MlKitOcrService mlKit=new MlKitOcrService()) {
+                mlText=mlKit.recognize(image);
+            }catch(Exception|OutOfMemoryError e) { mlError="Échec du moteur ML Kit"; }
+            long mlMs=SystemClock.elapsedRealtime()-t0;
+            if(!sessions.documentCurrent(ticket)||destroyed)return;
+            final String a=paddleText,b=mlText,errA=paddleError,errB=mlError;
+            final long msA=paddleMs,msB=mlMs;
+            ui(()->{
+                if(!sessions.documentCurrent(ticket)||compareBitmap!=image)return;
+                compare.setEnabled(true);
+                status.setText("Comparaison terminée. Choisis le texte à examiner.");
+                String summary="Même image : "+image.getWidth()+" × "+image.getHeight()+" pixels.\\n"
+                    +"PaddleOCR : "+msA+" ms, "+a.length()+" caractères"+(errA==null?"":" ("+errA+")")+"\\n"
+                    +"ML Kit : "+msB+" ms, "+b.length()+" caractères"+(errB==null?"":" ("+errB+")")+"\\n\\n"
+                    +"Durées = initialisation + inférence, hors attente dans la file. "
+                    +"Le nombre de caractères ne mesure pas l’exactitude. "
+                    +"Aucun texte de comparaison n’est enregistré ni envoyé.";
+                new AlertDialog.Builder(this)
+                    .setTitle("Test OCR hors ligne")
+                    .setMessage(summary)
+                    .setPositiveButton("Voir Paddle", (dialog,which)->showComparisonText("PaddleOCR",a,ticket))
+                    .setNeutralButton("Voir ML Kit", (dialog,which)->showComparisonText("ML Kit",b,ticket))
+                    .setNegativeButton("Fermer",null).show();
+            });
+        });
+    }
+    private void showComparisonText(String name,String value,long ticket){
+        if(!sessions.documentCurrent(ticket))return;
+        ScrollView scroll=new ScrollView(this);
+        scroll.setPadding(dp(16),dp(8),dp(16),dp(8));
+        TextView result=label(value.isEmpty()?"Aucun texte reconnu.":value,textSp);
+        result.setTextIsSelectable(true);
+        scroll.addView(result);
+        new AlertDialog.Builder(this).setTitle(name+" — texte reconnu")
+            .setView(scroll)
+            .setPositiveButton("Utiliser ce texte",(d,w)->{
+                if(!sessions.documentCurrent(ticket))return;
+                sessions.editText();maskedPreview="";stopReading();setText(value);
+                status.setText("Texte "+name+" affiché, non ajouté à l’historique par ce test.");
+            })
+            .setNegativeButton("Fermer",null).show();
+    }
+
     private void setText(String value){changingText=true;text.setText(value);changingText=false;}
     private ModelFiles models()throws Exception {if(models==null)models=new ModelFiles(this);return models;}
     private void saveManual(){String value=text.getText().toString();if(value.trim().isEmpty()){status.setText("Ajoute un texte à masquer.");return;}long ticket=sessions.documentTicket(),privacy=sessions.historyTicket();status.setText("Masquage local en préparation…");worker.execute(()->maskAndSave(value,ticket,privacy,true));}
