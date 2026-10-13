@@ -102,3 +102,8 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - [ ] [HUMAIN] Samsung : orientation aperçu/photo, Qwen imprimé/colonnes/manuscrit, comparaison Paddle, RAM/chauffe/espace, mode avion.
 - [ ] [HUMAIN] Samsung : première phrase Jessica, répétition identique, textes longs, arrêt/reprise et après inactivité.
 - [ ] Aucun merge `main` ni Release VMR-006 sans feu vert distinct.
+
+- [x] [VMR-006] CI `38436112539` : Kotlin 2.4 passe ; blocage suivant identifié = doublon natif ONNX Runtime.
+- [x] [VMR-006] Auditer Sherpa v1.13.8 : ORT Android ARM64 upstream = 1.28.2 ; aligner Paddle/NER/app sur 1.28.2 et retirer la copie ORT du seul AAR Sherpa authentifié.
+- [x] [VMR-006] Surcharger R8 9.4.14 pour métadonnées Kotlin 2.4.
+- [ ] [VMR-006/CI] Revalider merge native, D8, APK/AAB et contrôles finaux.

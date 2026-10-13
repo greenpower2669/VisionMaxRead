@@ -59,3 +59,9 @@ Qwen3.5-0.8B-VL est volontairement testé comme OCR principal, avec PP-OCRv6-Sma
 
 ## VMR-D016 — Échec CI initial Kotlin, cause identifiée
 Run `38435343498` : téléchargement Sherpa/Piper réussi, téléchargement Qwen réussi, préparation des modèles réussie. Échec à `:app:compileDebugKotlin` avant APK : LiteRT-LM 0.18.0 et ses dépendances Kotlin portent des métadonnées Kotlin 2.4.0 alors que le projet utilisait le plugin Kotlin 2.1.20. Ce n'est pas un échec de Qwen/Piper au chargement ; correction appliquée : plugin Kotlin 2.4.0, puis nouvelle CI requise. Ne pas déclarer de binaire valide tant que cette nouvelle CI n'est pas verte.
+
+
+## VMR-D017 — Collision ONNX Runtime après passage Kotlin 2.4
+Run `38436112539` : Kotlin 2.4 franchit la compilation Kotlin, puis Android échoue à `:app:mergeDebugNativeLibs` car deux `lib/arm64-v8a/libonnxruntime.so` sont présentes : Sherpa-ONNX 1.13.8 et ONNX Runtime Android 1.23.2 du projet. Audit upstream du tag Sherpa v1.13.8 : son build Android ARM64 utilise ONNX Runtime **1.28.2**. Correction choisie : aligner l'ORT Java/Android de Paddle + NER sur 1.28.2 et supprimer seulement la copie native ORT à l'intérieur de l'AAR Sherpa après vérification SHA de l'AAR. Une seule ORT 1.28.2 doit donc être empaquetée.
+
+La CI montrait aussi des avertissements D8/R8 sur les métadonnées Kotlin 2.4. Le projet conserve AGP 8.13 mais surcharge R8 vers 9.4.14 via `settings.gradle`, mécanisme officiellement supporté pour AGP 9.2 et antérieurs. Nouvelle CI requise.
