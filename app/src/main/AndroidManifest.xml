@@ -3,6 +3,9 @@
     <!-- ML Kit bundled text recognition must not bring INTERNET permission through its manifests. -->
     <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+    <queries>
+        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
+    </queries>
     <application android:allowBackup="false" android:fullBackupContent="false" android:label="VisionMaxRead" android:icon="@drawable/ic_launcher" android:theme="@style/AppTheme" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="portrait">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
