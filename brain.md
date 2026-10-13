@@ -28,3 +28,6 @@ La préversion APK de test `v0.2.0-ocr-test` est maintenant publiée et vérifi�
 
 ## VMR-004 — Expérience audio, Qwen ultérieur (13/10/2026)
 Choix utilisateur : procéder par étapes, tester une solution locale compacte avant l'expérience Qwen Omni. La branche LAB conserve Supertonic 3 par défaut et ajoute une **option explicite** de TTS Android avec voix française marquée hors ligne ; ne pas basculer en ligne ni remplacer silencieusement la voix du stable. La piste Qwen3.5-0.8B vision sera évaluée ensuite ; pas de modèle Qwen livré à ce stade. Application debug distincte `fr.visionmaxread.lab`. Ne pas confondre preuve de compilation et essai Samsung.
+
+## VMR-005 — Extraction en temp et téléchargement direct LAB
+La CI `38365535174` de la LAB v0.3.0 est **verte**, source `644d5177`. Fab souhaite que GitHub décompresse l'archive dans un répertoire temporaire et fournisse le `.apk`. Le workflow dédié opère dans `RUNNER_TEMP/VisionMaxRead-LAB` côté runner (pas sur Samsung ni dans le dépôt), puis rend le seul APK LAB téléchargeable via préversion `v0.3.0-lab-test` avec SHA256 vérifié après téléchargement. Ne pas confondre déclenchement du workflow et publication réussie, à confirmer. `main` et les packages stables restent inchangés.

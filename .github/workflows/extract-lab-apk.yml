@@ -1,0 +1,98 @@
+name: Extract LAB APK to GitHub TEMP and deliver direct test APK
+
+on:
+  push:
+    branches: [feature/offline-tts-qwen-prep-v1]
+    paths: [.github/workflows/extract-lab-apk.yml]
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: visionmaxread-lab-apk-direct
+  cancel-in-progress: false
+
+jobs:
+  unzip-lab-apk-to-temp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      ORIGINAL_RUN_ID: '38365535174'
+      ORIGINAL_BUILD_SHA: '644d5177145062f28aab2bd2f883ddbf0331390d'
+      ORIGINAL_ARTIFACT: 'VisionMaxRead-0.3.0-LAB'
+      APK_NAME: 'VisionMaxRead-0.3.0-LAB.apk'
+      RELEASE_TAG: 'v0.3.0-lab-test'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout release notes only
+        uses: actions/checkout@v4
+
+      - name: Prove that the original APK came from the green LAB build
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_DATA="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${ORIGINAL_RUN_ID}")"
+          test "$(echo "$RUN_DATA" | jq -r '.head_sha')" = "$ORIGINAL_BUILD_SHA"
+          test "$(echo "$RUN_DATA" | jq -r '.head_branch')" = 'feature/offline-tts-qwen-prep-v1'
+          test "$(echo "$RUN_DATA" | jq -r '.status')" = 'completed'
+          test "$(echo "$RUN_DATA" | jq -r '.conclusion')" = 'success'
+          echo "Original LAB build and checks verified."
+
+      - name: Unzip original GitHub artifact in runner temp folder
+        uses: actions/download-artifact@v4
+        with:
+          name: VisionMaxRead-0.3.0-LAB
+          run-id: 38365535174
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/VisionMaxRead-LAB
+
+      - name: Validate only signed debug APK in TEMP (never publish unsigned AAB)
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="${RUNNER_TEMP}/VisionMaxRead-LAB/${APK_NAME}"
+          test -f "$APK"
+          test ! -L "$APK"
+          test "$(stat -c '%s' "$APK")" -gt 100000000
+          unzip -t "$APK" >/dev/null
+          echo "APKs present in TEMP:"
+          find "${RUNNER_TEMP}/VisionMaxRead-LAB" -maxdepth 1 -type f -name '*.apk' -printf '%f\n'
+          sha256sum "$APK" | tee "${RUNNER_TEMP}/VisionMaxRead-LAB/apk-sha256.txt"
+
+      - name: Make extracted APK directly downloadable from test prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="${RUNNER_TEMP}/VisionMaxRead-LAB/${APK_NAME}"
+          EXISTING_TAG_SHA="$(git ls-remote --refs --tags origin "refs/tags/$RELEASE_TAG" | cut -f1)"
+          if [ -n "$EXISTING_TAG_SHA" ] && [ "$EXISTING_TAG_SHA" != "$ORIGINAL_BUILD_SHA" ]; then
+            echo "::error::Existing tag is not the SHA of the verified build."
+            exit 1
+          fi
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            test "$(gh release view "$RELEASE_TAG" --json isPrerelease --jq .isPrerelease)" = true
+            gh release upload "$RELEASE_TAG" "$APK" --clobber
+          else
+            gh release create "$RELEASE_TAG" "$APK" \
+              --target "$ORIGINAL_BUILD_SHA" \
+              --title "VisionMaxRead LAB v0.3.0 - Android offline voice test" \
+              --notes-file docs/release-notes-v0.3.0-lab-test.md \
+              --prerelease
+          fi
+
+      - name: Verify published APK SHA256 after downloading it
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh release view "$RELEASE_TAG" --json isPrerelease --jq .isPrerelease)" = true
+          test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = false
+          mkdir -p "${RUNNER_TEMP}/vmr-verify"
+          gh release download "$RELEASE_TAG" --pattern "$APK_NAME" --dir "${RUNNER_TEMP}/vmr-verify"
+          test -f "${RUNNER_TEMP}/vmr-verify/$APK_NAME"
+          ORIGINAL_HASH="$(sha256sum "${RUNNER_TEMP}/VisionMaxRead-LAB/$APK_NAME" | cut -d' ' -f1)"
+          RELEASE_HASH="$(sha256sum "${RUNNER_TEMP}/vmr-verify/$APK_NAME" | cut -d' ' -f1)"
+          test "$ORIGINAL_HASH" = "$RELEASE_HASH"
+          echo "DIRECT LAB APK SHA256 VERIFIED: $RELEASE_HASH"
+          echo "TEST_RELEASE=https://github.com/${GITHUB_REPOSITORY}/releases/tag/${RELEASE_TAG}"

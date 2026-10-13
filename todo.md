@@ -71,3 +71,10 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - [ ] [AGENT] Intégrer ultérieurement le petit Qwen3.5-0.8B **avec projecteur image et vrai runtime multimodal**, puis benchmark français manuscrit ; **pas encore codé**.
 - [ ] [AGENT/HUMAIN] Évaluer plus tard Qwen Omni (vision/audio natif), séparément.
 - [ ] Aucun merge main ni nouvelle Release sans accord distinct.
+
+## VMR-005 — APK LAB dans temp GitHub
+- [x] Run Android LAB `38365535174` terminé `success` au SHA `644d5177`, artefact `VisionMaxRead-0.3.0-LAB` présent (ID `11796812007`).
+- [x] Workflow `extract-lab-apk.yml` préparé : `actions/download-artifact` décompresse dans `RUNNER_TEMP/VisionMaxRead-LAB`, vérifie fichier APK, ZIP et SHA256, puis livre APK direct en préversion expérimentale uniquement et re-télécharge pour vérifier l'intégrité.
+- [ ] [CI] Vérifier que `v0.3.0-lab-test` contient un APK direct validé par exécution verte du workflow.
+- [ ] [HUMAIN] Installer sur Samsung et tester deux TTS en mode avion, arrêter/reprendre, latence et qualité.
+- [ ] Aucune fusion main ni publication stable autorisées.
