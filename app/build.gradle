@@ -7,8 +7,8 @@ android {
         applicationId 'fr.visionmaxread'
         minSdk 26
         targetSdk 36
-        versionCode 3
-        versionName '0.3.0-lab'
+        versionCode 4
+        versionName '0.4.0-lab'
         ndk { abiFilters 'arm64-v8a' }
     }
     buildTypes {
@@ -17,7 +17,7 @@ android {
     }
     // Every model is loaded through AssetManager streams; stored ZIP entries are unnecessary.
     // Lossless compression preserves exact bytes; legacy packaging extracts the same native libs.
-    androidResources { noCompress += ['xz'] }
+    androidResources { noCompress += ['xz', 'litertlm'] }
     packaging { jniLibs { useLegacyPackaging true } }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -34,8 +34,9 @@ dependencies {
     implementation 'org.tukaani:xz:1.10'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1'
     implementation 'androidx.exifinterface:exifinterface:1.4.1'
-    // Bundled ML Kit model works without Play Services model download.
-    implementation 'com.google.mlkit:text-recognition:16.0.1'
+    // Qwen3.5 VL runs fully on-device through LiteRT-LM; Piper runs through Sherpa-ONNX.
+    implementation 'com.google.ai.edge.litertlm:litertlm-android:0.18.0'
+    implementation files('libs/sherpa-onnx-1.13.8.aar')
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
 }
 tasks.register('verifyModels', Exec) { workingDir rootProject.projectDir; commandLine 'python3', 'scripts/prepare_models.py', '--verify' }
