@@ -22,6 +22,43 @@ jobs:
         run: |
           sdkmanager_path=$(python3 -c 'import os,pathlib; print(next(pathlib.Path(os.environ["ANDROID_HOME"]).glob("cmdline-tools/*/bin/sdkmanager")))')
           "$sdkmanager_path" 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Prepare Sherpa-ONNX and Piper Jessica
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p app/libs app/src/main/assets/tts/piper/jessica
+          curl --fail --location --retry 3 \
+            -o app/libs/sherpa-onnx-1.13.8.aar \
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-1.13.8.aar"
+          echo "633c24321e06b1fe79feafa03ea16cbc0f8a286641e2da3559bac91bdb13bd96  app/libs/sherpa-onnx-1.13.8.aar" | sha256sum -c -
+          work="$(mktemp -d)"
+          archive="$work/upmc-medium.tar.bz2"
+          curl --fail --location --retry 3 \
+            -o "$archive" \
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-fr_FR-upmc-medium.tar.bz2"
+          echo "e9830a331a16f6cc5ef3116a287065e015d3495c3f56b974889a266da7f89a7f  $archive" | sha256sum -c -
+          tar -xjf "$archive" -C "$work"
+          cp -a "$work/vits-piper-fr_FR-upmc-medium/." app/src/main/assets/tts/piper/jessica/
+          test -s app/src/main/assets/tts/piper/jessica/fr_FR-upmc-medium.onnx
+          test -s app/src/main/assets/tts/piper/jessica/tokens.txt
+          test -d app/src/main/assets/tts/piper/jessica/espeak-ng-data
+
+      - name: Prepare Qwen3.5 0.8B VL OCR model
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p app/src/main/assets/qwen
+          target="app/src/main/assets/qwen/Qwen3.5-0.8B-VL_int8.litertlm"
+          curl --fail --location --retry 3 --retry-all-errors \
+            -o "$target" \
+            "https://huggingface.co/litert-community/Qwen3.5-0.8B/resolve/main/Qwen3.5-0.8B-VL_int8.litertlm?download=true"
+          test "$(stat -c%s "$target")" = "1303966384"
+          qwen_sha="$(sha256sum "$target" | awk '{print $1}')"
+          echo "QWEN_SHA256=$qwen_sha"
+          # Current 2026-10-12 re-quantized build published by litert-community.
+          # Full digest is captured by this CI run, then locked on the next commit.
+          test "${qwen_sha:0:8}" = "5e6d69e5"
+
       - name: Prepare pinned offline models
         run: python3 scripts/prepare_models.py
       - name: Tests, lint, APK and AAB
@@ -33,11 +70,11 @@ jobs:
       - name: Name artifacts
         run: |
           mkdir artifacts
-          cp app/build/outputs/apk/debug/app-debug.apk artifacts/VisionMaxRead-0.3.0-LAB.apk
-          cp app/build/outputs/bundle/release/app-release.aab artifacts/VisionMaxRead-0.3.0-LAB-unsigned.aab
+          cp app/build/outputs/apk/debug/app-debug.apk artifacts/VisionMaxRead-0.4.0-QWEN-PIPER-LAB.apk
+          cp app/build/outputs/bundle/release/app-release.aab artifacts/VisionMaxRead-0.4.0-QWEN-PIPER-LAB-unsigned.aab
           cp app/build/reports/lint-results-debug.html artifacts/
       - uses: actions/upload-artifact@v4
         with:
-          name: VisionMaxRead-0.3.0-LAB
+          name: VisionMaxRead-0.4.0-QWEN-PIPER-LAB
           path: artifacts/
           retention-days: 14
