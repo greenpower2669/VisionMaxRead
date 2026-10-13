@@ -116,9 +116,6 @@ final class OfflineAndroidTts {
                 continue;
             candidates.add(voice);
         }
-        candidates.sort(Comparator
-                .comparingInt((Voice v)->Locale.FRANCE.equals(v.getLocale())?0:1)
-                .thenComparingInt(Voice::getQuality).reversed());
         // Prefer fr-FR first, then highest declared quality.
         candidates.sort(Comparator
                 .comparingInt((Voice v)->Locale.FRANCE.equals(v.getLocale())?0:1)
