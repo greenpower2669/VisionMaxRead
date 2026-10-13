@@ -39,3 +39,8 @@ Branche : `feature/ocr-ab-benchmark-v1` ; protocole : `docs/VMR-002-essai-ocr.md
 - Réutiliser la CI verte `38316437083`, préserver l'absence de permission INTERNET ; jamais d'AAB unsigned présenté comme prêt Google Play.
 - Publier via un workflow contrôlé GitHub Actions ; re-télécharger l'asset Release et vérifier son SHA256 avant d'annoncer la livraison.
 - **Statut : Livré, à valider sur Samsung.** Release de préversion publiée et vérifiée : https://github.com/greenpower2669/VisionMaxRead/releases/tag/v0.2.0-ocr-test. APK direct 539 252 854 octets, SHA-256 `ca39674a8c408a59bcb69cdf93dd422dccd4c1c5adb8e297de8c4d0f6a69e438`; run de publication `38318000959` vert, source APK du build `38316437083`. Aucun merge `main`, aucun changement de signature du stable.
+
+
+## VMR-004 — Étapes vocales et IA compacte (Fab, 13 octobre 2026)
+Instruction orale : mettre en œuvre d'abord la solution locale proposée pour VisionMaxRead, puis évaluer une IA Qwen plus intégrée dans un temps distinct. Interprétation prudente : **prototype audio Android hors ligne face à Supertonic**, puis **Qwen3.5-0.8B Vision** pour la reconnaissance ; Qwen Omni (voix et vision intégrées) comme expérience séparée. Ne pas présenter le travail préparatoire comme une intégration Qwen accomplie.
+Branche exclusive `feature/offline-tts-qwen-prep-v1` : identité expérimentale `fr.visionmaxread.lab` (debug), stable `fr.visionmaxread` et ancien OCR test `fr.visionmaxread.ocrtest` préservés. Aucun merge, Release, changement de signature, permission INTERNET ou texte brut persisté sans autorisation. Voir `docs/VMR-004-audio-hors-ligne-preparation-qwen.md`.
