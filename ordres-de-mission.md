@@ -50,3 +50,16 @@ Suite à la demande de Fab « Demande à Git de nous dézipper dans un répertoi
 
 ### Preuve de clôture VMR-005 (13 octobre 2026)
 **Terminé et vérifié** : workflow `38394243158` vert. Préversion LAB isolée `v0.3.0-lab-test` publiée (https://github.com/greenpower2669/VisionMaxRead/releases/tag/v0.3.0-lab-test), APK direct `https://github.com/greenpower2669/VisionMaxRead/releases/download/v0.3.0-lab-test/VisionMaxRead-0.3.0-LAB.apk`, 539 256 754 octets, SHA-256 `dfebd355d7aba7db182a1d9ccc7d88616265f94249a562ab5ed1055144e23042`. Le répertoire `RUNNER_TEMP/VisionMaxRead-LAB` était éphémère et a seulement servi à l'extraction côté GitHub ; **seul l'APK signé** a été publié, pas l'AAB. L'APK téléchargé depuis la préversion a été comparé par SHA256 avec l'original. `main` n'a pas changé. Tests réels Samsung à effectuer.
+
+
+## VMR-006 — Qwen principal, PP-OCR référence, Piper Jessica et caméra (Fab, 13 octobre 2026)
+**Autorisation explicite : « Ok code ça ».** Branche `feature/qwen-piper-camera-v1`. Aucun merge `main` et aucune Release sans nouvel accord.
+
+1. Remplacer Supertonic par Sherpa-ONNX/Piper UPMC medium, Jessica sid 0.
+2. Garder le moteur chargé et amorcer silencieusement la chaîne réelle ; pas de timer arbitraire, pas de volume système ; garde audio ~200–300 ms et diagnostic première génération.
+3. Lancer Qwen automatiquement comme OCR après capture/import.
+4. Remplacer le bouton ML Kit par PP-OCRv6-Small, moteur de référence déjà connu.
+5. Comparer Qwen et PP-OCRv6-Small sur le même bitmap, avec temps et choix du résultat à conserver/lire.
+6. Corriger l'orientation de l'aperçu caméra avec la rotation réelle de l'écran, et conserver la cohérence aperçu/photo/OCR.
+
+Contraintes : hors ligne, permission INTERNET absente dans l'APK final, aucune persistance supplémentaire des images/textes bruts, variante LAB `fr.visionmaxread.lab`. Livrable seulement après compilation, lint, vérification APK et essais Samsung explicitement distingués.

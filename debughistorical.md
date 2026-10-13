@@ -48,3 +48,14 @@ L'artefact du run LAB `38365535174` (vert) existe en ZIP GitHub de ~1,07 Go cont
 
 ### Conclusion VMR-D014 — Livraison GitHub validée
 Le build original `38365535174` et l'artefact `11796812007` ont été validés dans le workflow `38394243158`. L'extraction dans `RUNNER_TEMP`, la vérification de l'APK, sa publication en préversion `v0.3.0-lab-test` et sa re-vérification SHA256 après téléchargement ont tous réussi. SHA256 `dfebd355d7aba7db182a1d9ccc7d88616265f94249a562ab5ed1055144e23042`. Le fichier `VisionMaxRead-0.3.0-LAB.apk` est directement disponible sans ZIP, taille 539 256 754 octets. Aucun merge main, aucun test matériel Samsung prétendu.
+
+
+## VMR-D015 — Première intégration Qwen/Piper et orientation (13 octobre 2026)
+Le défaut de prévisualisation caméra provenait d'un calcul basé sur `SENSOR_ORIENTATION` seul ; la rotation réelle de l'affichage n'entrait pas dans la matrice et `onSurfaceTextureSizeChanged` ne recalculait rien. VMR-006 combine désormais capteur et Display et applique une orientation JPEG séparée. Validation physique portrait/paysage reste nécessaire.
+
+Pour le TTS, GeckoDoku recréait l'AudioTrack à chaque phrase. VMR-006 sépare donc la chauffe de l'inférence et celle de la sortie audio : Piper est gardé en mémoire, une courte forme d'onde d'amorce traverse la vraie piste à gain zéro, la consommation est suivie par la tête de lecture et 250 ms de silence précèdent la vraie phrase. Aucun réglage de volume global.
+
+Qwen3.5-0.8B-VL est volontairement testé comme OCR principal, avec PP-OCRv6-Small comme contrôle. Le fichier Qwen fait 1 303 966 384 octets ; son SHA-256 observé en CI est `5e6d69e55f92d21799fe0a2552da979c95a2533b64e4f0ed73fe87dd9d759ab9`. La taille APK, la copie privée, la RAM et la chauffe doivent être mesurées sur Samsung.
+
+## VMR-D016 — Échec CI initial Kotlin, cause identifiée
+Run `38435343498` : téléchargement Sherpa/Piper réussi, téléchargement Qwen réussi, préparation des modèles réussie. Échec à `:app:compileDebugKotlin` avant APK : LiteRT-LM 0.18.0 et ses dépendances Kotlin portent des métadonnées Kotlin 2.4.0 alors que le projet utilisait le plugin Kotlin 2.1.20. Ce n'est pas un échec de Qwen/Piper au chargement ; correction appliquée : plugin Kotlin 2.4.0, puis nouvelle CI requise. Ne pas déclarer de binaire valide tant que cette nouvelle CI n'est pas verte.

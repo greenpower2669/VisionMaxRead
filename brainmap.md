@@ -43,3 +43,14 @@ Workflow `.github/workflows/extract-lab-apk.yml` : vérifier run source `3836553
 
 ### Livraison effectivement vérifiée VMR-005
 Le workflow `38394243158` est vert : téléchargement depuis Actions vers le dossier éphémère `RUNNER_TEMP/VisionMaxRead-LAB`, contrôle ZIP de l'APK, préversion `v0.3.0-lab-test` créée, comparaison du SHA256 après re-téléchargement réussie. URL https://github.com/greenpower2669/VisionMaxRead/releases/download/v0.3.0-lab-test/VisionMaxRead-0.3.0-LAB.apk ; 539 256 754 octets ; SHA256 `dfebd355d7aba7db182a1d9ccc7d88616265f94249a562ab5ed1055144e23042`. Le `main` initial (`35a1eb4c`) reste inchangé.
+
+
+## VMR-006 — carte active de la branche Qwen/Piper
+- `QwenOcrService.kt` : OCR principal Qwen3.5-0.8B-VL via LiteRT-LM ; moteur conservé en mémoire, conversation neuve par document.
+- `OcrService.kt` : PP-OCRv6-Small conservé comme moteur de référence/bouton de comparaison sur le même bitmap.
+- `SpeechEngine.kt` + `PiperSpeechEngine.kt` : Sherpa-ONNX/Piper UPMC, Jessica sid 0 ; moteur persistant.
+- `PersistentVoicePcmPlayer.kt` : AudioTrack streaming, amorce silencieuse réelle, attente par playback head et garde 250 ms.
+- `CameraController.java` : orientation relative capteur/Display, recalcul de transformation, JPEG cohérent.
+- ML Kit, Supertonic et le prototype Android TTS ne font plus partie de l'exécution VMR-006.
+- La CI prépare les gros binaires/modèles sans les committer : Sherpa AAR, UPMC Piper et Qwen LiteRT-LM ; les SHA sont contrôlés.
+- Identité debug conservée : `fr.visionmaxread.lab`. Aucun merge `main`, aucune Release VMR-006 autorisée à ce stade.

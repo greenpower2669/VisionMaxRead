@@ -34,3 +34,13 @@ La CI `38365535174` de la LAB v0.3.0 est **verte**, source `644d5177`. Fab souha
 
 ### Validation de livraison VMR-005
 La préversion LAB directe `v0.3.0-lab-test` est publiée et vérifiée : workflow `38394243158` success ; asset `VisionMaxRead-0.3.0-LAB.apk` (539 256 754 octets), SHA256 `dfebd355d7aba7db182a1d9ccc7d88616265f94249a562ab5ed1055144e23042`, lien https://github.com/greenpower2669/VisionMaxRead/releases/download/v0.3.0-lab-test/VisionMaxRead-0.3.0-LAB.apk. Un seul APK de laboratoire est livré. La compilation source d'origine reste `38365535174` au SHA `644d5177`. L'état "testé sur téléphone" est encore **non validé**.
+
+
+## VMR-006 — Qwen OCR + Piper Jessica + orientation caméra (13/10/2026)
+Autorisation explicite de Fab : « Ok code ça ». Branche exclusive `feature/qwen-piper-camera-v1`, dérivée de la LAB, sans modification de `main` et sans autorisation de Release. Qwen3.5-0.8B-VL devient l'OCR lancé automatiquement après capture/import ; PP-OCRv6-Small reste la référence et remplace le bouton ML Kit pour relire exactement le même bitmap et comparer les temps/résultats. ML Kit est retiré de cette branche.
+
+La lecture remplace Supertonic par Sherpa-ONNX 1.13.8 + Piper `fr_FR-upmc-medium`, voix Jessica `sid=0` (Pierre `sid=1` reste seulement une référence GeckoDoku). Le moteur Piper reste chargé ; l'amorce « Ah, bon. » traverse un AudioTrack persistant à volume de piste nul, puis la vraie phrase reçoit 250 ms de silence de garde. Le diagnostic première phrase compare deux PCM d'un texte fixe sans enregistrer le texte utilisateur.
+
+La caméra calcule désormais l'orientation relative capteur/affichage et recalcule la transformation lors d'un changement de taille de TextureView ; JPEG et ImageLoader doivent conserver la cohérence prévisualisation → photo figée → bitmap OCR. Validation Samsung encore obligatoire.
+
+Le bundle Qwen est `Qwen3.5-0.8B-VL_int8.litertlm`, 1 303 966 384 octets, SHA-256 `5e6d69e55f92d21799fe0a2552da979c95a2533b64e4f0ed73fe87dd9d759ab9`. Il est très volumineux et est recopié au premier usage dans l'espace privé pour fournir un chemin fichier natif à LiteRT-LM. Ne pas annoncer l'APK comme prêt avant CI verte et essai matériel.

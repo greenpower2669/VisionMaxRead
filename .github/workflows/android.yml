@@ -55,9 +55,7 @@ jobs:
           test "$(stat -c%s "$target")" = "1303966384"
           qwen_sha="$(sha256sum "$target" | awk '{print $1}')"
           echo "QWEN_SHA256=$qwen_sha"
-          # Current 2026-10-12 re-quantized build published by litert-community.
-          # Full digest is captured by this CI run, then locked on the next commit.
-          test "${qwen_sha:0:8}" = "5e6d69e5"
+          test "$qwen_sha" = "5e6d69e55f92d21799fe0a2552da979c95a2533b64e4f0ed73fe87dd9d759ab9"
 
       - name: Prepare pinned offline models
         run: python3 scripts/prepare_models.py

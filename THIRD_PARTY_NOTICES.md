@@ -1,13 +1,11 @@
-# Components included in VisionMaxRead
+# Components included in VisionMaxRead — VMR-006 LAB
 
-- PaddleOCR Android SDK, Apache-2.0, vendored from PaddlePaddle/PaddleOCR at `dab3fe35379033fdcb2d0e9572fac0b36c9a9ebf`; local changes: build/dependency pins and the synchronous application adapter. Model PP-OCRv6 Small detection/recognition, Apache-2.0. Model revisions and hashes: models.lock.json.
-- Supertonic 3: four ONNX models and F1/M1 styles, BigScience Open RAIL-M (model use restrictions retained). Android inference port derived from Supertone official Java helper, MIT. Upstream: supertone-oss-archive/supertonic and supertone-oss-archive/supertonic-3.
-- Multilingual BERT NER, Davlan/bert-base-multilingual-cased-ner-hrl, AFL-3.0; quantized ONNX conversion by Xenova. French supported; news-trained model may miss entities in personal documents. Model card included.
-- ONNX Runtime 1.23.2, MIT; OpenCV 4.12.0, Apache-2.0.
-- AndroidX Core, ExifInterface, desugar_jdk_libs, Apache-2.0; Kotlin and kotlinx.coroutines, Apache-2.0.
+- PaddleOCR Android SDK and PP-OCRv6 Small detection/recognition, Apache-2.0. The adapted SDK remains in `ppocr-sdk/`; exact model revisions and hashes are in `models.lock.json`.
+- Qwen3.5-0.8B-VL LiteRT-LM bundle from `litert-community/Qwen3.5-0.8B`, Apache-2.0. CI validates the 1 303 966 384-byte file with SHA-256 `5e6d69e55f92d21799fe0a2552da979c95a2533b64e4f0ed73fe87dd9d759ab9`.
+- LiteRT-LM Android 0.18.0, Apache-2.0, used only for local Qwen inference.
+- Sherpa-ONNX Android 1.13.8 and its Piper/VITS integration. The AAR is fetched by CI and SHA-256 checked.
+- Piper `fr_FR-upmc-medium`: French, two speakers, 22,050 Hz; VisionMaxRead selects Jessica (speaker 0). Piper voice packaging/model is MIT; its UPMC model card identifies CC BY-SA 4.0 training data. Preserve attribution when redistributing the voice.
+- Multilingual BERT NER (Davlan/Xenova conversion) for local masking; see `models.lock.json` and bundled model card/license.
+- ONNX Runtime/OpenCV and AndroidX/Kotlin dependencies under their respective upstream licenses.
 
-License texts are bundled under app/src/main/assets/licenses. Original SDK copyright headers retained. Source repository is public; changes to the NER inference integration are available here. No training on user documents occurs.
-
-- XZ for Java 1.10, 0BSD (Tukaani), used only to decompress losslessly packed model assets. Original ONNX payloads and SHA256 remain identical. Native libraries are losslessly ZIP-compressed and extracted by Android.
-
-- Prototype VMR-002 : Google ML Kit Text Recognition v2 (bibliothèque Android `com.google.mlkit:text-recognition:16.0.1`), version latine avec modèle inclus à l'installation pour emploi hors ligne. Documentation et termes : https://developers.google.com/ml-kit/vision/text-recognition/v2/android et https://developers.google.com/ml-kit/terms. Utilisé pour comparaison uniquement, sans télémétrie applicative. Vérifier les obligations de redistribution des bibliothèques au build.
+VMR-006 no longer packages or executes ML Kit, Supertonic 3, or the Android system-TTS prototype. No user document is used for training. The application is required to remain without `android.permission.INTERNET`; CI verifies the compiled APK, not merely the source manifest.

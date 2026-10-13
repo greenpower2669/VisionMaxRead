@@ -84,3 +84,21 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - [x] https://github.com/greenpower2669/VisionMaxRead/releases/download/v0.3.0-lab-test/VisionMaxRead-0.3.0-LAB.apk — 539 256 754 octets ; SHA-256 `dfebd355d7aba7db182a1d9ccc7d88616265f94249a562ab5ed1055144e23042`.
 - [x] Run `38394243158` `success`, source build `38365535174` `success`.
 - [ ] Retour d'essai Samsung pour voix française Android installée, Supertonic et mode avion.
+
+
+## VMR-006 — Qwen/Piper/caméra
+- [x] Créer `feature/qwen-piper-camera-v1` sans modifier `main`.
+- [x] Retirer ML Kit de la branche et conserver PP-OCRv6-Small comme référence.
+- [x] Coder Qwen3.5-0.8B-VL comme OCR automatique principal.
+- [x] Coder la comparaison Qwen ↔ PP-OCRv6-Small sur le même bitmap avec chronos et sélection du texte.
+- [x] Remplacer l'exécution Supertonic/Android TTS par Sherpa-ONNX/Piper UPMC Jessica sid 0.
+- [x] Ajouter amorce audio silencieuse réelle, AudioTrack streaming, garde 250 ms et diagnostic PCM première/deuxième génération.
+- [x] Corriger le calcul d'orientation Camera2 avec rotation Display + recalcul TextureView/JPEG.
+- [x] Retirer les poids Supertonic du manifeste de modèles de cette branche.
+- [x] Capturer et verrouiller le SHA Qwen complet : `5e6d69e55f92d21799fe0a2552da979c95a2533b64e4f0ed73fe87dd9d759ab9`.
+- [x] Diagnostiquer le premier échec CI `38435343498` : incompatibilité Kotlin 2.1/2.4.
+- [ ] [CI] Valider Kotlin 2.4 + compilation, lint, APK/AAB, signature, ARM64 et absence INTERNET.
+- [ ] [CI] Relever taille finale APK/AAB et artifact LAB.
+- [ ] [HUMAIN] Samsung : orientation aperçu/photo, Qwen imprimé/colonnes/manuscrit, comparaison Paddle, RAM/chauffe/espace, mode avion.
+- [ ] [HUMAIN] Samsung : première phrase Jessica, répétition identique, textes longs, arrêt/reprise et après inactivité.
+- [ ] Aucun merge `main` ni Release VMR-006 sans feu vert distinct.
