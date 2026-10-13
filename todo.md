@@ -59,3 +59,15 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - [x] Asset direct **unique** : https://github.com/greenpower2669/VisionMaxRead/releases/download/v0.2.0-ocr-test/VisionMaxRead-0.2.0-OCR-TEST.apk ; 539 252 854 octets, SHA256 `ca39674a8c408a59bcb69cdf93dd422dccd4c1c5adb8e297de8c4d0f6a69e438`.
 - [x] `main` préservée au SHA `35a1eb4ce5c9a5286ebbe1be39207cf01b969051` ; branche de test séparée.
 - [ ] [HUMAIN] Test sur Samsung : installation côte à côte, écran, moteur comparatif, mode avion, qualité du manuscrit et performances.
+
+
+## VMR-004 — Audio Android hors ligne et Qwen compact (13/10/2026)
+- [x] Créer `feature/offline-tts-qwen-prep-v1` depuis VMR-002 ; ne pas modifier `main`.
+- [x] Ajouter un moteur TTS Android sélectionnable explicitement, filtré aux voix françaises **non réseau** ; conserver Supertonic par défaut.
+- [x] Préserver annulation, mode avion, aucun texte sauvegardé, réglages défilants et identité APK LAB `fr.visionmaxread.lab`.
+- [x] Documenter le protocole de mesures dans `docs/VMR-004-audio-hors-ligne-preparation-qwen.md`.
+- [ ] [CI] Vérifier Gradle, lint, ZIP/APK signé, listes et hashes de modèles, absence INTERNET, identité Android et AAB unsigned.
+- [ ] [HUMAIN] Mesurer sur Samsung voix Supertonic et voix Android hors ligne : délai, intelligibilité, RAM, chauffe, annulation.
+- [ ] [AGENT] Intégrer ultérieurement le petit Qwen3.5-0.8B **avec projecteur image et vrai runtime multimodal**, puis benchmark français manuscrit ; **pas encore codé**.
+- [ ] [AGENT/HUMAIN] Évaluer plus tard Qwen Omni (vision/audio natif), séparément.
+- [ ] Aucun merge main ni nouvelle Release sans accord distinct.
