@@ -24,3 +24,7 @@ Fab autorise maintenant explicitement la **préversion de test avec APK direct**
 
 ## Preuve de livraison VMR-003
 La préversion APK de test `v0.2.0-ocr-test` est maintenant publiée et vérifiée sur GitHub (run `38318000959` vert). L'asset direct `VisionMaxRead-0.2.0-OCR-TEST.apk` a été re-téléchargé côté GitHub, SHA-256 confirmé `ca39674a8c408a59bcb69cdf93dd422dccd4c1c5adb8e297de8c4d0f6a69e438` (539 252 854 octets). Seul l'APK test debug est distribué ; l'usage Samsung reste à valider. La version `main` n'a pas été modifiée.
+
+
+## VMR-004 — Expérience audio, Qwen ultérieur (13/10/2026)
+Choix utilisateur : procéder par étapes, tester une solution locale compacte avant l'expérience Qwen Omni. La branche LAB conserve Supertonic 3 par défaut et ajoute une **option explicite** de TTS Android avec voix française marquée hors ligne ; ne pas basculer en ligne ni remplacer silencieusement la voix du stable. La piste Qwen3.5-0.8B vision sera évaluée ensuite ; pas de modèle Qwen livré à ce stade. Application debug distincte `fr.visionmaxread.lab`. Ne pas confondre preuve de compilation et essai Samsung.
