@@ -66,7 +66,7 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - [x] Ajouter un moteur TTS Android sélectionnable explicitement, filtré aux voix françaises **non réseau** ; conserver Supertonic par défaut.
 - [x] Préserver annulation, mode avion, aucun texte sauvegardé, réglages défilants et identité APK LAB `fr.visionmaxread.lab`.
 - [x] Documenter le protocole de mesures dans `docs/VMR-004-audio-hors-ligne-preparation-qwen.md`.
-- [ ] [CI] Vérifier Gradle, lint, ZIP/APK signé, listes et hashes de modèles, absence INTERNET, identité Android et AAB unsigned.
+- [x] [CI] Gradle, lint, ZIP/APK signé, intégrité modèles et absence INTERNET : run `38365535174` success ; identité LAB prévue par `app/build.gradle`.
 - [ ] [HUMAIN] Mesurer sur Samsung voix Supertonic et voix Android hors ligne : délai, intelligibilité, RAM, chauffe, annulation.
 - [ ] [AGENT] Intégrer ultérieurement le petit Qwen3.5-0.8B **avec projecteur image et vrai runtime multimodal**, puis benchmark français manuscrit ; **pas encore codé**.
 - [ ] [AGENT/HUMAIN] Évaluer plus tard Qwen Omni (vision/audio natif), séparément.
@@ -75,6 +75,12 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 ## VMR-005 — APK LAB dans temp GitHub
 - [x] Run Android LAB `38365535174` terminé `success` au SHA `644d5177`, artefact `VisionMaxRead-0.3.0-LAB` présent (ID `11796812007`).
 - [x] Workflow `extract-lab-apk.yml` préparé : `actions/download-artifact` décompresse dans `RUNNER_TEMP/VisionMaxRead-LAB`, vérifie fichier APK, ZIP et SHA256, puis livre APK direct en préversion expérimentale uniquement et re-télécharge pour vérifier l'intégrité.
-- [ ] [CI] Vérifier que `v0.3.0-lab-test` contient un APK direct validé par exécution verte du workflow.
+- [x] [CI] `v0.3.0-lab-test` publiée, unique APK direct `VisionMaxRead-0.3.0-LAB.apk`, SHA256 vérifié après re-téléchargement : run `38394243158` success.
 - [ ] [HUMAIN] Installer sur Samsung et tester deux TTS en mode avion, arrêter/reprendre, latence et qualité.
 - [ ] Aucune fusion main ni publication stable autorisées.
+
+### Preuve finale VMR-005
+- [x] https://github.com/greenpower2669/VisionMaxRead/releases/tag/v0.3.0-lab-test — préversion non brouillon avec uniquement l'APK de LAB.
+- [x] https://github.com/greenpower2669/VisionMaxRead/releases/download/v0.3.0-lab-test/VisionMaxRead-0.3.0-LAB.apk — 539 256 754 octets ; SHA-256 `dfebd355d7aba7db182a1d9ccc7d88616265f94249a562ab5ed1055144e23042`.
+- [x] Run `38394243158` `success`, source build `38365535174` `success`.
+- [ ] Retour d'essai Samsung pour voix française Android installée, Supertonic et mode avion.

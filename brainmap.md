@@ -40,3 +40,6 @@ Run de publication `38318000959` success ; Release https://github.com/greenpower
 
 ## VMR-005 — Temporaire GitHub pour APK LAB
 Workflow `.github/workflows/extract-lab-apk.yml` : vérifier run source `38365535174` et SHA `644d5177` → dézip automatique `actions/download-artifact@v4` dans `${RUNNER_TEMP}/VisionMaxRead-LAB` → sélectionner APK signé `VisionMaxRead-0.3.0-LAB.apk` (ignorer AAB unsigned) → contrôler ZIP/SHA256 → publier une préversion `v0.3.0-lab-test` avec APK seul → re-télécharger et comparer SHA256. Le dossier temp du runner sera nettoyé par GitHub après exécution ; seuls les assets de Release sont permanents. Ne jamais committer le binaire dans Git.
+
+### Livraison effectivement vérifiée VMR-005
+Le workflow `38394243158` est vert : téléchargement depuis Actions vers le dossier éphémère `RUNNER_TEMP/VisionMaxRead-LAB`, contrôle ZIP de l'APK, préversion `v0.3.0-lab-test` créée, comparaison du SHA256 après re-téléchargement réussie. URL https://github.com/greenpower2669/VisionMaxRead/releases/download/v0.3.0-lab-test/VisionMaxRead-0.3.0-LAB.apk ; 539 256 754 octets ; SHA256 `dfebd355d7aba7db182a1d9ccc7d88616265f94249a562ab5ed1055144e23042`. Le `main` initial (`35a1eb4c`) reste inchangé.

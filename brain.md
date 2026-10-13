@@ -31,3 +31,6 @@ Choix utilisateur : procéder par étapes, tester une solution locale compacte a
 
 ## VMR-005 — Extraction en temp et téléchargement direct LAB
 La CI `38365535174` de la LAB v0.3.0 est **verte**, source `644d5177`. Fab souhaite que GitHub décompresse l'archive dans un répertoire temporaire et fournisse le `.apk`. Le workflow dédié opère dans `RUNNER_TEMP/VisionMaxRead-LAB` côté runner (pas sur Samsung ni dans le dépôt), puis rend le seul APK LAB téléchargeable via préversion `v0.3.0-lab-test` avec SHA256 vérifié après téléchargement. Ne pas confondre déclenchement du workflow et publication réussie, à confirmer. `main` et les packages stables restent inchangés.
+
+### Validation de livraison VMR-005
+La préversion LAB directe `v0.3.0-lab-test` est publiée et vérifiée : workflow `38394243158` success ; asset `VisionMaxRead-0.3.0-LAB.apk` (539 256 754 octets), SHA256 `dfebd355d7aba7db182a1d9ccc7d88616265f94249a562ab5ed1055144e23042`, lien https://github.com/greenpower2669/VisionMaxRead/releases/download/v0.3.0-lab-test/VisionMaxRead-0.3.0-LAB.apk. Un seul APK de laboratoire est livré. La compilation source d'origine reste `38365535174` au SHA `644d5177`. L'état "testé sur téléphone" est encore **non validé**.

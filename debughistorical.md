@@ -45,3 +45,6 @@ Problème signalé : latence importante de la lecture Supertonic. Code observé 
 
 ## VMR-D014 — Livraison LAB, dossier temp demandé (13 octobre 2026)
 L'artefact du run LAB `38365535174` (vert) existe en ZIP GitHub de ~1,07 Go contenant APK et AAB. Un simple `temp/` dans le dépôt Git ne peut pas conserver un APK de ~500 Mo (limite GitHub des blobs) ; le dossier temporaire d'un runner GitHub est éphémère. La procédure VMR-005 utilise `actions/download-artifact@v4` dans `RUNNER_TEMP/VisionMaxRead-LAB` (extraction du ZIP **côté serveur**), vérifie `unzip -t` et SHA256 de l'APK, puis l'attache seul à une préversion LAB, avec re-téléchargement SHA256. Ne prétendre à la livraison qu'une fois la Release GitHub vérifiée. Aucun Android modifié et `main` inchangée.
+
+### Conclusion VMR-D014 — Livraison GitHub validée
+Le build original `38365535174` et l'artefact `11796812007` ont été validés dans le workflow `38394243158`. L'extraction dans `RUNNER_TEMP`, la vérification de l'APK, sa publication en préversion `v0.3.0-lab-test` et sa re-vérification SHA256 après téléchargement ont tous réussi. SHA256 `dfebd355d7aba7db182a1d9ccc7d88616265f94249a562ab5ed1055144e23042`. Le fichier `VisionMaxRead-0.3.0-LAB.apk` est directement disponible sans ZIP, taille 539 256 754 octets. Aucun merge main, aucun test matériel Samsung prétendu.
