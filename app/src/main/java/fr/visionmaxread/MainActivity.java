@@ -22,14 +22,14 @@ public final class MainActivity extends Activity {
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private final ReaderSessions sessions=new ReaderSessions();
     private final SessionGate speech=new SessionGate();
-    private final SupertonicEngine voice=new SupertonicEngine();
-    private final OfflineAndroidTts offlineVoice=new OfflineAndroidTts();
+    private final PiperSpeechEngine voice=new PiperSpeechEngine();
+    private final QwenOcrService qwen=new QwenOcrService();
     private TextureView preview;private ImageView frozen;private FrameLayout imageArea;
     // Only an in-memory reference to the displayed photo, never copied to persistent storage.
     private Bitmap compareBitmap;
     private EditText text;private TextView status;private Button freeze,play,compare;private CameraController camera;
     private HistoryStore history;private ModelFiles models;private SharedPreferences prefs;
-    private boolean changingText,destroyed,reading,cameraMode;private String maskedPreview="";private int textSp=24;
+    private boolean changingText,destroyed,reading,cameraMode;private String maskedPreview="",lastQwenText="";private long lastQwenMs=-1;private int textSp=24;
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);prefs=getSharedPreferences("settings",MODE_PRIVATE);history=new HistoryStore(this);textSp=prefs.getInt("textSize",24);
         buildUi();camera=new CameraController(this,preview,new CameraController.Listener(){
@@ -37,6 +37,16 @@ public final class MainActivity extends Activity {
             public void error(String message){ui(()->{if(cameraMode){status.setText(message);freeze.setEnabled(true);}});}
         });
         incoming(getIntent());
+        // Warm Piper through the real muted audio route before the first user reading.
+        worker.execute(()->{
+            try{
+                voice.initialize(this,message->ui(()->{if(!reading&&text.getText().length()==0)status.setText(message);}));
+                voice.warmUp(this,()->destroyed);
+                ui(()->{if(!destroyed&&text.getText().length()==0)status.setText("Voix Jessica prête. Choisis Caméra, Photo ou colle un texte.");});
+            }catch(Exception|OutOfMemoryError e){
+                ui(()->{if(!destroyed&&text.getText().length()==0)status.setText("Voix Piper en attente : elle sera réessayée à la première lecture.");});
+            }
+        });
     }
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
     private TextView label(String value,int size){TextView v=new TextView(this);v.setText(value);v.setTextSize(size);v.setTextColor(INK);return v;}
@@ -55,7 +65,7 @@ public final class MainActivity extends Activity {
         preview=new TextureView(this);preview.setContentDescription("Aperçu caméra pour viser uniquement");imageArea.addView(preview,new FrameLayout.LayoutParams(-1,-1));
         frozen=new ImageView(this);frozen.setScaleType(ImageView.ScaleType.FIT_CENTER);frozen.setContentDescription("Image figée à reconnaître");frozen.setBackgroundColor(Color.BLACK);frozen.setVisibility(View.GONE);imageArea.addView(frozen,new FrameLayout.LayoutParams(-1,-1));
         freeze=button("● Figer l’image",RED,()->{freeze.setEnabled(false);status.setText("Capture de la photo…");camera.freeze();});content.addView(freeze);freeze.setEnabled(false);
-        compare=button("Comparer les OCR (test)",TEAL,this::compareOcr);compare.setVisibility(View.GONE);compare.setEnabled(false);content.addView(compare);
+        compare=button("PP-OCRv6-Small / Comparer",TEAL,this::compareOcr);compare.setVisibility(View.GONE);compare.setEnabled(false);content.addView(compare);
         status=label("Choisis Caméra, Photo ou colle un texte.",18);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);status.setPadding(0,dp(8),0,dp(8));content.addView(status);
         text=new EditText(this);text.setHint("Le texte apparaît ici. Tu peux le corriger ou coller un texte.");text.setTextSize(textSp);text.setTextColor(INK);text.setHintTextColor(Color.rgb(74,86,95));text.setGravity(Gravity.TOP);text.setMinLines(5);text.setSingleLine(false);text.setSelectAllOnFocus(false);text.setBackgroundTintList(android.content.res.ColorStateList.valueOf(TEAL));
         text.setImeOptions(android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
@@ -68,7 +78,7 @@ public final class MainActivity extends Activity {
         play=button("▶ Lire le texte",TEAL,()->{if(reading)stopReading();else readText();});outer.addView(play,new LinearLayout.LayoutParams(-1,dp(64)));
     }
     private void font(int delta){textSp=Math.max(18,Math.min(48,textSp+delta));text.setTextSize(textSp);prefs.edit().putInt("textSize",textSp).apply();}
-    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";compareBitmap=null;if(compare!=null){compare.setEnabled(false);compare.setVisibility(View.GONE);}return sessions.replaceSource();}
+    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastQwenText="";lastQwenMs=-1;compareBitmap=null;if(compare!=null){compare.setEnabled(false);compare.setVisibility(View.GONE);}return sessions.replaceSource();}
     private void startCamera(){
         newDocument();cameraMode=true;imageArea.setVisibility(View.VISIBLE);preview.setVisibility(View.VISIBLE);frozen.setVisibility(View.GONE);freeze.setVisibility(View.VISIBLE);freeze.setEnabled(true);setText("");status.setText("Vise le texte puis appuie sur Figer l’image.");
         if(checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION);
@@ -83,52 +93,50 @@ public final class MainActivity extends Activity {
         worker.execute(()->{
             try{
                 if(!sessions.documentCurrent(ticket))return;Bitmap image=source.get();if(!sessions.documentCurrent(ticket)){image.recycle();return;}
-                ui(()->{if(sessions.documentCurrent(ticket)){frozen.setImageBitmap(image);compareBitmap=image;compare.setVisibility(View.VISIBLE);compare.setEnabled(true);status.setText("Reconnaissance du texte sur ce téléphone…");}});
-                String found=new OcrService().recognize(this,image);if(!sessions.documentCurrent(ticket))return;
-                ui(()->{if(sessions.documentCurrent(ticket)){setText(found);status.setText(found.trim().isEmpty()?"Aucun texte trouvé. Essaie une image plus nette.":"Texte reconnu. Corrige-le si nécessaire, puis appuie sur Lire.");}});
+                ui(()->{if(sessions.documentCurrent(ticket)){frozen.setImageBitmap(image);compareBitmap=image;compare.setVisibility(View.VISIBLE);compare.setEnabled(false);status.setText("Qwen prépare la reconnaissance…");}});
+                long q0=SystemClock.elapsedRealtime();
+                String found=qwen.recognize(this,image,message->ui(()->{if(sessions.documentCurrent(ticket))status.setText(message);}));
+                long qMs=SystemClock.elapsedRealtime()-q0;
+                if(!sessions.documentCurrent(ticket))return;
+                lastQwenText=found;lastQwenMs=qMs;
+                ui(()->{if(sessions.documentCurrent(ticket)){setText(found);compare.setEnabled(true);status.setText(found.trim().isEmpty()?"Qwen : aucun texte trouvé ("+qMs+" ms). Essaie PP-OCRv6-Small.":"Qwen : texte reconnu en "+qMs+" ms. PP-OCRv6-Small est disponible pour comparer.");}});
                 if(!found.trim().isEmpty()&&prefs.getBoolean("history",true))maskAndSave(found,ticket,privacy,true);
             }catch(Exception|OutOfMemoryError e){ui(()->{if(sessions.documentCurrent(ticket))status.setText("Impossible de reconnaître cette image. Essaie une photo plus petite ou plus nette.");});}
         });
     }
 
-    /** Compare both real models on exactly the same bitmap and report inference time. */
+    /** Run the known-good PP-OCRv6-Small on the exact bitmap already sent to Qwen. */
     private void compareOcr() {
         final Bitmap image=compareBitmap;
         final long ticket=sessions.documentTicket();
+        final String qwenText=lastQwenText;
+        final long qwenMs=lastQwenMs;
         if(image==null||image.isRecycled()||!sessions.documentCurrent(ticket))return;
         compare.setEnabled(false);
-        status.setText("Comparaison locale des deux moteurs…");
+        status.setText("PP-OCRv6-Small analyse exactement la même image…");
         worker.execute(()->{
-            String paddleText="",mlText="";
-            String paddleError=null,mlError=null;
+            String paddleText="";
+            String paddleError=null;
             long t0=SystemClock.elapsedRealtime();
             try { paddleText=new OcrService().recognize(this,image); }
-            catch(Exception|OutOfMemoryError e) { paddleError="Échec du moteur PaddleOCR"; }
+            catch(Exception|OutOfMemoryError e) { paddleError="Échec de PP-OCRv6-Small"; }
             long paddleMs=SystemClock.elapsedRealtime()-t0;
             if(!sessions.documentCurrent(ticket)||destroyed)return;
-            t0=SystemClock.elapsedRealtime();
-            try (MlKitOcrService mlKit=new MlKitOcrService()) {
-                mlText=mlKit.recognize(image);
-            }catch(Exception|OutOfMemoryError e) { mlError="Échec du moteur ML Kit"; }
-            long mlMs=SystemClock.elapsedRealtime()-t0;
-            if(!sessions.documentCurrent(ticket)||destroyed)return;
-            final String a=paddleText,b=mlText,errA=paddleError,errB=mlError;
-            final long msA=paddleMs,msB=mlMs;
+            final String p=paddleText,err=paddleError;
             ui(()->{
                 if(!sessions.documentCurrent(ticket)||compareBitmap!=image)return;
                 compare.setEnabled(true);
-                status.setText("Comparaison terminée. Choisis le texte à examiner.");
+                status.setText("Comparaison terminée. Choisis le résultat à examiner.");
                 String summary="Même image : "+image.getWidth()+" × "+image.getHeight()+" pixels.\n"
-                    +"PaddleOCR : "+msA+" ms, "+a.length()+" caractères"+(errA==null?"":" ("+errA+")")+"\n"
-                    +"ML Kit : "+msB+" ms, "+b.length()+" caractères"+(errB==null?"":" ("+errB+")")+"\n\n"
-                    +"Durées = initialisation + inférence, hors attente dans la file. "
-                    +"Le nombre de caractères ne mesure pas l’exactitude. "
-                    +"Aucun texte de comparaison n’est enregistré ni envoyé.";
+                    +"Qwen3.5-0.8B-VL : "+qwenMs+" ms, "+qwenText.length()+" caractères\n"
+                    +"PP-OCRv6-Small : "+paddleMs+" ms, "+p.length()+" caractères"+(err==null?"":" ("+err+")")+"\n\n"
+                    +"Les deux moteurs ont reçu le même bitmap. Le nombre de caractères ne mesure pas à lui seul l’exactitude. "
+                    +"Aucun texte de comparaison n’est envoyé sur Internet.";
                 new AlertDialog.Builder(this)
-                    .setTitle("Test OCR hors ligne")
+                    .setTitle("Qwen ↔ PP-OCRv6-Small")
                     .setMessage(summary)
-                    .setPositiveButton("Voir Paddle", (dialog,which)->showComparisonText("PaddleOCR",a,ticket))
-                    .setNeutralButton("Voir ML Kit", (dialog,which)->showComparisonText("ML Kit",b,ticket))
+                    .setPositiveButton("Voir Qwen",(dialog,which)->showComparisonText("Qwen",qwenText,ticket))
+                    .setNeutralButton("Voir PP-OCR",(dialog,which)->showComparisonText("PP-OCRv6-Small",p,ticket))
                     .setNegativeButton("Fermer",null).show();
             });
         });
@@ -145,7 +153,7 @@ public final class MainActivity extends Activity {
             .setPositiveButton("Utiliser ce texte",(d,w)->{
                 if(!sessions.documentCurrent(ticket))return;
                 sessions.editText();maskedPreview="";stopReading();setText(value);
-                status.setText("Texte "+name+" affiché, non ajouté à l’historique par ce test.");
+                status.setText("Texte "+name+" sélectionné. Tu peux le corriger puis le faire lire.");
             })
             .setNegativeButton("Fermer",null).show();
     }
@@ -169,22 +177,19 @@ public final class MainActivity extends Activity {
     }
     private void readText(){
         String value=text.getText().toString();if(value.trim().isEmpty()){status.setText("Il n’y a pas encore de texte à lire.");return;}
-        long ticket=speech.next();reading=true;play.setText("■ Arrêter la lecture");
-        boolean androidTts="android-offline".equals(prefs.getString("ttsEngine","supertonic"));
-        status.setText(androidTts?"Préparation de la voix Android hors ligne…":"Préparation de Supertonic 3 sur le téléphone…");
-        String selected=prefs.getString("voice","F1");float speed=prefs.getFloat("speed",1.05f);
+        long ticket=speech.next();reading=true;play.setText("■ Arrêter la lecture");status.setText("Préparation de Jessica · Sherpa-ONNX/Piper…");
+        float speed=prefs.getFloat("speed",1.05f);
         worker.execute(()->{
             try{
                 java.util.function.BooleanSupplier cancelled=()->!speech.current(ticket)||destroyed;
                 java.util.function.Consumer<String> report=message->ui(()->{if(speech.current(ticket))status.setText(message);});
-                if(androidTts)offlineVoice.speak(this,value,speed,cancelled,report);
-                else voice.speak(this,value,selected,speed,models(),cancelled,report);
+                voice.speak(this,value,speed,cancelled,report);
                 ui(()->{if(speech.current(ticket)){reading=false;play.setText("▶ Lire le texte");status.setText("Lecture terminée.");}});
             }catch(CancellationException ignored){ui(()->{if(speech.current(ticket)){reading=false;play.setText("▶ Lire le texte");status.setText("Lecture interrompue.");}});}
-            catch(Exception|OutOfMemoryError e){ui(()->{if(speech.current(ticket)){reading=false;play.setText("▶ Lire le texte");status.setText(androidTts?"Voix Android hors ligne indisponible. Installe une voix française hors ligne ou sélectionne Supertonic.":"Supertonic indisponible. Vérifie l’espace libre et réessaie.");}});}
+            catch(Exception|OutOfMemoryError e){ui(()->{if(speech.current(ticket)){reading=false;play.setText("▶ Lire le texte");status.setText("Jessica / Piper n’a pas pu démarrer. Réessaie après fermeture des applications lourdes.");}});}
         });
     }
-    private void stopReading(){speech.next();voice.stop();offlineVoice.stop();if(reading){reading=false;play.setText("▶ Lire le texte");status.setText("Lecture arrêtée.");}}
+    private void stopReading(){speech.next();voice.stop();if(reading){reading=false;play.setText("▶ Lire le texte");status.setText("Lecture arrêtée.");}}
     private void showMasked(){
         if(maskedPreview.isEmpty()){
             String value=text.getText().toString();if(value.trim().isEmpty()){status.setText("Ajoute un texte à masquer.");return;}
@@ -210,20 +215,18 @@ public final class MainActivity extends Activity {
     private void settings(){
         LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);panel.setPadding(dp(16),dp(8),dp(16),dp(8));
         CheckBox keep=new CheckBox(this);keep.setText("Conserver les textes après masquage local");keep.setTextSize(18);keep.setChecked(prefs.getBoolean("history",true));panel.addView(keep);
-        panel.addView(label("Voix Supertonic (si sélectionnée)",18));RadioGroup voices=new RadioGroup(this);RadioButton female=new RadioButton(this);female.setId(View.generateViewId());female.setText("F1 — voix féminine");RadioButton male=new RadioButton(this);male.setId(View.generateViewId());male.setText("M1 — voix masculine");voices.addView(female);voices.addView(male);voices.check(prefs.getString("voice","F1").equals("M1")?male.getId():female.getId());panel.addView(voices);
-        panel.addView(label("Moteur de lecture (expérimental)",18));
-        RadioGroup engines=new RadioGroup(this);
-        RadioButton supertonic=new RadioButton(this);supertonic.setId(View.generateViewId());supertonic.setText("Supertonic 3 — voix actuelle");
-        RadioButton android=new RadioButton(this);android.setId(View.generateViewId());android.setText("Android — voix française installée hors ligne (test)");
-        engines.addView(supertonic);engines.addView(android);
-        engines.check("android-offline".equals(prefs.getString("ttsEngine","supertonic"))?android.getId():supertonic.getId());panel.addView(engines);
-        panel.addView(label("Android nécessite une voix française hors ligne déjà installée. Aucun remplacement automatique par une voix réseau.",16));
+        panel.addView(label("Voix : Jessica · Piper / Sherpa-ONNX · fr_FR-upmc-medium",18));
+        panel.addView(label("Le moteur est amorcé silencieusement sur le canal vocal avant la première vraie phrase.",16));
         TextView speedLabel=label("Vitesse de lecture",18);panel.addView(speedLabel);SeekBar speed=new SeekBar(this);speed.setMax(100);speed.setProgress(Math.round((prefs.getFloat("speed",1.05f)-0.75f)*100));panel.addView(speed);speed.setContentDescription("Vitesse de lecture de 0,75 à 1,75");
+        panel.addView(button("Diagnostic 1re phrase",INK,()->worker.execute(()->{
+            try{String diag=voice.diagnoseFirstPass(this);ui(()->status.setText("Diagnostic Piper : "+diag));}
+            catch(Exception e){ui(()->status.setText("Diagnostic Piper indisponible."));}
+        })));
         panel.addView(button("Effacer l’historique",RED,this::confirmClear));
         ScrollView settingsScroll=new ScrollView(this);settingsScroll.addView(panel);
-        new AlertDialog.Builder(this).setTitle("Réglages").setView(settingsScroll).setPositiveButton("Enregistrer",(d,w)->{stopReading();prefs.edit().putBoolean("history",keep.isChecked()).putString("voice",voices.getCheckedRadioButtonId()==male.getId()?"M1":"F1").putString("ttsEngine",engines.getCheckedRadioButtonId()==android.getId()?"android-offline":"supertonic").putFloat("speed",0.75f+speed.getProgress()/100f).apply();if(!keep.isChecked())sessions.clearHistory();}).setNegativeButton("Annuler",null).show();
+        new AlertDialog.Builder(this).setTitle("Réglages").setView(settingsScroll).setPositiveButton("Enregistrer",(d,w)->{stopReading();prefs.edit().putBoolean("history",keep.isChecked()).putFloat("speed",0.75f+speed.getProgress()/100f).apply();if(!keep.isChecked())sessions.clearHistory();}).setNegativeButton("Annuler",null).show();
     }
-    private void help(){new AlertDialog.Builder(this).setTitle("Lire avec VisionMaxRead").setMessage("1. Caméra : vise, puis Figer l’image.\n2. Photo : choisis une image du téléphone.\n3. Corrige le texte affiché, puis Lire.\n\nL’aperçu léger sert uniquement à viser. La photo est prise à meilleure résolution. Le manuscrit, les colonnes et le texte peu net peuvent être mal reconnus.\n\nTout fonctionne hors ligne. La première lecture Supertonic peut demander du temps pour charger les modèles. Dans Réglages, une voix Android française hors ligne peut être sélectionnée pour comparer la réactivité. Prévois environ 2 Go libres pour l’installation et les modèles locaux.\n\nLes images et textes originaux ne sont pas enregistrés par l’application. Seul l’historique masqué est conservé ; le masquage automatique peut être incomplet.\n\nVersion 0.1.0 · PaddleOCR PP-OCRv6 Small · Supertonic 3 · NER multilingual BERT. Licences disponibles dans le dépôt et incluses dans l’APK.").setPositiveButton("Fermer",null).show();}
+    private void help(){new AlertDialog.Builder(this).setTitle("Lire avec VisionMaxRead").setMessage("1. Caméra : vise, puis Figer l’image.\n2. Photo : choisis une image du téléphone.\n3. Qwen reconnaît automatiquement le texte hors ligne.\n4. Le bouton PP-OCRv6-Small permet une seconde lecture de la même image et une comparaison.\n5. Corrige le résultat puis Lire : Jessica parle avec Piper / Sherpa-ONNX.\n\nLa première utilisation de Qwen copie son modèle local d’environ 1,3 Go ; cela peut prendre du temps et nécessite de l’espace libre. La voix est amorcée silencieusement afin de protéger le début de la première phrase.\n\nAucune permission INTERNET n’est utilisée par l’application. Les images et textes originaux ne sont pas enregistrés dans l’historique ; seul le texte masqué peut y être conservé.\n\nLAB 0.4.0 · Qwen3.5-0.8B-VL · PP-OCRv6-Small · Jessica Piper/Sherpa-ONNX.").setPositiveButton("Fermer",null).show();}
     @Override protected void onNewIntent(Intent intent){super.onNewIntent(intent);setIntent(intent);incoming(intent);}
     private void incoming(Intent intent){
         if(intent==null)return;String action=intent.getAction();
@@ -236,5 +239,5 @@ public final class MainActivity extends Activity {
     private void ui(Runnable action){runOnUiThread(()->{if(!destroyed)action.run();});}
     @Override protected void onPause(){super.onPause();if(camera!=null)camera.stop();if(freeze!=null)freeze.setEnabled(false);stopReading();}
     @Override protected void onResume(){super.onResume();if(cameraMode&&camera!=null&&checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED){camera.start(sessions.sourceTicket());freeze.setEnabled(true);}}
-    @Override protected void onDestroy(){destroyed=true;sessions.replaceSource();sessions.clearHistory();speech.next();voice.stop();offlineVoice.stop();if(camera!=null)camera.destroy();worker.shutdownNow();super.onDestroy();}
+    @Override protected void onDestroy(){destroyed=true;sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();qwen.release();if(camera!=null)camera.destroy();worker.shutdownNow();super.onDestroy();}
 }
