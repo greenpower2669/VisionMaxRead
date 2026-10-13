@@ -38,3 +38,7 @@ La tentative de gestion de 404 par `gh api --jq '.object.sha // ""'` n'a pas suf
 
 ## VMR-D012 — Publication directe enfin vérifiée
 Le run `38318000959` se termine **success** : la détection du tag avec `git ls-remote` a corrigé la fausse alerte des précédentes tentatives. Le runner a extrait le ZIP source de l'artefact validé (aucun transfert ZIP au téléphone), puis GitHub a publié la préversion `v0.2.0-ocr-test` avec un seul APK. La Release, non-brouillon, et son asset direct ont été confirmés par API GitHub. Re-téléchargement de l'APK depuis la Release et comparaison du SHA-256 `ca39674a8c408a59bcb69cdf93dd422dccd4c1c5adb8e297de8c4d0f6a69e438` réussis. Pas de fusion main ; aucun essai réel Samsung encore réalisé.
+
+
+## VMR-D013 — Expérience Supertonic vs voix Android locale
+Problème signalé : latence importante de la lecture Supertonic. Code observé : quatre sessions ONNX recréées à chaque lecture et huit pas de diffusion par segment ; **aucune mesure temps réel sur Samsung**. La nouvelle branche LAB propose une voix Android française `isNetworkConnectionRequired() == false` et refuse toute voix non disponible ; elle mesure `UtteranceProgressListener.onStart` depuis l'appel `speak`, **pas le premier son audible**. Attention : la synthèse Android dépend de l'engine TTS installé, indépendamment de la permission INTERNET de VisionMaxRead. Vérification CI et essai mode avion requis avant qualification.
