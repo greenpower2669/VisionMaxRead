@@ -33,11 +33,11 @@ jobs:
       - name: Name artifacts
         run: |
           mkdir artifacts
-          cp app/build/outputs/apk/debug/app-debug.apk artifacts/VisionMaxRead-0.2.0-OCR-TEST.apk
-          cp app/build/outputs/bundle/release/app-release.aab artifacts/VisionMaxRead-0.2.0-OCR-TEST-unsigned.aab
+          cp app/build/outputs/apk/debug/app-debug.apk artifacts/VisionMaxRead-0.3.0-LAB.apk
+          cp app/build/outputs/bundle/release/app-release.aab artifacts/VisionMaxRead-0.3.0-LAB-unsigned.aab
           cp app/build/reports/lint-results-debug.html artifacts/
       - uses: actions/upload-artifact@v4
         with:
-          name: VisionMaxRead-0.2.0-OCR-TEST
+          name: VisionMaxRead-0.3.0-LAB
           path: artifacts/
           retention-days: 14
