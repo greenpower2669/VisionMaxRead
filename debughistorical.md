@@ -126,3 +126,16 @@ Artifacts : binaire `11867298469`, metadata `11867068707`. Le poids très élev�
 - AAB unsigned : `1333003862` octets ; SHA-256 `eb570dd4bc5bf64de9e057681aa19ad17b4cc5cda8b160e47be76f5e3274d70f`.
 - Artefact principal : `11892045941` ; métadonnées : `11891441218`.
 - Validation fonctionnelle Samsung encore requise pour observer le journal caméra/OCR et corriger ensuite la formule d’orientation avec les valeurs réelles.
+
+
+### Pré-Release directe VMR-006 DEBUG publiée
+- Feu vert explicite de Fab reçu le 2026-10-14.
+- Tag : `v0.4.0-qwen-piper-debug-test`.
+- Source : `331b0207009477857dd9c2bfa42034558bad2937`.
+- Build source : `38558165918` — SUCCESS.
+- Workflow publication : `38570794104` — SUCCESS.
+- Artefact extrait dans `RUNNER_TEMP`, APK exact vérifié avant publication puis re-téléchargé et re-vérifié après publication.
+- APK seul : `VisionMaxRead-0.4.0-QWEN-PIPER-LAB.apk`.
+- Taille : `1582759577` octets.
+- SHA-256 : `f2d1a7604900413507f524f27bbaccdada7c398ef28eb3d2feab0ac2dde135ba`.
+- `main` inchangée ; AAB unsigned non publié.
