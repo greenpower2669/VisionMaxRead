@@ -65,3 +65,18 @@ Le changement d'orientation est désormais traité sans recréer MainActivity (`
 - Validation Samsung réelle encore requise pour orientation dynamique, qualité OCR, RAM/PSS/chauffe, première phrase Jessica, arrêt/reprise/inactivité et mode avion.
 - Aucun merge `main`, aucune Release.
 
+
+
+## VMR-006 — pré-Release test directe publiée (2026-10-14)
+- Feu vert explicite de Fab reçu pour la pré-Release de test VMR-006.
+- Publication effectuée sans merge de `main`.
+- Tag : `v0.4.0-qwen-piper-lab-test`.
+- Source validée : `cf7083b5d204626617aa17bc1515c8c910f82dc6`.
+- Build source vert : GitHub Actions `38505688283`.
+- Workflow de publication : `38537482245` — succès.
+- Artefact source extrait dans `RUNNER_TEMP` côté GitHub Actions.
+- APK publié seul : `VisionMaxRead-0.4.0-QWEN-PIPER-LAB.apk`.
+- Taille : `1582753113` octets.
+- SHA-256 vérifié avant et après publication : `be97ff8f4b90f3f5aa6cccb9564e1d9a13f0cefab8b341a47fea05da4c3686af`.
+- AAB unsigned non publié.
+- Validation réelle Samsung encore à effectuer.
