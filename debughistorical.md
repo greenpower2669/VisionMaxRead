@@ -227,3 +227,18 @@ Artifacts : binaire `11867298469`, metadata `11867068707`. Le poids très élev�
 - Artefact principal : `11908775821`; métadonnées : `11908402484`.
 - Validation fonctionnelle Samsung requise : la première ligne du prochain log doit annoncer `version=0.4.3-debug code=7`; Qwen doit ensuite montrer `QWEN cache ready path=/data/user/0/fr.visionmaxread.labdebug/cache ...`.
 - Aucun merge de `main`; aucune Release directe 0.4.3 sans feu vert explicite.
+
+
+### Pré-Release directe v0.4.3 DEBUG publiée
+- Demande explicite de Fab : nouvel APK/push.
+- Tag : `v0.4.3-qwen-piper-debug-test`.
+- Source validée : `79e905ab69723716eef22a14738f4df7d3e91dd1`.
+- Build source : `38592842511` — SUCCESS.
+- Workflow de publication : `38601765196` — SUCCESS.
+- Artefact extrait dans `RUNNER_TEMP`, APK vérifié avant publication puis re-téléchargé et re-vérifié après publication.
+- APK seul : `VisionMaxRead-0.4.3-QWEN-PIPER-DEBUG.apk`.
+- Taille : `1582760261` octets.
+- SHA-256 : `7e285969c3b0fd33c2e1bb0f2acb21d92af8154727278b1c4b85c017733186f2`.
+- Package : `fr.visionmaxread.labdebug` ; versionCode `7`.
+- Certificat LAB SHA-256 inchangé : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
+- `main` inchangée ; AAB unsigned non publié.
