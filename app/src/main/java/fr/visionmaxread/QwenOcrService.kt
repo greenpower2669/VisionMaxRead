@@ -19,54 +19,131 @@ class QwenOcrService {
         private const val ASSET = "qwen/Qwen3.5-0.8B-VL_int8.litertlm"
         private const val EXPECTED_SIZE = 1_303_966_384L
         private const val LOCAL = "Qwen3.5-0.8B-VL_int8.litertlm"
+
+        const val PROFILE_AUTO_TURBO = "auto_gpu_gpu"
+        const val PROFILE_GPU_GPU = "gpu_gpu"
+        const val PROFILE_GPU_CPU = "gpu_cpu"
+        const val PROFILE_CPU_GPU = "cpu_gpu"
+        const val PROFILE_CPU4 = "cpu4"
+        const val PROFILE_CPU2 = "cpu2"
+        const val PROFILE_CPU_DEFAULT = "cpu_default"
     }
 
     @Volatile private var engine: Engine? = null
     @Volatile private var released = false
+    @Volatile private var activeRequestedProfile = ""
+    @Volatile private var activeRuntimeProfile = ""
 
-    @Synchronized private fun ensureEngine(context: Context, status: Consumer<String>, progress: java.util.function.IntConsumer): Engine {
-        engine?.let { return it }
+    private data class ProfileSpec(
+        val key: String,
+        val label: String,
+        val backend: Backend,
+        val visionBackend: Backend
+    )
+
+    private fun normalizeProfile(value: String?): String = when (value) {
+        PROFILE_GPU_GPU, PROFILE_GPU_CPU, PROFILE_CPU_GPU,
+        PROFILE_CPU4, PROFILE_CPU2, PROFILE_CPU_DEFAULT -> value
+        else -> PROFILE_AUTO_TURBO
+    }
+
+    private fun specFor(key: String): ProfileSpec = when (key) {
+        PROFILE_GPU_GPU -> ProfileSpec(key, "GPU langage + GPU vision", Backend.GPU(), Backend.GPU())
+        PROFILE_GPU_CPU -> ProfileSpec(key, "GPU langage + CPU vision", Backend.GPU(), Backend.CPU())
+        PROFILE_CPU_GPU -> ProfileSpec(key, "CPU 4 threads + GPU vision", Backend.CPU(threadCount = 4), Backend.GPU())
+        PROFILE_CPU2 -> ProfileSpec(key, "CPU 2 threads + CPU vision", Backend.CPU(threadCount = 2), Backend.CPU())
+        PROFILE_CPU_DEFAULT -> ProfileSpec(key, "CPU auto + CPU vision", Backend.CPU(), Backend.CPU())
+        else -> ProfileSpec(PROFILE_CPU4, "CPU 4 threads + CPU vision", Backend.CPU(threadCount = 4), Backend.CPU())
+    }
+
+    @Synchronized private fun ensureEngine(
+        context: Context,
+        status: Consumer<String>,
+        progress: java.util.function.IntConsumer,
+        requestedProfileRaw: String?
+    ): Engine {
+        val requestedProfile = normalizeProfile(requestedProfileRaw)
+        engine?.let {
+            if (activeRequestedProfile == requestedProfile) return it
+            DebugLog.append(context, "QWEN profile changed requested=" + requestedProfile + " previous=" + activeRequestedProfile + " -> recreate engine")
+            try { it.close() } catch (_: Throwable) {}
+            engine = null
+            activeRequestedProfile = ""
+            activeRuntimeProfile = ""
+        }
         check(!released) { "Qwen engine released" }
+
         progress.accept(5)
         val model = ensureModelFile(context.applicationContext, status, progress)
         progress.accept(50)
-        status.accept("Initialisation de Qwen3.5 Vision sur CPU…")
         val cacheDir = context.cacheDir
         check(cacheDir.isDirectory) { "Android cache directory is missing: " + cacheDir.absolutePath }
         check(cacheDir.canWrite()) { "Android cache directory is not writable: " + cacheDir.absolutePath }
         DebugLog.append(context, "QWEN cache ready path=" + cacheDir.absolutePath + " exists=" + cacheDir.exists() + " writable=" + cacheDir.canWrite())
-        DebugLog.append(context, "QWEN engine initialize start")
-        var created: Engine? = null
-        try {
-            created = Engine(
-                EngineConfig(
-                    modelPath = model.absolutePath,
-                    backend = Backend.CPU(),
-                    visionBackend = Backend.CPU(),
-                    maxNumTokens = 2048,
-                    maxNumImages = 1,
-                    cacheDir = cacheDir.absolutePath
-                )
+
+        val candidates = if (requestedProfile == PROFILE_AUTO_TURBO) {
+            listOf(
+                ProfileSpec(PROFILE_GPU_GPU, "AUTO Turbo GPU/GPU", Backend.GPU(), Backend.GPU()),
+                specFor(PROFILE_CPU4)
             )
-            runBlocking { created.initialize() }
-        } catch (t: Throwable) {
-            try { created?.close() } catch (_: Throwable) {}
-            DebugLog.exception(context, "QWEN engine initialize", t)
-            throw t
+        } else if (requestedProfile == PROFILE_GPU_GPU || requestedProfile == PROFILE_GPU_CPU || requestedProfile == PROFILE_CPU_GPU) {
+            listOf(specFor(requestedProfile), specFor(PROFILE_CPU4))
+        } else {
+            listOf(specFor(requestedProfile))
         }
-        val ready = checkNotNull(created)
-        engine = ready
-        progress.accept(60)
-        status.accept("Qwen prêt.")
-        DebugLog.append(context, "QWEN engine initialize success")
-        return ready
+
+        var lastError: Throwable? = null
+        for ((index, spec) in candidates.withIndex()) {
+            status.accept("Initialisation Qwen : " + spec.label + "…")
+            DebugLog.thermal(context, "QWEN init before requested=" + requestedProfile + " attempt=" + spec.key)
+            DebugLog.append(context, "QWEN engine initialize start requested=" + requestedProfile + " attempt=" + spec.key + " label=" + spec.label)
+            var created: Engine? = null
+            try {
+                created = Engine(
+                    EngineConfig(
+                        modelPath = model.absolutePath,
+                        backend = spec.backend,
+                        visionBackend = spec.visionBackend,
+                        maxNumTokens = 2048,
+                        maxNumImages = 1,
+                        cacheDir = cacheDir.absolutePath
+                    )
+                )
+                runBlocking { created.initialize() }
+                engine = created
+                activeRequestedProfile = requestedProfile
+                activeRuntimeProfile = spec.key
+                progress.accept(60)
+                status.accept("Qwen prêt : " + spec.label + ".")
+                DebugLog.append(context, "QWEN engine initialize success requested=" + requestedProfile + " active=" + spec.key)
+                DebugLog.thermal(context, "QWEN init after active=" + spec.key)
+                return created
+            } catch (t: Throwable) {
+                lastError = t
+                try { created?.close() } catch (_: Throwable) {}
+                DebugLog.exception(context, "QWEN engine initialize profile=" + spec.key, t)
+                DebugLog.thermal(context, "QWEN init failed profile=" + spec.key)
+                if (index + 1 < candidates.size) {
+                    DebugLog.append(context, "QWEN fallback from=" + spec.key + " to=" + candidates[index + 1].key)
+                    status.accept("Mode " + spec.label + " indisponible ; repli CPU 4 threads…")
+                }
+            }
+        }
+        throw checkNotNull(lastError)
     }
 
-    fun recognize(context: Context, bitmap: Bitmap, status: Consumer<String>, progress: java.util.function.IntConsumer): String {
+    fun recognize(
+        context: Context,
+        bitmap: Bitmap,
+        status: Consumer<String>,
+        progress: java.util.function.IntConsumer,
+        requestedProfile: String?
+    ): String {
         val jpeg = ByteArrayOutputStream()
         check(bitmap.compress(Bitmap.CompressFormat.JPEG, 95, jpeg)) { "Image encoding failed" }
-        DebugLog.append(context, "QWEN recognize start image=" + bitmap.width + "x" + bitmap.height)
-        val current = ensureEngine(context, status, progress)
+        DebugLog.append(context, "QWEN recognize start image=" + bitmap.width + "x" + bitmap.height + " requestedProfile=" + normalizeProfile(requestedProfile))
+        DebugLog.thermal(context, "QWEN inference before")
+        val current = ensureEngine(context, status, progress, requestedProfile)
         val prompt = "Transcris exactement tout le texte visible dans cette image. " +
             "Réponds uniquement avec le texte transcrit, sans introduction, commentaire ni balises Markdown. " +
             "Respecte autant que possible les retours à la ligne, accents, nombres et ponctuation. " +
@@ -85,15 +162,18 @@ class QwenOcrService {
         }
         val cleaned = clean(result)
         progress.accept(100)
-        DebugLog.append(context, "QWEN recognize success chars=" + cleaned.length)
+        DebugLog.append(context, "QWEN recognize success chars=" + cleaned.length + " activeProfile=" + activeRuntimeProfile)
+        DebugLog.thermal(context, "QWEN inference after active=" + activeRuntimeProfile)
         return cleaned
     }
 
     @Synchronized fun release() {
         if (released) return
         released = true
-        engine?.close()
+        try { engine?.close() } catch (_: Throwable) {}
         engine = null
+        activeRequestedProfile = ""
+        activeRuntimeProfile = ""
     }
 
     fun isReady(): Boolean = engine != null && !released
