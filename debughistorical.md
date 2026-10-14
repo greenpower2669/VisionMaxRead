@@ -156,3 +156,18 @@ Artifacts : binaire `11867298469`, metadata `11867068707`. Le poids très élev�
 - Artefact principal : `11900497303`; métadonnées : `11900677088`.
 - L'ancienne `fr.visionmaxread.lab` peut rester installée : la nouvelle LAB DEBUG s'installe à côté.
 - Aucun merge de `main` et aucune nouvelle Release directe créée sans nouveau feu vert explicite.
+
+
+### Pré-Release directe v0.4.1 DEBUG publiée
+- Feu vert explicite de Fab reçu le 2026-10-14.
+- Tag : `v0.4.1-qwen-piper-debug-test`.
+- Source validée : `587cba2fcbb2157f364e48fcbc94a9be760832c7`.
+- Build source : `38576497507` — SUCCESS.
+- Workflow de publication : `38578433124` — SUCCESS.
+- Artefact extrait dans `RUNNER_TEMP`, APK exact vérifié avant publication puis re-téléchargé et re-vérifié après publication.
+- APK seul : `VisionMaxRead-0.4.1-QWEN-PIPER-DEBUG.apk`.
+- Taille : `1582759585` octets.
+- SHA-256 : `6edef1b2d4a62d415823023ee56b865fba6623eecc4fced633546d3d88c5053e`.
+- Package : `fr.visionmaxread.labdebug` ; versionCode `5`.
+- Certificat LAB SHA-256 : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
+- `main` inchangée ; AAB unsigned non publié.
