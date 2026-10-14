@@ -65,8 +65,8 @@ jobs:
           # Optional high-articulation French Siwis: pin exact official release
           # asset digest (GitHub release asset 324609218), never download in app.
           archive_siwis="$work/siwis-medium.tar.bz2"
-          curl --fail --location --retry 3 --retry-all-errors \\
-            -o "$archive_siwis" \\
+          curl --fail --location --retry 3 --retry-all-errors \
+            -o "$archive_siwis" \
             "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-fr_FR-siwis-medium.tar.bz2"
           echo "375909aa30842b3a4efa10b1beb1d761af792960ae6873b4d53889f96c66195b  $archive_siwis" | sha256sum -c -
           tar -xjf "$archive_siwis" -C "$work"
