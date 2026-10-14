@@ -242,3 +242,11 @@ Artifacts : binaire `11867298469`, metadata `11867068707`. Le poids très élev�
 - Package : `fr.visionmaxread.labdebug` ; versionCode `7`.
 - Certificat LAB SHA-256 inchangé : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
 - `main` inchangée ; AAB unsigned non publié.
+
+## 2026-10-14 — VMR-007, audit risques avant validation matérielle
+- Le bundle PaddleOCR-VL-1.6 (1 390 305 472 o, SHA256 314df8b34d6911990d488e825602550a5bbcc5d6700cb1a8914e853e9043f4f1) est trop gros pour l'ajouter naïvement à l'APK Qwen existant. Import hors ligne avec picker Android et validation SHA256 (aucune permission INTERNET).
+- Le modèle travaille en 560×560 fixe d'après sa fiche ; risques sur menus et petits caractères. Benchmark Samsung nécessaire, ne pas revendiquer ses scores de benchmark comme taux OCR local.
+- Deux grosses instances LiteRT simultanées risquent l'OOM : la file Qwen commune décharge le moteur actif avant le suivant ; PP-OCR reste sur worker distinct.
+- Le modèle Siwis source de k2-fsa est vérifié par SHA256 d'archive 375909aa30842b3a4efa10b1beb1d761af792960ae6873b4d53889f96c66195b, sans téléchargement appli. Tester prosodie en français ; Kokoro français pas encore validé dans Sherpa 1.13.4.
+- Attention au premier caractère, à la reprise AudioTrack, au choix du texte utilisateur et à la stabilité Android 16 ; la CI teste le packaging mais pas le matériel.
+- Actions GitHub anciennes déclenchées par les commits intermédiaires : seule une CI verte pour le dernier HEAD fait preuve.
