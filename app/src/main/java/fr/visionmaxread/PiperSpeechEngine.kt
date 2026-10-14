@@ -15,20 +15,38 @@ import java.util.function.BooleanSupplier
 import java.util.function.Consumer
 import kotlin.math.abs
 
-/** Sherpa-ONNX/Piper UPMC medium. Jessica is speaker 0; Pierre is speaker 1. */
+/** Offline Sherpa-ONNX/Piper: Siwis articulation mode or original Jessica fallback. */
 class PiperSpeechEngine : SpeechEngine {
     companion object {
         private const val ASSET_DIR = "tts/piper/jessica"
         private const val MODEL = "fr_FR-upmc-medium.onnx"
+        private const val HQ_ASSET_DIR = "tts/piper/siwis"
+        private const val HQ_MODEL = "fr_FR-siwis-medium.onnx"
         private const val TOKENS = "tokens.txt"
         private const val DATA = "espeak-ng-data"
-        private const val JESSICA_SID = 0
+        private const val VOICE_SID = 0
         private const val GUARD_MS = 250
         private const val MARKER = ".visionmaxread-sherpa-1.13.4-upmc"
         private const val WARM_TEXT = "Ah, bon."
     }
 
     private val player = PersistentVoicePcmPlayer()
+    @Volatile private var highQuality = true
+
+    fun voiceName(): String = if (highQuality) "Siwis" else "Jessica"
+    private fun currentAssetDir(): String = if (highQuality) HQ_ASSET_DIR else ASSET_DIR
+    private fun currentModel(): String = if (highQuality) HQ_MODEL else MODEL
+
+    /** Called between utterances, on the serial speech worker. Never keep two TTS engines. */
+    @Synchronized fun selectVoice(hiFi: Boolean) {
+        if (highQuality == hiFi) return
+        tts?.release()
+        tts = null
+        player.release()
+        warmed = false
+        firstPassDiagnostic = null
+        highQuality = hiFi
+    }
     @Volatile private var tts: OfflineTts? = null
     @Volatile private var warmed = false
     @Volatile private var released = false
@@ -41,12 +59,13 @@ class PiperSpeechEngine : SpeechEngine {
     @Synchronized override fun initialize(context: Context, status: Consumer<String>?) {
         check(!released) { "Piper engine released" }
         if (tts != null) return
-        status?.accept("Chargement de Sherpa-ONNX / Piper Jessica…")
+        status?.accept("Chargement de Sherpa-ONNX / Piper " + voiceName() + "…")
         val started = SystemClock.elapsedRealtime()
         val dataDir = prepareEspeakData(context.applicationContext)
+        val assetDir = currentAssetDir()
         val vits = OfflineTtsVitsModelConfig(
-            model = "$ASSET_DIR/$MODEL",
-            tokens = "$ASSET_DIR/$TOKENS",
+            model = "$assetDir/${currentModel()}",
+            tokens = "$assetDir/$TOKENS",
             dataDir = dataDir.absolutePath
         )
         tts = OfflineTts(
@@ -58,7 +77,7 @@ class PiperSpeechEngine : SpeechEngine {
             )
         )
         lastInitializeMs = SystemClock.elapsedRealtime() - started
-        status?.accept("Piper Jessica chargé.")
+        status?.accept("Piper " + voiceName() + " chargé.")
     }
 
     @Synchronized override fun warmUp(context: Context, cancelled: BooleanSupplier) {
@@ -69,11 +88,11 @@ class PiperSpeechEngine : SpeechEngine {
         val engine = requireNotNull(tts)
         val audio = if (firstPassDiagnostic == null) {
             val firstStart = SystemClock.elapsedRealtime()
-            val first = engine.generate(WARM_TEXT, JESSICA_SID, 1.0f)
+            val first = engine.generate(WARM_TEXT, VOICE_SID, 1.0f)
             val firstMs = SystemClock.elapsedRealtime() - firstStart
             checkCancelled(cancelled)
             val secondStart = SystemClock.elapsedRealtime()
-            val second = engine.generate(WARM_TEXT, JESSICA_SID, 1.0f)
+            val second = engine.generate(WARM_TEXT, VOICE_SID, 1.0f)
             val secondMs = SystemClock.elapsedRealtime() - secondStart
             val firstHash = hash(first.samples)
             val secondHash = hash(second.samples)
@@ -86,7 +105,7 @@ class PiperSpeechEngine : SpeechEngine {
                 "; fréquence=" + second.sampleRate + " Hz. " + verdict
             second
         } else {
-            engine.generate(WARM_TEXT, JESSICA_SID, 1.0f)
+            engine.generate(WARM_TEXT, VOICE_SID, 1.0f)
         }
         checkCancelled(cancelled)
         player.warm(audio.samples, audio.sampleRate, cancelled)
@@ -104,10 +123,10 @@ class PiperSpeechEngine : SpeechEngine {
         for ((index, segment) in chunks.withIndex()) {
             checkCancelled(cancelled)
             if (segment.isBlank()) continue
-            status.accept("Jessica · passage " + (index + 1) + " / " + chunks.size)
-            val audio = engine.generate(segment, JESSICA_SID, speed)
+            status.accept(voiceName() + " · passage " + (index + 1) + " / " + chunks.size)
+            val audio = engine.generate(segment, VOICE_SID, speed)
             checkCancelled(cancelled)
-            player.play(audio.samples, audio.sampleRate, GUARD_MS, cancelled)
+            player.play(audio.samples, audio.sampleRate, if (index == 0) GUARD_MS else 0, cancelled)
         }
         lastSpeechMs = SystemClock.elapsedRealtime() - speechStarted
     }
@@ -135,17 +154,18 @@ class PiperSpeechEngine : SpeechEngine {
     override fun isReady(): Boolean = tts != null && !released
 
     private fun prepareEspeakData(context: Context): File {
-        val root = File(context.filesDir, "piper_jessica")
+        val root = File(context.filesDir, if (highQuality) "piper_siwis" else "piper_jessica")
+        val assetDir = currentAssetDir()
         val destination = File(root, DATA)
-        val marker = File(destination, MARKER)
+        val marker = File(destination, MARKER + if (highQuality) "-siwis" else "-upmc")
         if (!marker.exists()) {
             if (destination.exists()) destination.deleteRecursively()
             destination.mkdirs()
-            copyAssetTree(context, "$ASSET_DIR/$DATA", destination)
-            marker.writeText("sherpa-onnx-1.13.4;upmc-medium;sid=0")
+            copyAssetTree(context, "$assetDir/$DATA", destination)
+            marker.writeText("sherpa-onnx-1.13.4;" + voiceName() + ";sid=0")
         }
-        context.assets.open("$ASSET_DIR/$MODEL").use { }
-        context.assets.open("$ASSET_DIR/$TOKENS").use { }
+        context.assets.open("$assetDir/${currentModel()}").use { }
+        context.assets.open("$assetDir/$TOKENS").use { }
         return destination
     }
 
