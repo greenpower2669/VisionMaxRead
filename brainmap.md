@@ -173,3 +173,19 @@ La référence binaire canonique de la LAB VMR-006 est le run `38505688283` sur 
 - Valeurs caméra Samsung relevées pour la suite : back camera id=0, sensor=90°, display=0°, preview=640x480, still=4000x3000, TextureView=1012x759, transform actuel=90°, JPEG=90°.
 - Correction du redressement d'aperçu caméra non incluse dans ce push ; conserver ces valeurs pour l'audit/correctif dédié.
 - Aucun merge de `main` ; aucune nouvelle Release directe créée sans feu vert explicite.
+
+
+### Pré-Release directe v0.4.2 DEBUG publiée
+- Feu vert explicite de Fab reçu le 2026-10-14.
+- Tag : `v0.4.2-qwen-piper-debug-test`.
+- Source validée : `208032d92e682d3b9e43b621627bd7efc579cf78`.
+- Build source : `38583098184` — SUCCESS.
+- Workflow de publication : `38586381436` — SUCCESS.
+- Artefact extrait dans `RUNNER_TEMP`, APK exact vérifié avant publication puis re-téléchargé et re-vérifié après publication.
+- APK seul : `VisionMaxRead-0.4.2-QWEN-PIPER-DEBUG.apk`.
+- Taille : `1582759977` octets.
+- SHA-256 : `74f6d2c71189d71214a750837034ed18c5ea7e1a081bcb3979ddf7e59f68d2a6`.
+- Package : `fr.visionmaxread.labdebug` ; versionCode `6`.
+- Certificat LAB SHA-256 : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
+- Correctif principal : création/vérification explicite du cache LiteRT `qwen_litert_cache` avant initialisation du moteur.
+- `main` inchangée ; AAB unsigned non publié.
