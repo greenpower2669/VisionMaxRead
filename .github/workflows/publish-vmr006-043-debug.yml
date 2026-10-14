@@ -1,0 +1,117 @@
+name: Publish VisionMaxRead VMR-006 v0.4.3 DEBUG direct APK
+
+on:
+  push:
+    branches:
+      - publish/vmr006-043-debug-direct-apk
+    paths:
+      - .github/workflows/publish-vmr006-043-debug.yml
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: visionmaxread-vmr006-043-debug-prerelease
+  cancel-in-progress: false
+
+jobs:
+  publish-debug-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      RUN_ID: '38592842511'
+      BUILD_SHA: '79e905ab69723716eef22a14738f4df7d3e91dd1'
+      BUILD_BRANCH: 'feature/vmr006-qwen-camera-fix-043'
+      TAG: 'v0.4.3-qwen-piper-debug-test'
+      APK_NAME: 'VisionMaxRead-0.4.3-QWEN-PIPER-DEBUG.apk'
+      APK_BYTES: '1582760261'
+      APK_SHA256: '7e285969c3b0fd33c2e1bb0f2acb21d92af8154727278b1c4b85c017733186f2'
+      APK_PACKAGE: 'fr.visionmaxread.labdebug'
+      APK_VERSION_CODE: '7'
+      APK_CERT_SHA256: '2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182'
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Check out publication branch
+        uses: actions/checkout@v4
+
+      - name: Verify approved signed debug build
+        shell: bash
+        run: |
+          set -euo pipefail
+          data="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}")"
+          test "$(echo "$data" | jq -r '.head_sha')" = "$BUILD_SHA"
+          test "$(echo "$data" | jq -r '.head_branch')" = "$BUILD_BRANCH"
+          test "$(echo "$data" | jq -r '.status')" = completed
+          test "$(echo "$data" | jq -r '.conclusion')" = success
+
+      - name: Download and extract artifact in RUNNER_TEMP
+        uses: actions/download-artifact@v4
+        with:
+          name: VisionMaxRead-0.4.3-QWEN-PIPER-DEBUG
+          run-id: 38592842511
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/vmr006-043
+
+      - name: Verify exact APK before publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="${RUNNER_TEMP}/vmr006-043/${APK_NAME}"
+          test -f "$APK"
+          test "$(stat -c %s "$APK")" = "$APK_BYTES"
+          test "$(sha256sum "$APK" | awk '{print $1}')" = "$APK_SHA256"
+          unzip -t "$APK" >/dev/null
+          build_tools="${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools/36.0.0"
+          if [ -x "$build_tools/aapt" ]; then
+            badging="$("$build_tools/aapt" dump badging "$APK" | head -n1)"
+            echo "$badging" | grep -F "name='${APK_PACKAGE}'"
+            echo "$badging" | grep -F "versionCode='${APK_VERSION_CODE}'"
+          fi
+          if [ -x "$build_tools/apksigner" ]; then
+            cert="$("$build_tools/apksigner" verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print tolower($2); exit}')"
+            test "$cert" = "$APK_CERT_SHA256"
+          fi
+
+      - name: Prepare prerelease notes
+        shell: bash
+        run: |
+          cat > "${RUNNER_TEMP}/notes.md" <<'EOF'
+          # VisionMaxRead VMR-006 v0.4.3 DEBUG
+
+          - Correction aperçu caméra TextureView en paysage
+          - JPEG figé conservé inchangé
+          - Qwen utilise directement le cache Android racine
+          - Journal debug avec package/version/versionCode
+          - Package : fr.visionmaxread.labdebug
+          - versionCode 7 / versionName 0.4.3-debug
+          - Signature LAB persistante
+          - ARM64 uniquement
+          - Aucune permission INTERNET
+          - APK uniquement
+          EOF
+
+      - name: Publish isolated prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="${RUNNER_TEMP}/vmr006-043/${APK_NAME}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            test "$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)" = true
+            gh release upload "$TAG" "$APK" --clobber
+          else
+            gh release create "$TAG" "$APK"               --target "$BUILD_SHA"               --title "VisionMaxRead VMR-006 v0.4.3 DEBUG"               --notes-file "${RUNNER_TEMP}/notes.md"               --prerelease
+          fi
+
+      - name: Re-download and verify published APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/verify"
+          gh release download "$TAG" --pattern "$APK_NAME" --dir "${RUNNER_TEMP}/verify"
+          PUBLISHED="${RUNNER_TEMP}/verify/${APK_NAME}"
+          test "$(stat -c %s "$PUBLISHED")" = "$APK_BYTES"
+          test "$(sha256sum "$PUBLISHED" | awk '{print $1}')" = "$APK_SHA256"
+          test "$(gh release view "$TAG" --json assets --jq '.assets | length')" = 1
+          echo "DIRECT_APK_URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${APK_NAME}"
