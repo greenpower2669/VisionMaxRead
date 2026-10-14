@@ -1,0 +1,141 @@
+name: Publish VisionMaxRead VMR-006 v0.4.2 DEBUG direct APK
+
+on:
+  push:
+    branches:
+      - publish/vmr006-042-debug-direct-apk
+    paths:
+      - .github/workflows/publish-vmr006-042-debug.yml
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: visionmaxread-vmr006-042-debug-prerelease
+  cancel-in-progress: false
+
+jobs:
+  publish-debug-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      RUN_ID: '38583098184'
+      BUILD_SHA: '208032d92e682d3b9e43b621627bd7efc579cf78'
+      BUILD_BRANCH: 'feature/vmr006-qwen-cache-fix'
+      TAG: 'v0.4.2-qwen-piper-debug-test'
+      ARTIFACT_NAME: 'VisionMaxRead-0.4.2-QWEN-PIPER-DEBUG'
+      APK_NAME: 'VisionMaxRead-0.4.2-QWEN-PIPER-DEBUG.apk'
+      APK_BYTES: '1582759977'
+      APK_SHA256: '74f6d2c71189d71214a750837034ed18c5ea7e1a081bcb3979ddf7e59f68d2a6'
+      APK_PACKAGE: 'fr.visionmaxread.labdebug'
+      APK_VERSION_CODE: '6'
+      APK_CERT_SHA256: '2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182'
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Check out publication branch
+        uses: actions/checkout@v4
+
+      - name: Verify approved signed debug build
+        shell: bash
+        run: |
+          set -euo pipefail
+          data="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}")"
+          test "$(echo "$data" | jq -r '.head_sha')" = "$BUILD_SHA"
+          test "$(echo "$data" | jq -r '.head_branch')" = "$BUILD_BRANCH"
+          test "$(echo "$data" | jq -r '.status')" = completed
+          test "$(echo "$data" | jq -r '.conclusion')" = success
+          echo "Verified source run $RUN_ID at $BUILD_SHA"
+
+      - name: Download and extract artifact in RUNNER_TEMP
+        uses: actions/download-artifact@v4
+        with:
+          name: VisionMaxRead-0.4.2-QWEN-PIPER-DEBUG
+          run-id: 38583098184
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/vmr006-042
+
+      - name: Verify exact APK before publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="${RUNNER_TEMP}/vmr006-042/${APK_NAME}"
+          test -f "$APK"
+          test ! -L "$APK"
+          test "$(stat -c %s "$APK")" = "$APK_BYTES"
+          test "$(sha256sum "$APK" | awk '{print $1}')" = "$APK_SHA256"
+          unzip -t "$APK" >/dev/null
+          build_tools="${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools/36.0.0"
+          if [ -x "$build_tools/aapt" ]; then
+            badging="$("$build_tools/aapt" dump badging "$APK" | head -n1)"
+            echo "$badging"
+            echo "$badging" | grep -F "name='${APK_PACKAGE}'"
+            echo "$badging" | grep -F "versionCode='${APK_VERSION_CODE}'"
+          fi
+          if [ -x "$build_tools/apksigner" ]; then
+            cert="$("$build_tools/apksigner" verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print tolower($2); exit}')"
+            test "$cert" = "$APK_CERT_SHA256"
+          fi
+          echo "Exact APK verified before publication."
+
+      - name: Prepare prerelease notes
+        shell: bash
+        run: |
+          cat > "${RUNNER_TEMP}/vmr006-042-notes.md" <<'EOF'
+          # VisionMaxRead VMR-006 v0.4.2 DEBUG — Qwen LiteRT cache fix
+
+          Préversion de test Android hors ligne.
+
+          - Correction du crash LiteRT-LM lié au dossier `qwen_litert_cache`
+          - Création et vérification explicite du cache avant initialisation de Qwen
+          - Nettoyage du moteur partiellement créé en cas d'échec
+          - Package debug isolé : `fr.visionmaxread.labdebug`
+          - `versionCode 6`, `versionName 0.4.2-debug`
+          - Signature LAB persistante
+          - PP-OCR indépendant de Qwen
+          - Progression OCR visible
+          - Journal debug local OCR/caméra
+          - ARM64 uniquement
+          - Aucune permission INTERNET dans l'APK vérifié
+          - APK uniquement ; AAB unsigned non publié
+
+          Source validée : `208032d92e682d3b9e43b621627bd7efc579cf78`
+          GitHub Actions : `38583098184`
+          APK SHA-256 : `74f6d2c71189d71214a750837034ed18c5ea7e1a081bcb3979ddf7e59f68d2a6`
+          Certificat LAB SHA-256 : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`
+
+          `main` reste inchangée.
+          EOF
+
+      - name: Publish isolated prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="${RUNNER_TEMP}/vmr006-042/${APK_NAME}"
+          EXISTING_TAG_SHA="$(git ls-remote --refs --tags origin "refs/tags/${TAG}" | cut -f1)"
+          if [ -n "$EXISTING_TAG_SHA" ] && [ "$EXISTING_TAG_SHA" != "$BUILD_SHA" ]; then
+            echo "::error::Existing tag $TAG points to another commit"
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            test "$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)" = true
+            gh release upload "$TAG" "$APK" --clobber
+          else
+            gh release create "$TAG" "$APK"               --target "$BUILD_SHA"               --title "VisionMaxRead VMR-006 v0.4.2 DEBUG"               --notes-file "${RUNNER_TEMP}/vmr006-042-notes.md"               --prerelease
+          fi
+
+      - name: Re-download and verify published APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)" = true
+          test "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = false
+          mkdir -p "${RUNNER_TEMP}/verify"
+          gh release download "$TAG" --pattern "$APK_NAME" --dir "${RUNNER_TEMP}/verify"
+          PUBLISHED="${RUNNER_TEMP}/verify/${APK_NAME}"
+          test -f "$PUBLISHED"
+          test "$(stat -c %s "$PUBLISHED")" = "$APK_BYTES"
+          test "$(sha256sum "$PUBLISHED" | awk '{print $1}')" = "$APK_SHA256"
+          test "$(gh release view "$TAG" --json assets --jq '.assets | length')" = 1
+          echo "DIRECT_APK_URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${APK_NAME}"
