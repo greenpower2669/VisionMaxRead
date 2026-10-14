@@ -136,7 +136,7 @@ class SpecializedOcrService {
             }
         }
         DebugLog.append(context, "SPECIALIST done chars=" + result.length)
-        return result.trim().removePrefix("&#x200B;").trim()
+        return result.trim()
     }
 
     @Synchronized fun unload() {
