@@ -75,3 +75,18 @@ Pour satisfaire littéralement « première et deuxième génération du même t
 
 ### VMR-006 — État de livraison technique après CI (14/10/2026)
 Le code SHA `cf7083b5d204626617aa17bc1515c8c910f82dc6` est la version construite et vérifiée par le run `38505688283` vert. APK test identifié : `VisionMaxRead-0.4.0-QWEN-PIPER-LAB.apk`, 1 582 753 113 octets, SHA-256 `be97ff8f4b90f3f5aa6cccb9564e1d9a13f0cefab8b341a47fea05da4c3686af`. AAB unsigned : 1 333 001 356 octets, SHA-256 `977679dce7a4726f99a5f1219db3db99438002b8d694757369d768de22b680e2`. Artifacts Actions : `11867298469` (binaires) et `11867068707` (preuve compacte). Ceci est une preuve de build, pas encore une preuve d'usage Samsung. Interdictions inchangées : pas de merge main, pas de Release sans nouveau feu vert.
+
+
+## VMR-006 — pré-Release test directe publiée (2026-10-14)
+- Feu vert explicite de Fab reçu pour la pré-Release de test VMR-006.
+- Publication effectuée sans merge de `main`.
+- Tag : `v0.4.0-qwen-piper-lab-test`.
+- Source validée : `cf7083b5d204626617aa17bc1515c8c910f82dc6`.
+- Build source vert : GitHub Actions `38505688283`.
+- Workflow de publication : `38537482245` — succès.
+- Artefact source extrait dans `RUNNER_TEMP` côté GitHub Actions.
+- APK publié seul : `VisionMaxRead-0.4.0-QWEN-PIPER-LAB.apk`.
+- Taille : `1582753113` octets.
+- SHA-256 vérifié avant et après publication : `be97ff8f4b90f3f5aa6cccb9564e1d9a13f0cefab8b341a47fea05da4c3686af`.
+- AAB unsigned non publié.
+- Validation réelle Samsung encore à effectuer.
