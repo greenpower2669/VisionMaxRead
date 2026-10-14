@@ -1,0 +1,133 @@
+name: Publish VisionMaxRead VMR-006 direct APK
+
+on:
+  push:
+    branches:
+      - publish/vmr006-direct-apk
+    paths:
+      - .github/workflows/publish-vmr006-test.yml
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: visionmaxread-vmr006-prerelease
+  cancel-in-progress: false
+
+jobs:
+  publish-test-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      RUN_ID: '38505688283'
+      BUILD_SHA: 'cf7083b5d204626617aa17bc1515c8c910f82dc6'
+      BUILD_BRANCH: 'feature/qwen-piper-camera-v1'
+      TAG: 'v0.4.0-qwen-piper-lab-test'
+      ARTIFACT_NAME: 'VisionMaxRead-0.4.0-QWEN-PIPER-LAB'
+      APK_NAME: 'VisionMaxRead-0.4.0-QWEN-PIPER-LAB.apk'
+      APK_BYTES: '1582753113'
+      APK_SHA256: 'be97ff8f4b90f3f5aa6cccb9564e1d9a13f0cefab8b341a47fea05da4c3686af'
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Check out publication branch
+        uses: actions/checkout@v4
+
+      - name: Verify approved source build
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACTUAL_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.head_sha')"
+          STATUS="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.status')"
+          CONCLUSION="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.conclusion')"
+          BRANCH="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.head_branch')"
+          test "$ACTUAL_SHA" = "$BUILD_SHA"
+          test "$STATUS" = completed
+          test "$CONCLUSION" = success
+          test "$BRANCH" = "$BUILD_BRANCH"
+          echo "Verified source run $RUN_ID at $BUILD_SHA"
+
+      - name: Download and extract verified artifact in RUNNER_TEMP
+        uses: actions/download-artifact@v4
+        with:
+          name: VisionMaxRead-0.4.0-QWEN-PIPER-LAB
+          run-id: 38505688283
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/vmr006
+
+      - name: Validate exact APK before publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="${RUNNER_TEMP}/vmr006/${APK_NAME}"
+          test -f "$APK"
+          test ! -L "$APK"
+          ACTUAL_BYTES="$(stat -c %s "$APK")"
+          ACTUAL_SHA="$(sha256sum "$APK" | awk '{print $1}')"
+          test "$ACTUAL_BYTES" = "$APK_BYTES"
+          test "$ACTUAL_SHA" = "$APK_SHA256"
+          unzip -t "$APK" >/dev/null
+          echo "Validated APK: $APK_NAME"
+          echo "Bytes: $ACTUAL_BYTES"
+          echo "SHA256: $ACTUAL_SHA"
+          echo "Only the APK will be published; the unsigned AAB remains unpublished."
+
+      - name: Prepare prerelease notes
+        shell: bash
+        run: |
+          cat > "${RUNNER_TEMP}/vmr006-release-notes.md" <<'EOF'
+          # VisionMaxRead VMR-006 — Qwen + Piper LAB
+
+          Préversion expérimentale Android destinée aux essais Samsung, non destinée à Google Play.
+
+          - Qwen3.5 0.8B VL devient l'OCR automatique hors ligne.
+          - PP-OCRv6-Small reste disponible pour comparaison sur exactement la même image.
+          - TTS Sherpa-ONNX / Piper français, voix Jessica (speaker 0), avec warm-up réel et AudioTrack persistant.
+          - Correction de l'orientation caméra / image gelée / OCR.
+          - ARM64 uniquement.
+          - Aucune permission INTERNET dans l'APK vérifié.
+          - Cette pré-Release publie uniquement l'APK de test, jamais l'AAB unsigned.
+
+          Source validée : commit `cf7083b5d204626617aa17bc1515c8c910f82dc6`
+          Build GitHub Actions : `38505688283`
+          APK SHA-256 : `be97ff8f4b90f3f5aa6cccb9564e1d9a13f0cefab8b341a47fea05da4c3686af`
+          APK taille : `1582753113` octets.
+
+          `main` n'est pas fusionnée ni modifiée par cette publication.
+          EOF
+
+      - name: Publish isolated prerelease with direct APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="${RUNNER_TEMP}/vmr006/${APK_NAME}"
+          EXISTING_TAG_SHA="$(git ls-remote --refs --tags origin "refs/tags/${TAG}" | cut -f1)"
+          if [ -n "$EXISTING_TAG_SHA" ] && [ "$EXISTING_TAG_SHA" != "$BUILD_SHA" ]; then
+            echo "::error::Existing tag $TAG points to unapproved commit $EXISTING_TAG_SHA"
+            exit 1
+          fi
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            test "$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)" = true
+            gh release upload "$TAG" "$APK" --clobber
+          else
+            gh release create "$TAG" "$APK"               --target "$BUILD_SHA"               --title "VisionMaxRead VMR-006 v0.4.0 QWEN + PIPER LAB"               --notes-file "${RUNNER_TEMP}/vmr006-release-notes.md"               --prerelease
+          fi
+
+      - name: Re-download and verify published direct APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)" = true
+          test "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = false
+          mkdir -p "${RUNNER_TEMP}/vmr006-verify"
+          gh release download "$TAG" --pattern "$APK_NAME" --dir "${RUNNER_TEMP}/vmr006-verify"
+          PUBLISHED="${RUNNER_TEMP}/vmr006-verify/${APK_NAME}"
+          test -f "$PUBLISHED"
+          test "$(stat -c %s "$PUBLISHED")" = "$APK_BYTES"
+          test "$(sha256sum "$PUBLISHED" | awk '{print $1}')" = "$APK_SHA256"
+          ASSET_COUNT="$(gh release view "$TAG" --json assets --jq '.assets | length')"
+          test "$ASSET_COUNT" = 1
+          echo "VERIFIED_DIRECT_APK_SHA256=$APK_SHA256"
+          echo "DIRECT_APK_URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${APK_NAME}"
