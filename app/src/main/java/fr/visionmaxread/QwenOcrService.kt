@@ -89,11 +89,17 @@ class QwenOcrService {
         return cleaned
     }
 
+    /** Serialized by MainActivity's Qwen worker before specialist OCR loads. */
+    @Synchronized fun unload() {
+        val previous = engine
+        engine = null
+        if (previous != null) try { previous.close() } catch (_: Throwable) {}
+    }
+
     @Synchronized fun release() {
         if (released) return
         released = true
-        engine?.close()
-        engine = null
+        unload()
     }
 
     fun isReady(): Boolean = engine != null && !released
