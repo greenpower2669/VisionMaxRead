@@ -154,3 +154,15 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - SHA-256 vérifié avant et après publication : `be97ff8f4b90f3f5aa6cccb9564e1d9a13f0cefab8b341a47fea05da4c3686af`.
 - AAB unsigned non publié.
 - Validation réelle Samsung encore à effectuer.
+
+
+## VMR-006 — instrumentation OCR/caméra (2026-10-14)
+- Branche : `feature/vmr006-ocr-camera-debug` ; `main` inchangée.
+- Retour Samsung : Qwen/PP-OCR perçus comme inactifs ; aperçu caméra encore mal orienté alors que l'Activity tourne.
+- PP-OCRv6-Small est désormais réellement indépendant du worker Qwen et reste utilisable même si Qwen bloque ou échoue.
+- Bouton PP-OCR grisé visiblement lorsqu'il est indisponible/en cours.
+- Barre de progression OCR ajoutée : progression réelle pendant la copie locale du modèle Qwen ; mode indéterminé pendant les phases sans télémétrie fiable (initialisation/inférence), pas de faux pourcentage.
+- Journal debug privé ajouté : dimensions image, étapes OCR, temps, PSS processus, erreurs, paramètres caméra (sensor/display/rotation/buffer), sans texte OCR brut ni image.
+- Le journal est consultable/copier/effaçable depuis Réglages > Journal debug.
+- Orientation caméra : instrumentation seulement dans ce push ; aucune nouvelle formule de transform appliquée avant retour des valeurs réelles Samsung.
+- Validation CI Android attendue avant APK de test.
