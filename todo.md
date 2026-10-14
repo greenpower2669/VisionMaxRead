@@ -307,7 +307,8 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - [ ] Comparer résultats Qwen vs PP-OCRv6 vs PaddleOCR-VL-1.6 sur les mêmes photos françaises.
 - [ ] Tester audio Siwis vs Jessica (qualité subjective, chiffres, première syllabe, phonèmes, arrêt/reprise, longs textes).
 - [ ] Auditer OvisOCR2 en branche séparée (GGUF + mmproj + runtime Android natif) ; option non intégrée.
-- [ ] Consigner RAM/PSS/chauffe, version et signature exacte de l'APK CI avant de demander feu vert Release/merge.
+- [ ] Consigner RAM/PSS/chauffe sur Samsung, puis demander feu vert distinct avant toute Release/merge.
+- [x] Fournir un APK seul non zippé sur GitHub Actions v7 (run 38635132541, artefact 11927379292).
 
 ### VMR-007 — preuve CI complète (14/10/2026)
 - HEAD compilé et validé : `fb59d7b1a16438f1f6d264657fc865044b687fc8`.
@@ -321,3 +322,12 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - Modèle additionnel PaddleOCR-VL-1.6 non intégré à l'APK : import manuellement via SAF + SHA256, format .litertlm (1 390 305 472 octets, `314df8b34d6911990d488e825602550a5bbcc5d6700cb1a8914e853e9043f4f1`).
 - CI ≠ validation Samsung : test matériel Qwen/cache/caméra, import OCR, comparatif précision, Siwis/Jessica, RAM/température toujours nécessaires.
 - Ne pas merger `main` ni créer de Release sans autorisation expresse.
+
+### VMR-007 — livraison APK direct, sans ZIP (14/10/2026)
+- Changement GitHub Actions : `actions/upload-artifact@v7`, `archive: false` pour l'APK unique et pour l'AAB unsigned dans deux artefacts distincts ; upload de métadonnées séparé.
+- CI source du packaging : `7ff23a04dc69e6327bac611485bdb2d511417fa4`, run https://github.com/greenpower2669/VisionMaxRead/actions/runs/38635132541 — SUCCESS. Mêmes sources Android version 0.4.4-debug code 8, même clé LAB, mêmes tests verts.
+- **APK Android seul (non zippé, 1 651 093 817 octets)** : https://github.com/greenpower2669/VisionMaxRead/actions/runs/38635132541/artifacts/11927379292 ; artefact nommé `VisionMaxRead-0.4.4-QWEN-SIWIS-DEBUG.apk`.
+- AAB unsigned non installable (distinct) : artefact `11927274270`. Métadonnées : `11926934378`.
+- Cette voie de livraison GitHub n'est ni une Release ni un merge `main`.
+- La branche ajoute une correction de notices : `THIRD_PARTY_NOTICES.md` mentionne désormais Siwis CC-BY 4.0 et la version Sherpa-ONNX réelle 1.13.4.
+- Reste à valider matériellement sur Samsung la qualité vocale et la lecture PaddleOCR-VL importé ; la CI ne démontre pas les performances réelles.
