@@ -65,3 +65,9 @@ Run `38435343498` : téléchargement Sherpa/Piper réussi, téléchargement Qwen
 Run `38436112539` : Kotlin 2.4 franchit la compilation Kotlin, puis Android échoue à `:app:mergeDebugNativeLibs` car deux `lib/arm64-v8a/libonnxruntime.so` sont présentes : Sherpa-ONNX 1.13.8 et ONNX Runtime Android 1.23.2 du projet. Audit upstream du tag Sherpa v1.13.8 : son build Android ARM64 utilise ONNX Runtime **1.28.2**. Correction choisie : aligner l'ORT Java/Android de Paddle + NER sur 1.28.2 et supprimer seulement la copie native ORT à l'intérieur de l'AAR Sherpa après vérification SHA de l'AAR. Une seule ORT 1.28.2 doit donc être empaquetée.
 
 La CI montrait aussi des avertissements D8/R8 sur les métadonnées Kotlin 2.4. Le projet conserve AGP 8.13 mais surcharge R8 vers 9.4.14 via `settings.gradle`, mécanisme officiellement supporté pour AGP 9.2 et antérieurs. Nouvelle CI requise.
+
+
+## VMR-D018 — ORT 1.28.2 non publié sur Maven et orientation encore verrouillée (14/10/2026)
+Run `38436956702` : 47 contrôles core passent, puis `:ppocr-sdk:checkDebugAarMetadata` échoue car `com.microsoft.onnxruntime:onnxruntime-android:1.28.2` est introuvable dans Google/Maven Central. Le correctif D017 était donc conceptuellement aligné avec Sherpa 1.13.8 mais non résolvable par Gradle. Correction : Sherpa 1.13.4 (AAR SHA-256 `03f9c4df965f21c71269365a7951a7f23b5696fddd093fa318c80d65550ab780`) + ORT Android 1.27.0, avec une seule copie native empaquetée.
+
+Audit simultané VMR-006 : le manifeste conservait `screenOrientation="portrait"`, incompatible avec l'objectif portrait/paysage, et `previewRotation()` utilisait le signe avant/arrière opposé à la formule JPEG. Le verrou est retiré, le signe est harmonisé et un listener de rotation recalcule le transform. L'AudioTrack était également libéré par `stop()`; il est désormais conservé entre arrêt/reprise et n'est libéré qu'au `release()`. Preuve CI et appareil encore requise.

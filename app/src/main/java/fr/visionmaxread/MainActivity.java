@@ -29,7 +29,7 @@ public final class MainActivity extends Activity {
     private Bitmap compareBitmap;
     private EditText text;private TextView status;private Button freeze,play,compare;private CameraController camera;
     private HistoryStore history;private ModelFiles models;private SharedPreferences prefs;
-    private boolean changingText,destroyed,reading,cameraMode;private String maskedPreview="",lastQwenText="";private long lastQwenMs=-1;private int textSp=24;
+    private boolean changingText,destroyed,reading,cameraMode;private String maskedPreview="",lastQwenText="";private long lastQwenMs=-1;private float lastQwenPssMb=-1f;private int textSp=24;
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);prefs=getSharedPreferences("settings",MODE_PRIVATE);history=new HistoryStore(this);textSp=prefs.getInt("textSize",24);
         buildUi();camera=new CameraController(this,preview,new CameraController.Listener(){
@@ -78,7 +78,7 @@ public final class MainActivity extends Activity {
         play=button("▶ Lire le texte",TEAL,()->{if(reading)stopReading();else readText();});outer.addView(play,new LinearLayout.LayoutParams(-1,dp(64)));
     }
     private void font(int delta){textSp=Math.max(18,Math.min(48,textSp+delta));text.setTextSize(textSp);prefs.edit().putInt("textSize",textSp).apply();}
-    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastQwenText="";lastQwenMs=-1;compareBitmap=null;if(compare!=null){compare.setEnabled(false);compare.setVisibility(View.GONE);}return sessions.replaceSource();}
+    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastQwenText="";lastQwenMs=-1;lastQwenPssMb=-1f;compareBitmap=null;if(compare!=null){compare.setEnabled(false);compare.setVisibility(View.GONE);}return sessions.replaceSource();}
     private void startCamera(){
         newDocument();cameraMode=true;imageArea.setVisibility(View.VISIBLE);preview.setVisibility(View.VISIBLE);frozen.setVisibility(View.GONE);freeze.setVisibility(View.VISIBLE);freeze.setEnabled(true);setText("");status.setText("Vise le texte puis appuie sur Figer l’image.");
         if(checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION);
@@ -98,7 +98,7 @@ public final class MainActivity extends Activity {
                 String found=qwen.recognize(this,image,message->ui(()->{if(sessions.documentCurrent(ticket))status.setText(message);}));
                 long qMs=SystemClock.elapsedRealtime()-q0;
                 if(!sessions.documentCurrent(ticket))return;
-                lastQwenText=found;lastQwenMs=qMs;
+                lastQwenText=found;lastQwenMs=qMs;lastQwenPssMb=processPssMb();
                 ui(()->{if(sessions.documentCurrent(ticket)){setText(found);compare.setEnabled(true);status.setText(found.trim().isEmpty()?"Qwen : aucun texte trouvé ("+qMs+" ms). Essaie PP-OCRv6-Small.":"Qwen : texte reconnu en "+qMs+" ms. PP-OCRv6-Small est disponible pour comparer.");}});
                 if(!found.trim().isEmpty()&&prefs.getBoolean("history",true))maskAndSave(found,ticket,privacy,true);
             }catch(Exception|OutOfMemoryError e){ui(()->{if(sessions.documentCurrent(ticket))status.setText("Impossible de reconnaître cette image. Essaie une photo plus petite ou plus nette.");});}
@@ -111,6 +111,7 @@ public final class MainActivity extends Activity {
         final long ticket=sessions.documentTicket();
         final String qwenText=lastQwenText;
         final long qwenMs=lastQwenMs;
+        final float qwenPss=lastQwenPssMb;
         if(image==null||image.isRecycled()||!sessions.documentCurrent(ticket))return;
         compare.setEnabled(false);
         status.setText("PP-OCRv6-Small analyse exactement la même image…");
@@ -121,15 +122,16 @@ public final class MainActivity extends Activity {
             try { paddleText=new OcrService().recognize(this,image); }
             catch(Exception|OutOfMemoryError e) { paddleError="Échec de PP-OCRv6-Small"; }
             long paddleMs=SystemClock.elapsedRealtime()-t0;
+            float paddlePss=processPssMb();
             if(!sessions.documentCurrent(ticket)||destroyed)return;
-            final String p=paddleText,err=paddleError;
+            final String p=paddleText,err=paddleError;final float pPss=paddlePss;
             ui(()->{
                 if(!sessions.documentCurrent(ticket)||compareBitmap!=image)return;
                 compare.setEnabled(true);
                 status.setText("Comparaison terminée. Choisis le résultat à examiner.");
                 String summary="Même image : "+image.getWidth()+" × "+image.getHeight()+" pixels.\n"
-                    +"Qwen3.5-0.8B-VL : "+qwenMs+" ms, "+qwenText.length()+" caractères\n"
-                    +"PP-OCRv6-Small : "+paddleMs+" ms, "+p.length()+" caractères"+(err==null?"":" ("+err+")")+"\n\n"
+                    +"Qwen3.5-0.8B-VL : "+qwenMs+" ms, "+qwenText.length()+" caractères, PSS processus ≈ "+formatMb(qwenPss)+"\n"
+                    +"PP-OCRv6-Small : "+paddleMs+" ms, "+p.length()+" caractères, PSS processus après test ≈ "+formatMb(pPss)+(err==null?"":" ("+err+")")+"\n\n"
                     +"Les deux moteurs ont reçu le même bitmap. Le nombre de caractères ne mesure pas à lui seul l’exactitude. "
                     +"Aucun texte de comparaison n’est envoyé sur Internet.";
                 new AlertDialog.Builder(this)
@@ -158,6 +160,8 @@ public final class MainActivity extends Activity {
             .setNegativeButton("Fermer",null).show();
     }
 
+    private float processPssMb(){Debug.MemoryInfo info=new Debug.MemoryInfo();Debug.getMemoryInfo(info);return info.getTotalPss()/1024f;}
+    private String formatMb(float mb){return mb<0?"n/d":String.format(Locale.FRANCE,"%.0f Mo",mb);}
     private void setText(String value){changingText=true;text.setText(value);changingText=false;}
     private ModelFiles models()throws Exception {if(models==null)models=new ModelFiles(this);return models;}
     private void saveManual(){String value=text.getText().toString();if(value.trim().isEmpty()){status.setText("Ajoute un texte à masquer.");return;}long ticket=sessions.documentTicket(),privacy=sessions.historyTicket();status.setText("Masquage local en préparation…");worker.execute(()->maskAndSave(value,ticket,privacy,true));}

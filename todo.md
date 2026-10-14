@@ -107,3 +107,13 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - [x] [VMR-006] Auditer Sherpa v1.13.8 : ORT Android ARM64 upstream = 1.28.2 ; aligner Paddle/NER/app sur 1.28.2 et retirer la copie ORT du seul AAR Sherpa authentifié.
 - [x] [VMR-006] Surcharger R8 9.4.14 pour métadonnées Kotlin 2.4.
 - [ ] [VMR-006/CI] Revalider merge native, D8, APK/AAB et contrôles finaux.
+
+
+### VMR-006 — Correctif du 14/10/2026
+- [x] Diagnostiquer run `38436956702` : ORT Android 1.28.2 absent des dépôts Maven utilisés.
+- [x] Revenir à Sherpa 1.13.4 + ORT Android 1.27.0 commun, AAR Sherpa vérifié par SHA avant déduplication native.
+- [x] Retirer le verrou portrait, corriger le signe rotation caméra arrière/avant et écouter les changements de rotation d'affichage.
+- [x] Conserver l'AudioTrack initialisé entre Arrêter/Reprendre ; attendre la consommation PCM via playback head.
+- [x] Enrichir le diagnostic première phrase (temps init/amorce, temps et début de signal des 2 PCM) et la comparaison OCR (PSS processus approximative).
+- [ ] [CI] Obtenir compilation/lint/APK/AAB/verify_apk verts sur ce correctif.
+- [ ] [HUMAIN] Valider sur Samsung orientation, audio première phrase/arrêt-reprise/inactivité, OCR et mesures PSS en mode avion.

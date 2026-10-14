@@ -11,7 +11,6 @@ import kotlin.math.max
 class PersistentVoicePcmPlayer {
     private var track: AudioTrack? = null
     private var sampleRate = 0
-    private var writtenFrames = 0L
 
     @Synchronized private fun ensureTrack(rate: Int): AudioTrack {
         val existing = track
@@ -33,7 +32,6 @@ class PersistentVoicePcmPlayer {
         check(created.state == AudioTrack.STATE_INITIALIZED) { "AudioTrack initialization failed" }
         track = created
         sampleRate = rate
-        writtenFrames = 0L
         return created
     }
 
@@ -42,8 +40,9 @@ class PersistentVoicePcmPlayer {
         val current = ensureTrack(rate)
         current.setVolume(0f)
         if (current.playState != AudioTrack.PLAYSTATE_PLAYING) current.play()
-        writeAll(current, samples, cancelled)
-        waitUntilConsumed(current, cancelled)
+        val startHead = head(current)
+        val written = writeAll(current, samples, cancelled)
+        waitUntilConsumed(current, startHead, written, cancelled)
         current.setVolume(1f)
     }
 
@@ -52,32 +51,41 @@ class PersistentVoicePcmPlayer {
         val current = ensureTrack(rate)
         current.setVolume(1f)
         if (current.playState != AudioTrack.PLAYSTATE_PLAYING) current.play()
+        val startHead = head(current)
+        var written = 0L
         val guardFrames = (rate * guardMs / 1000).coerceAtLeast(0)
-        if (guardFrames > 0) writeAll(current, FloatArray(guardFrames), cancelled)
-        writeAll(current, samples, cancelled)
-        waitUntilConsumed(current, cancelled)
+        if (guardFrames > 0) written += writeAll(current, FloatArray(guardFrames), cancelled)
+        written += writeAll(current, samples, cancelled)
+        waitUntilConsumed(current, startHead, written, cancelled)
     }
 
-    private fun writeAll(current: AudioTrack, samples: FloatArray, cancelled: BooleanSupplier) {
+    private fun writeAll(current: AudioTrack, samples: FloatArray, cancelled: BooleanSupplier): Long {
         var offset = 0
         while (offset < samples.size) {
             checkCancelled(cancelled)
             val n = current.write(samples, offset, samples.size - offset, AudioTrack.WRITE_BLOCKING)
             check(n > 0) { "AudioTrack write failed: $n" }
             offset += n
-            writtenFrames += n
         }
+        return offset.toLong()
     }
 
-    private fun waitUntilConsumed(current: AudioTrack, cancelled: BooleanSupplier) {
-        val target = writtenFrames
-        while ((current.playbackHeadPosition.toLong() and 0xffffffffL) < target) {
+    /** Wait on the real playback head; the 5 ms sleep only avoids busy-spinning. */
+    private fun waitUntilConsumed(current: AudioTrack, startHead: Long, frames: Long, cancelled: BooleanSupplier) {
+        while ((((current.playbackHeadPosition.toLong() and 0xffffffffL) - startHead) and 0xffffffffL) < frames) {
             checkCancelled(cancelled)
             Thread.sleep(5)
         }
     }
 
-    @Synchronized fun stop() = releaseLocked()
+    /** Stop current speech but retain the initialized AudioTrack for the next warm-up. */
+    @Synchronized fun stop() {
+        track?.let {
+            try { it.pause() } catch (_: Throwable) {}
+            try { it.flush() } catch (_: Throwable) {}
+            try { it.setVolume(1f) } catch (_: Throwable) {}
+        }
+    }
     @Synchronized fun release() = releaseLocked()
     @Synchronized fun hasLiveTrack(): Boolean = track?.state == AudioTrack.STATE_INITIALIZED
 
@@ -90,7 +98,6 @@ class PersistentVoicePcmPlayer {
         }
         track = null
         sampleRate = 0
-        writtenFrames = 0L
     }
 
     private fun checkCancelled(cancelled: BooleanSupplier) {

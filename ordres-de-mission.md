@@ -63,3 +63,7 @@ Suite à la demande de Fab « Demande à Git de nous dézipper dans un répertoi
 6. Corriger l'orientation de l'aperçu caméra avec la rotation réelle de l'écran, et conserver la cohérence aperçu/photo/OCR.
 
 Contraintes : hors ligne, permission INTERNET absente dans l'APK final, aucune persistance supplémentaire des images/textes bruts, variante LAB `fr.visionmaxread.lab`. Livrable seulement après compilation, lint, vérification APK et essais Samsung explicitement distingués.
+
+
+### VMR-006 — Note d'exécution du 14/10/2026
+La version précise de Sherpa n'était pas imposée par l'ordre utilisateur : elle peut être ajustée pour compatibilité Android tant que Piper `fr_FR-upmc-medium`, Jessica sid 0, la chaîne hors ligne et les critères fonctionnels restent inchangés. Correctif en cours sur la branche VMR-006 : Sherpa 1.13.4 / ORT 1.27.0, déverrouillage portrait/paysage, AudioTrack conservé après arrêt, diagnostics temps/PCM/PSS. Ne pas transformer cet état en preuve de livraison avant CI verte et conserver les tests Samsung comme validation humaine distincte.

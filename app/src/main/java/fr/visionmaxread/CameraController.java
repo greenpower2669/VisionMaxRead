@@ -18,10 +18,22 @@ final class CameraController {
     private final Context context;private final TextureView view;private final Listener listener;
     private final HandlerThread thread=new HandlerThread("Camera");private final Handler handler;
     private final AtomicLong generation=new AtomicLong();
+    private final OrientationEventListener orientationListener;
     private CameraDevice device;private CameraCaptureSession session;private ImageReader reader;private Surface previewSurface;
     private long document;private int sensorRotation;private boolean front;private volatile boolean wanted;private Size previewSize;
+    private int lastDisplayDegrees=-1;
     CameraController(Context context,TextureView view,Listener listener){
         this.context=context;this.view=view;this.listener=listener;thread.start();handler=new Handler(thread.getLooper());
+        orientationListener=new OrientationEventListener(context){
+            @Override public void onOrientationChanged(int orientation){
+                if(!wanted)return;
+                int degrees=displayRotationDegrees();
+                if(degrees==lastDisplayDegrees)return;
+                lastDisplayDegrees=degrees;
+                Size size=previewSize;
+                if(size!=null)transform(size,generation.get());
+            }
+        };
         view.setSurfaceTextureListener(new TextureView.SurfaceTextureListener(){
             public void onSurfaceTextureAvailable(SurfaceTexture surface,int w,int h){if(wanted)start(document);}
             public void onSurfaceTextureSizeChanged(SurfaceTexture surface,int w,int h){Size size=previewSize;if(size!=null)transform(size,generation.get());}
@@ -29,9 +41,9 @@ final class CameraController {
             public void onSurfaceTextureUpdated(SurfaceTexture surface){}
         });
     }
-    void start(long document){this.document=document;wanted=true;long ticket=generation.incrementAndGet();if(view.isAvailable())handler.post(()->open(ticket,document));}
-    void stop(){wanted=false;generation.incrementAndGet();handler.post(this::closeCamera);}
-    void destroy(){stop();handler.post(thread::quitSafely);}
+    void start(long document){this.document=document;wanted=true;lastDisplayDegrees=displayRotationDegrees();if(orientationListener.canDetectOrientation())orientationListener.enable();long ticket=generation.incrementAndGet();if(view.isAvailable())handler.post(()->open(ticket,document));}
+    void stop(){wanted=false;orientationListener.disable();generation.incrementAndGet();handler.post(this::closeCamera);}
+    void destroy(){orientationListener.disable();stop();handler.post(thread::quitSafely);}
     private boolean current(long ticket){return wanted&&generation.get()==ticket;}
     private void open(long ticket,long document){
         closeCamera();if(!current(ticket)||context.checkSelfPermission(Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED)return;
@@ -50,7 +62,7 @@ final class CameraController {
                 try(Image image=source.acquireLatestImage()){
                     if(image==null||!current(ticket))return;
                     ByteBuffer buffer=image.getPlanes()[0].getBuffer();byte[] bytes=new byte[buffer.remaining()];buffer.get(bytes);
-                    wanted=false;listener.captured(bytes,document);
+                    wanted=false;orientationListener.disable();listener.captured(bytes,document);
                 }catch(Exception e){if(current(ticket))listener.error("La photo n’a pas pu être capturée.");}
                 finally{closeCamera();}
             },handler);
@@ -96,18 +108,20 @@ final class CameraController {
         int r=display!=null?display.getRotation():((WindowManager)context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
         switch(r){case Surface.ROTATION_90:return 90;case Surface.ROTATION_180:return 180;case Surface.ROTATION_270:return 270;default:return 0;}
     }
+    /** Relative rotation: back=sensor-display, front=sensor+display then mirror. */
     private int previewRotation(){
         int display=displayRotationDegrees();
-        int sign=front?1:-1;
+        int sign=front?-1:1;
         return (sensorRotation-display*sign+360)%360;
     }
     private int jpegOrientation(){
-        int device=(360-displayRotationDegrees())%360;
-        if(front)device=-device;
-        return (sensorRotation+device+360)%360;
+        int display=displayRotationDegrees();
+        int sign=front?-1:1;
+        return (sensorRotation-display*sign+360)%360;
     }
     private void transform(Size size,long ticket){view.post(()->{
         if(!current(ticket)||view.getWidth()==0||view.getHeight()==0)return;
+        lastDisplayDegrees=displayRotationDegrees();
         float w=view.getWidth(),h=view.getHeight(),cx=w/2f,cy=h/2f;
         int rotation=previewRotation();
         boolean swap=rotation==90||rotation==270;

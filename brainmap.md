@@ -54,3 +54,11 @@ Le workflow `38394243158` est vert : téléchargement depuis Actions vers le dos
 - ML Kit, Supertonic et le prototype Android TTS ne font plus partie de l'exécution VMR-006.
 - La CI prépare les gros binaires/modèles sans les committer : Sherpa AAR, UPMC Piper et Qwen LiteRT-LM ; les SHA sont contrôlés.
 - Identité debug conservée : `fr.visionmaxread.lab`. Aucun merge `main`, aucune Release VMR-006 autorisée à ce stade.
+
+
+## VMR-006 — Orientation, audio persistant et compatibilité ORT (14/10/2026)
+- `CameraController` : rotation relative = capteur - affichage pour la caméra arrière, capteur + affichage pour l'avant puis miroir ; `OrientationEventListener` force un nouveau transform si la rotation d'affichage change.
+- `AndroidManifest.xml` : aucun verrou `screenOrientation=portrait` sur la LAB VMR-006.
+- `PersistentVoicePcmPlayer` : `stop()` fait pause+flush mais conserve l'AudioTrack initialisé ; `release()` seul libère la route. L'attente de fin se base sur la progression réelle du playback head relative aux frames écrites.
+- Sherpa-ONNX 1.13.4 et Paddle partagent ORT Android 1.27.0 ; la copie native ORT de l'AAR Sherpa est retirée après vérification SHA.
+- `MainActivity.compareOcr()` affiche temps et PSS processus approximative après Qwen / après Paddle ; ce n'est pas une attribution mémoire isolée à chaque moteur.

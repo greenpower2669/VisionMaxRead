@@ -39,8 +39,12 @@ La préversion LAB directe `v0.3.0-lab-test` est publiée et vérifiée : workfl
 ## VMR-006 — Qwen OCR + Piper Jessica + orientation caméra (13/10/2026)
 Autorisation explicite de Fab : « Ok code ça ». Branche exclusive `feature/qwen-piper-camera-v1`, dérivée de la LAB, sans modification de `main` et sans autorisation de Release. Qwen3.5-0.8B-VL devient l'OCR lancé automatiquement après capture/import ; PP-OCRv6-Small reste la référence et remplace le bouton ML Kit pour relire exactement le même bitmap et comparer les temps/résultats. ML Kit est retiré de cette branche.
 
-La lecture remplace Supertonic par Sherpa-ONNX 1.13.8 + Piper `fr_FR-upmc-medium`, voix Jessica `sid=0` (Pierre `sid=1` reste seulement une référence GeckoDoku). Le moteur Piper reste chargé ; l'amorce « Ah, bon. » traverse un AudioTrack persistant à volume de piste nul, puis la vraie phrase reçoit 250 ms de silence de garde. Le diagnostic première phrase compare deux PCM d'un texte fixe sans enregistrer le texte utilisateur.
+La lecture remplace Supertonic par Sherpa-ONNX 1.13.4 + Piper `fr_FR-upmc-medium`, voix Jessica `sid=0` (Pierre `sid=1` reste seulement une référence GeckoDoku). Le moteur Piper reste chargé ; l'amorce « Ah, bon. » traverse un AudioTrack persistant à volume de piste nul, puis la vraie phrase reçoit 250 ms de silence de garde. Le diagnostic première phrase compare deux PCM d'un texte fixe sans enregistrer le texte utilisateur.
 
 La caméra calcule désormais l'orientation relative capteur/affichage et recalcule la transformation lors d'un changement de taille de TextureView ; JPEG et ImageLoader doivent conserver la cohérence prévisualisation → photo figée → bitmap OCR. Validation Samsung encore obligatoire.
 
 Le bundle Qwen est `Qwen3.5-0.8B-VL_int8.litertlm`, 1 303 966 384 octets, SHA-256 `5e6d69e55f92d21799fe0a2552da979c95a2533b64e4f0ed73fe87dd9d759ab9`. Il est très volumineux et est recopié au premier usage dans l'espace privé pour fournir un chemin fichier natif à LiteRT-LM. Ne pas annoncer l'APK comme prêt avant CI verte et essai matériel.
+
+
+### VMR-006 — Ajustement de compatibilité et mesures (14/10/2026)
+La branche utilise Sherpa-ONNX 1.13.4 avec ONNX Runtime Android 1.27.0 afin d'utiliser une dépendance réellement publiée et commune à Paddle/NER/Sherpa. L'AAR Sherpa est authentifié par SHA-256 avant retrait de sa copie native ORT afin de n'empaqueter qu'une seule `libonnxruntime.so`. L'Activity n'est plus verrouillée en portrait ; la rotation aperçu/JPEG suit la même formule capteur/affichage avec correction avant/arrière et recalcul lors d'un changement d'orientation. Le comparateur affiche aussi la PSS approximative du processus Android après Qwen puis après Paddle. Ces changements restent à qualifier par CI et test Samsung.

@@ -1,6 +1,7 @@
 package fr.visionmaxread
 
 import android.content.Context
+import android.os.SystemClock
 import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.OfflineTtsConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
@@ -12,6 +13,7 @@ import java.security.MessageDigest
 import java.util.concurrent.CancellationException
 import java.util.function.BooleanSupplier
 import java.util.function.Consumer
+import kotlin.math.abs
 
 /** Sherpa-ONNX/Piper UPMC medium. Jessica is speaker 0; Pierre is speaker 1. */
 class PiperSpeechEngine : SpeechEngine {
@@ -22,7 +24,7 @@ class PiperSpeechEngine : SpeechEngine {
         private const val DATA = "espeak-ng-data"
         private const val JESSICA_SID = 0
         private const val GUARD_MS = 250
-        private const val MARKER = ".visionmaxread-sherpa-1.13.8-upmc"
+        private const val MARKER = ".visionmaxread-sherpa-1.13.4-upmc"
         private const val WARM_TEXT = "Ah, bon."
     }
 
@@ -30,11 +32,14 @@ class PiperSpeechEngine : SpeechEngine {
     @Volatile private var tts: OfflineTts? = null
     @Volatile private var warmed = false
     @Volatile private var released = false
+    @Volatile private var lastInitializeMs = -1L
+    @Volatile private var lastWarmUpMs = -1L
 
     @Synchronized override fun initialize(context: Context, status: Consumer<String>?) {
         check(!released) { "Piper engine released" }
         if (tts != null) return
         status?.accept("Chargement de Sherpa-ONNX / Piper Jessica…")
+        val started = SystemClock.elapsedRealtime()
         val dataDir = prepareEspeakData(context.applicationContext)
         val vits = OfflineTtsVitsModelConfig(
             model = "$ASSET_DIR/$MODEL",
@@ -49,6 +54,7 @@ class PiperSpeechEngine : SpeechEngine {
                 silenceScale = 0.2f
             )
         )
+        lastInitializeMs = SystemClock.elapsedRealtime() - started
         status?.accept("Piper Jessica chargé.")
     }
 
@@ -56,9 +62,11 @@ class PiperSpeechEngine : SpeechEngine {
         initialize(context, null)
         if (warmed && player.hasLiveTrack()) return
         checkCancelled(cancelled)
+        val started = SystemClock.elapsedRealtime()
         val audio = requireNotNull(tts).generate(WARM_TEXT, JESSICA_SID, 1.0f)
         checkCancelled(cancelled)
         player.warm(audio.samples, audio.sampleRate, cancelled)
+        lastWarmUpMs = SystemClock.elapsedRealtime() - started
         warmed = true
     }
 
@@ -81,9 +89,21 @@ class PiperSpeechEngine : SpeechEngine {
         initialize(context, null)
         val engine = requireNotNull(tts)
         val phrase = "Bonjour, ceci est un test."
+        val aStart = SystemClock.elapsedRealtime()
         val a = engine.generate(phrase, JESSICA_SID, 1.0f)
+        val aMs = SystemClock.elapsedRealtime() - aStart
+        val bStart = SystemClock.elapsedRealtime()
         val b = engine.generate(phrase, JESSICA_SID, 1.0f)
-        return "A=" + a.samples.size + "/" + hash(a.samples) + " B=" + b.samples.size + "/" + hash(b.samples)
+        val bMs = SystemClock.elapsedRealtime() - bStart
+        val aHash = hash(a.samples)
+        val bHash = hash(b.samples)
+        val verdict = if (aHash == bHash && a.samples.size == b.samples.size)
+            "PCM identiques : si le début audible manque, piste Android/AudioTrack à examiner."
+        else "PCM différents : génération Piper à examiner."
+        return "init=" + lastInitializeMs + " ms, amorce=" + lastWarmUpMs + " ms; " +
+            "PCM1=" + a.samples.size + ", gen=" + aMs + " ms, signal=" + leadingSignalMs(a.samples, a.sampleRate) + " ms, " + aHash +
+            "; PCM2=" + b.samples.size + ", gen=" + bMs + " ms, signal=" + leadingSignalMs(b.samples, b.sampleRate) + " ms, " + bHash +
+            ". " + verdict
     }
 
     @Synchronized override fun stop() {
@@ -110,7 +130,7 @@ class PiperSpeechEngine : SpeechEngine {
             if (destination.exists()) destination.deleteRecursively()
             destination.mkdirs()
             copyAssetTree(context, "$ASSET_DIR/$DATA", destination)
-            marker.writeText("sherpa-onnx-1.13.8;upmc-medium;sid=0")
+            marker.writeText("sherpa-onnx-1.13.4;upmc-medium;sid=0")
         }
         context.assets.open("$ASSET_DIR/$MODEL").use { }
         context.assets.open("$ASSET_DIR/$TOKENS").use { }
@@ -128,6 +148,12 @@ class PiperSpeechEngine : SpeechEngine {
         }
         destination.mkdirs()
         for (name in children) copyAssetTree(context, "$assetPath/$name", File(destination, name))
+    }
+
+    private fun leadingSignalMs(samples: FloatArray, sampleRate: Int): Int {
+        if (sampleRate <= 0) return -1
+        val index = samples.indexOfFirst { abs(it) > 0.001f }
+        return if (index < 0) -1 else (index * 1000L / sampleRate).toInt()
     }
 
     private fun hash(samples: FloatArray): String {

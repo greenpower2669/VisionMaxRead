@@ -28,13 +28,13 @@ jobs:
           set -euo pipefail
           mkdir -p app/libs app/src/main/assets/tts/piper/jessica
           curl --fail --location --retry 3 \
-            -o app/libs/sherpa-onnx-1.13.8.aar \
-            "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-1.13.8.aar"
-          echo "633c24321e06b1fe79feafa03ea16cbc0f8a286641e2da3559bac91bdb13bd96  app/libs/sherpa-onnx-1.13.8.aar" | sha256sum -c -
-          # Sherpa 1.13.8 is built against ONNX Runtime 1.28.2. VisionMaxRead
-          # supplies the same ORT version once for Paddle/NER + Sherpa, so remove
-          # only Sherpa's duplicate native copy after authenticating the upstream AAR.
-          zip -q -d app/libs/sherpa-onnx-1.13.8.aar 'jni/*/libonnxruntime.so'
+            -o app/libs/sherpa-onnx-1.13.4.aar \
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.4/sherpa-onnx-1.13.4.aar"
+          echo "03f9c4df965f21c71269365a7951a7f23b5696fddd093fa318c80d65550ab780  app/libs/sherpa-onnx-1.13.4.aar" | sha256sum -c -
+          # Sherpa 1.13.4 uses ONNX Runtime 1.27.0. VisionMaxRead supplies that
+          # Maven-published ORT once for Paddle/NER + Sherpa, so remove only the
+          # duplicate native copy inside the authenticated Sherpa AAR.
+          zip -q -d app/libs/sherpa-onnx-1.13.4.aar 'jni/*/libonnxruntime.so'
           work="$(mktemp -d)"
           archive="$work/upmc-medium.tar.bz2"
           curl --fail --location --retry 3 \
