@@ -81,3 +81,10 @@ Run `38504519405` : téléchargement Sherpa/Piper, Qwen et préparation des mod�
 Après le run vert `38504818600`, audit de conformité fonctionnelle : retirer seulement le verrou portrait autorisait Android à recréer l'Activity lors d'une rotation, ce qui pouvait interrompre la session caméra. Ajout de `configChanges="orientation|screenSize"` pour conserver l'Activity et laisser CameraController recalculer le transform.
 
 Le diagnostic PCM générait auparavant deux échantillons seulement lorsque l'utilisateur ouvrait le diagnostic, donc après l'amorce initiale : il ne représentait pas les deux **premières** générations réelles. L'amorce initiale génère maintenant deux fois le même texte, mémorise durées/hash/début de signal/fréquence, puis envoie la seconde génération dans l'AudioTrack muet. Nouvelle CI requise.
+
+
+## VMR-D021 — VMR-006 CI verte finale (14/10/2026)
+Run `38505688283` sur `cf7083b5d204626617aa17bc1515c8c910f82dc6` : **success**. Les 47 contrôles passent, Gradle/lint produisent APK+AAB, le contrat d'archive passe et `verify_apk.py` confirme signature debug, ARM64, tous hashes modèles et absence INTERNET. Mesures produites par `build-manifest.txt` :
+- APK : 1 582 753 113 octets ; SHA-256 `be97ff8f4b90f3f5aa6cccb9564e1d9a13f0cefab8b341a47fea05da4c3686af`.
+- AAB unsigned : 1 333 001 356 octets ; SHA-256 `977679dce7a4726f99a5f1219db3db99438002b8d694757369d768de22b680e2`.
+Artifacts : binaire `11867298469`, metadata `11867068707`. Le poids très élevé vient notamment du Qwen VL 1 303 966 384 octets embarqué. Aucun résultat Samsung n'est inventé : test matériel encore à faire.

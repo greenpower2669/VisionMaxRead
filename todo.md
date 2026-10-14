@@ -129,3 +129,13 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - [x] Ajouter un `build-manifest.txt` CI avec tailles et SHA-256 APK/AAB + artifact metadata compact.
 - [ ] [CI] Revalider le SHA de ce raffinement final et relever les tailles exactes APK/AAB.
 - [ ] [HUMAIN] Tests Samsung toujours nécessaires : orientation en cours de caméra, rendu figé identique, Qwen/Paddle, Jessica, arrêt/reprise, inactivité et mode avion.
+
+
+### VMR-006 — Clôture CI du 14/10/2026
+- [x] [CI] Run final `38505688283` vert sur code SHA `cf7083b5d204626617aa17bc1515c8c910f82dc6`.
+- [x] [CI] 47 contrôles, lint, APK/AAB, archive, signature, ARM64, hashes modèles et absence INTERNET validés.
+- [x] [CI] APK : 1 582 753 113 octets, SHA-256 `be97ff8f4b90f3f5aa6cccb9564e1d9a13f0cefab8b341a47fea05da4c3686af`.
+- [x] [CI] AAB unsigned : 1 333 001 356 octets, SHA-256 `977679dce7a4726f99a5f1219db3db99438002b8d694757369d768de22b680e2`.
+- [x] [CI] Artifact binaire `11867298469` + metadata `11867068707`.
+- [ ] [HUMAIN] Installer l'APK sur Samsung SM-A576B et exécuter les 12 validations terrain VMR-006, dont mode avion.
+- [ ] Aucun merge `main` ni Release sans feu vert explicite de Fab.

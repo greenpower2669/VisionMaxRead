@@ -71,3 +71,7 @@ La version précise de Sherpa n'était pas imposée par l'ordre utilisateur : el
 
 ### VMR-006 — Raffinement de conformité du 14/10/2026
 Pour satisfaire littéralement « première et deuxième génération du même texte » et « rotation du terminal », le premier warm-up capture la vraie paire PCM initiale avant lecture utilisateur et MainActivity absorbe les changements orientation/screenSize afin que CameraController puisse corriger la prévisualisation sans perdre la session. La CI doit également publier une preuve textuelle légère des tailles et SHA-256 APK/AAB. Toujours : aucun merge main, aucune Release sans feu vert explicite de Fab.
+
+
+### VMR-006 — État de livraison technique après CI (14/10/2026)
+Le code SHA `cf7083b5d204626617aa17bc1515c8c910f82dc6` est la version construite et vérifiée par le run `38505688283` vert. APK test identifié : `VisionMaxRead-0.4.0-QWEN-PIPER-LAB.apk`, 1 582 753 113 octets, SHA-256 `be97ff8f4b90f3f5aa6cccb9564e1d9a13f0cefab8b341a47fea05da4c3686af`. AAB unsigned : 1 333 001 356 octets, SHA-256 `977679dce7a4726f99a5f1219db3db99438002b8d694757369d768de22b680e2`. Artifacts Actions : `11867298469` (binaires) et `11867068707` (preuve compacte). Ceci est une preuve de build, pas encore une preuve d'usage Samsung. Interdictions inchangées : pas de merge main, pas de Release sans nouveau feu vert.

@@ -68,3 +68,7 @@ Le workflow `38394243158` est vert : téléchargement depuis Actions vers le dos
 - `MainActivity` conserve sa session lors de `orientation|screenSize`; la rotation est gérée par `CameraController` plutôt que par une recréation de l'écran.
 - `PiperSpeechEngine.warmUp()` capture la vraie paire génération 1 / génération 2 de `WARM_TEXT` au premier démarrage, conserve hashes/onsets/temps/fréquence, puis amorce silencieusement l'AudioTrack avec la seconde génération.
 - `.github/workflows/android.yml` produit `build-manifest.txt` avec RUN_ID, HEAD_SHA, noms, tailles exactes et SHA-256 APK/AAB, et l'upload aussi dans un petit artifact metadata séparé.
+
+
+### VMR-006 — Ancrage de preuve final
+La référence binaire canonique de la LAB VMR-006 est le run `38505688283` sur le code SHA `cf7083b5d204626617aa17bc1515c8c910f82dc6`. Le petit artifact metadata `11867068707` contient `build-manifest.txt` ; le gros artifact binaire `11867298469` contient APK, AAB, lint et manifeste. Toute validation terrain doit rester distincte de cette preuve de build.

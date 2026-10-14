@@ -52,3 +52,16 @@ La branche utilise Sherpa-ONNX 1.13.4 avec ONNX Runtime Android 1.27.0 afin d'ut
 
 ### VMR-006 — Dernier raffinement avant preuve finale (14/10/2026)
 Le changement d'orientation est désormais traité sans recréer MainActivity (`configChanges=orientation|screenSize`) afin de conserver la session caméra pendant le passage portrait/paysage ; CameraController recalcule son transform. L'amorce TTS compare et mémorise réellement les **deux premières générations** du même texte d'amorce avant la première lecture audible, puis fait traverser la seconde au même AudioTrack en silence. Le diagnostic expose temps d'initialisation, première/dernière amorce, dernière lecture, fréquence audio et comparaison PCM initiale. Le workflow écrit maintenant taille + SHA-256 APK/AAB dans un manifeste compact. Nouvelle CI complète requise avant clôture.
+
+
+### VMR-006 — Preuve CI finale (14/10/2026)
+
+- Code validé : `cf7083b5d204626617aa17bc1515c8c910f82dc6`.
+- CI : run `38505688283` **success** ; 47 contrôles contractuels ; Gradle/lint/APK/AAB success ; `verify_apk.py` confirme APK signé, ARM64, hashes modèles conformes et absence de permission INTERNET.
+- APK test : `VisionMaxRead-0.4.0-QWEN-PIPER-LAB.apk` — 1 582 753 113 octets — SHA-256 `be97ff8f4b90f3f5aa6cccb9564e1d9a13f0cefab8b341a47fea05da4c3686af`.
+- AAB non signé : `VisionMaxRead-0.4.0-QWEN-PIPER-LAB-unsigned.aab` — 1 333 001 356 octets — SHA-256 `977679dce7a4726f99a5f1219db3db99438002b8d694757369d768de22b680e2`.
+- Artifact binaire Actions : ID `11867298469`, nom `VisionMaxRead-0.4.0-QWEN-PIPER-LAB`, expiration 28/10/2026.
+- Artifact preuve légère : ID `11867068707`, `VisionMaxRead-0.4.0-QWEN-PIPER-LAB-metadata`.
+- Validation Samsung réelle encore requise pour orientation dynamique, qualité OCR, RAM/PSS/chauffe, première phrase Jessica, arrêt/reprise/inactivité et mode avion.
+- Aucun merge `main`, aucune Release.
+
