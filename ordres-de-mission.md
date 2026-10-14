@@ -126,3 +126,20 @@ Le code SHA `cf7083b5d204626617aa17bc1515c8c910f82dc6` est la version construite
 - Taille : `1582759577` octets.
 - SHA-256 : `f2d1a7604900413507f524f27bbaccdada7c398ef28eb3d2feab0ac2dde135ba`.
 - `main` inchangée ; AAB unsigned non publié.
+
+
+## VMR-006 — signature LAB persistante / installation Samsung (2026-10-14)
+- Cause du message Android « Application non installée » : anciennes LAB et nouvelle LAB partageaient `fr.visionmaxread.lab` mais chaque runner GitHub générait sa propre clé debug.
+- Correction validée sur `feature/vmr006-stable-lab-signing`.
+- Nouvelle identité debug isolée : `fr.visionmaxread.labdebug`.
+- `versionCode=5`, `versionName=0.4.1-debug`, label `VisionMaxRead LAB DEBUG`.
+- Signature LAB persistante dédiée aux préversions/debug uniquement ; elle ne doit JAMAIS signer l'AAB release/Play.
+- Empreinte certificat LAB SHA-256 de référence : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
+- La CI reconstruit la clé LAB test, vérifie son empreinte, puis vérifie après build package/version/certificat de l'APK.
+- Code validé : `587cba2fcbb2157f364e48fcbc94a9be760832c7`.
+- GitHub Actions : `38576497507` — SUCCESS ; 47 contrôles, Gradle/lint/APK/AAB, archive et verify_apk verts.
+- APK : `VisionMaxRead-0.4.1-QWEN-PIPER-DEBUG.apk`, `1582759585` octets, SHA-256 `6edef1b2d4a62d415823023ee56b865fba6623eecc4fced633546d3d88c5053e`.
+- AAB unsigned : `1333003863` octets, SHA-256 `afb71708069d31ca3c4962a7d3765827f09deb70c2e18c4cdbd7a8eef7cbe631`.
+- Artefact principal : `11900497303`; métadonnées : `11900677088`.
+- L'ancienne `fr.visionmaxread.lab` peut rester installée : la nouvelle LAB DEBUG s'installe à côté.
+- Aucun merge de `main` et aucune nouvelle Release directe créée sans nouveau feu vert explicite.
