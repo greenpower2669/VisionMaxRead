@@ -22,6 +22,8 @@ final class CameraController {
     private CameraDevice device;private CameraCaptureSession session;private ImageReader reader;private Surface previewSurface;
     private long document;private int sensorRotation;private boolean front;private volatile boolean wanted;private Size previewSize;
     private int lastDisplayDegrees=-1;
+    // Tracks whether a camera open was actually queued after TextureView became available.
+    private volatile boolean openRequested;
     CameraController(Context context,TextureView view,Listener listener){
         this.context=context;this.view=view;this.listener=listener;thread.start();handler=new Handler(thread.getLooper());
         orientationListener=new OrientationEventListener(context){
@@ -42,19 +44,30 @@ final class CameraController {
         });
     }
     void start(long document){
-        // TextureView.onSurfaceTextureAvailable and MainActivity can ask for
-        // the same session. Ignore duplicate requests instead of opening twice.
-        if(wanted && this.document==document){
+        // Both MainActivity and TextureView may request the same document.
+        // If TextureView was initially unavailable, allow the second callback
+        // to schedule its *first* open instead of silently dropping it.
+        boolean sameRequest=wanted&&this.document==document;
+        if(sameRequest&&openRequested){
             DebugLog.append(context,"CAM duplicate start ignored document="+document);
             return;
         }
-        this.document=document;wanted=true;lastDisplayDegrees=displayRotationDegrees();
-        DebugLog.append(context,"CAM start displayDeg="+lastDisplayDegrees);
-        if(orientationListener.canDetectOrientation())orientationListener.enable();
-        long ticket=generation.incrementAndGet();
-        if(view.isAvailable())handler.post(()->open(ticket,document));
+        if(!sameRequest){
+            this.document=document;
+            wanted=true;
+            openRequested=false;
+            lastDisplayDegrees=displayRotationDegrees();
+            DebugLog.append(context,"CAM start displayDeg="+lastDisplayDegrees);
+            if(orientationListener.canDetectOrientation())orientationListener.enable();
+            generation.incrementAndGet();
+        }
+        if(view.isAvailable()&&!openRequested){
+            openRequested=true;
+            long ticket=generation.get();
+            handler.post(()->open(ticket,document));
+        }
     }
-    void stop(){wanted=false;orientationListener.disable();generation.incrementAndGet();handler.post(this::closeCamera);}
+    void stop(){wanted=false;openRequested=false;orientationListener.disable();generation.incrementAndGet();handler.post(this::closeCamera);}
     void destroy(){orientationListener.disable();stop();handler.post(thread::quitSafely);}
     private boolean current(long ticket){return wanted&&generation.get()==ticket;}
     private void open(long ticket,long document){
