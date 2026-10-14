@@ -41,7 +41,7 @@ final class CameraController {
             public void onSurfaceTextureUpdated(SurfaceTexture surface){}
         });
     }
-    void start(long document){this.document=document;wanted=true;lastDisplayDegrees=displayRotationDegrees();if(orientationListener.canDetectOrientation())orientationListener.enable();long ticket=generation.incrementAndGet();if(view.isAvailable())handler.post(()->open(ticket,document));}
+    void start(long document){this.document=document;wanted=true;lastDisplayDegrees=displayRotationDegrees();DebugLog.append(context,"CAM start displayDeg="+lastDisplayDegrees);if(orientationListener.canDetectOrientation())orientationListener.enable();long ticket=generation.incrementAndGet();if(view.isAvailable())handler.post(()->open(ticket,document));}
     void stop(){wanted=false;orientationListener.disable();generation.incrementAndGet();handler.post(this::closeCamera);}
     void destroy(){orientationListener.disable();stop();handler.post(thread::quitSafely);}
     private boolean current(long ticket){return wanted&&generation.get()==ticket;}
@@ -53,8 +53,10 @@ final class CameraController {
             if(chosen==null)throw new IllegalStateException();CameraCharacteristics info=manager.getCameraCharacteristics(chosen);
             front=Objects.equals(info.get(CameraCharacteristics.LENS_FACING),CameraCharacteristics.LENS_FACING_FRONT);
             Integer angle=info.get(CameraCharacteristics.SENSOR_ORIENTATION);sensorRotation=angle==null?90:angle;
+            DebugLog.append(context,"CAM open id="+chosen+" front="+front+" sensorDeg="+sensorRotation+" displayDeg="+displayRotationDegrees());
             StreamConfigurationMap map=info.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);if(map==null)throw new IllegalStateException();
             Size preview=choosePreview(map.getOutputSizes(SurfaceTexture.class));previewSize=preview;Size still=chooseStill(map.getOutputSizes(ImageFormat.JPEG));
+            DebugLog.append(context,"CAM sizes preview="+preview.getWidth()+"x"+preview.getHeight()+" still="+still.getWidth()+"x"+still.getHeight());
             SurfaceTexture surface=view.getSurfaceTexture();if(surface==null)return;surface.setDefaultBufferSize(preview.getWidth(),preview.getHeight());
             previewSurface=new Surface(surface);transform(preview,ticket);
             reader=ImageReader.newInstance(still.getWidth(),still.getHeight(),ImageFormat.JPEG,2);
@@ -88,7 +90,7 @@ final class CameraController {
         try{
             CaptureRequest.Builder capture=device.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);capture.addTarget(reader.getSurface());
             capture.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-            capture.set(CaptureRequest.JPEG_ORIENTATION,jpegOrientation());capture.set(CaptureRequest.JPEG_QUALITY,(byte)95);
+            int jpegDeg=jpegOrientation();DebugLog.append(context,"CAM freeze jpegDeg="+jpegDeg+" displayDeg="+displayRotationDegrees()+" sensorDeg="+sensorRotation);capture.set(CaptureRequest.JPEG_ORIENTATION,jpegDeg);capture.set(CaptureRequest.JPEG_QUALITY,(byte)95);
             session.stopRepeating();session.capture(capture.build(),new CameraCaptureSession.CaptureCallback(){
                 public void onCaptureFailed(CameraCaptureSession s,CaptureRequest r,CaptureFailure failure){if(current(ticket)){closeCamera();listener.error("Capture échouée. Relance la caméra.");}}
             },handler);
@@ -124,6 +126,7 @@ final class CameraController {
         lastDisplayDegrees=displayRotationDegrees();
         float w=view.getWidth(),h=view.getHeight(),cx=w/2f,cy=h/2f;
         int rotation=previewRotation();
+        DebugLog.append(context,"CAM transform view="+Math.round(w)+"x"+Math.round(h)+" buffer="+size.getWidth()+"x"+size.getHeight()+" rotation="+rotation+" displayDeg="+lastDisplayDegrees+" sensorDeg="+sensorRotation+" front="+front);
         boolean swap=rotation==90||rotation==270;
         float rotatedW=swap?size.getHeight():size.getWidth();
         float rotatedH=swap?size.getWidth():size.getHeight();
