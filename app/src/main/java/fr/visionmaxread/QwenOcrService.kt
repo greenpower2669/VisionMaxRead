@@ -31,12 +31,10 @@ class QwenOcrService {
         val model = ensureModelFile(context.applicationContext, status, progress)
         progress.accept(50)
         status.accept("Initialisation de Qwen3.5 Vision sur CPU…")
-        val cacheDir = File(context.cacheDir, "qwen_litert_cache")
-        if (!cacheDir.isDirectory) {
-            check(cacheDir.mkdirs()) { "Unable to create Qwen cache directory: " + cacheDir.absolutePath }
-        }
-        check(cacheDir.canWrite()) { "Qwen cache directory is not writable: " + cacheDir.absolutePath }
-        DebugLog.append(context, "QWEN cache ready path=" + cacheDir.absolutePath + " writable=" + cacheDir.canWrite())
+        val cacheDir = context.cacheDir
+        check(cacheDir.isDirectory) { "Android cache directory is missing: " + cacheDir.absolutePath }
+        check(cacheDir.canWrite()) { "Android cache directory is not writable: " + cacheDir.absolutePath }
+        DebugLog.append(context, "QWEN cache ready path=" + cacheDir.absolutePath + " exists=" + cacheDir.exists() + " writable=" + cacheDir.canWrite())
         DebugLog.append(context, "QWEN engine initialize start")
         var created: Engine? = null
         try {
