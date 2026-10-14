@@ -19,6 +19,24 @@ import fr.visionmaxread.core.ReaderSessions;
 
 public final class MainActivity extends Activity {
     private static final int CAMERA_PERMISSION=10,PHOTO=20;
+    private static final String[] QWEN_PROFILE_KEYS={
+        QwenOcrService.PROFILE_AUTO_TURBO,
+        QwenOcrService.PROFILE_GPU_GPU,
+        QwenOcrService.PROFILE_GPU_CPU,
+        QwenOcrService.PROFILE_CPU_GPU,
+        QwenOcrService.PROFILE_CPU4,
+        QwenOcrService.PROFILE_CPU2,
+        QwenOcrService.PROFILE_CPU_DEFAULT
+    };
+    private static final String[] QWEN_PROFILE_LABELS={
+        "AUTO Turbo · GPU langage + GPU vision · repli CPU 4 threads",
+        "GPU langage + GPU vision · repli CPU 4 threads",
+        "GPU langage + CPU vision · repli CPU 4 threads",
+        "CPU 4 threads + GPU vision · repli CPU 4 threads",
+        "CPU 4 threads + CPU vision",
+        "CPU 2 threads + CPU vision",
+        "CPU auto + CPU vision"
+    };
     private static final int INK=Color.rgb(16,44,60),PAPER=Color.rgb(255,249,238),TEAL=Color.rgb(0,105,92),RED=Color.rgb(179,38,32),DISABLED=Color.rgb(145,145,145);
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private final ExecutorService qwenWorker=Executors.newSingleThreadExecutor();
@@ -112,7 +130,8 @@ public final class MainActivity extends Activity {
                     try{
                         String found=qwen.recognize(this,image,
                             message->ui(()->{if(sessions.documentCurrent(ticket)&&progressGeneration.get()==qProgress)status.setText(message);}),
-                            value->updateOcrProgress(qProgress,value));
+                            value->updateOcrProgress(qProgress,value),
+                            prefs.getString("qwenProfile",QwenOcrService.PROFILE_AUTO_TURBO));
                         long qMs=SystemClock.elapsedRealtime()-q0;
                         if(!sessions.documentCurrent(ticket))return;
                         lastQwenText=found;lastQwenError="";lastQwenMs=qMs;lastQwenPssMb=processPssMb();
@@ -147,6 +166,7 @@ public final class MainActivity extends Activity {
         final long pProgress=beginOcrProgress(-1);
         status.setText("PP-OCRv6-Small analyse exactement la même image…");
         DebugLog.append(this,"PADDLE start image="+image.getWidth()+"x"+image.getHeight());
+        DebugLog.thermal(this,"PADDLE inference before");
         paddleWorker.execute(()->{
             String paddleText="";
             String paddleError=null;
@@ -156,6 +176,7 @@ public final class MainActivity extends Activity {
             long paddleMs=SystemClock.elapsedRealtime()-t0;
             float paddlePss=processPssMb();
             DebugLog.append(this,"PADDLE done ms="+paddleMs+" chars="+paddleText.length()+" pssMb="+formatMb(paddlePss)+(paddleError==null?"":" error="+paddleError));
+            DebugLog.thermal(this,"PADDLE inference after");
             finishOcrProgress(pProgress);
             if(!sessions.documentCurrent(ticket)||destroyed)return;
             final String p=paddleText,err=paddleError;final float pPss=paddlePss;
@@ -257,6 +278,19 @@ public final class MainActivity extends Activity {
         CheckBox keep=new CheckBox(this);keep.setText("Conserver les textes après masquage local");keep.setTextSize(18);keep.setChecked(prefs.getBoolean("history",true));panel.addView(keep);
         panel.addView(label("Voix : Jessica · Piper / Sherpa-ONNX · fr_FR-upmc-medium",18));
         panel.addView(label("Le moteur est amorcé silencieusement sur le canal vocal avant la première vraie phrase.",16));
+        panel.addView(label("Qwen · accélération OCR",18));
+        panel.addView(label("AUTO Turbo essaie GPU langage + GPU vision, puis revient automatiquement sur CPU 4 threads si le GPU refuse ce modèle.",16));
+        Spinner qwenProfile=new Spinner(this);
+        ArrayAdapter<String> qwenAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,QWEN_PROFILE_LABELS);
+        qwenAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        qwenProfile.setAdapter(qwenAdapter);
+        String currentQwenProfile=prefs.getString("qwenProfile",QwenOcrService.PROFILE_AUTO_TURBO);
+        int currentQwenIndex=0;
+        for(int i=0;i<QWEN_PROFILE_KEYS.length;i++)if(QWEN_PROFILE_KEYS[i].equals(currentQwenProfile)){currentQwenIndex=i;break;}
+        qwenProfile.setSelection(currentQwenIndex);
+        qwenProfile.setContentDescription("Profil d'accélération Qwen");
+        panel.addView(qwenProfile);
+        panel.addView(label("Le journal debug note le profil demandé, le profil réellement actif, les replis, le statut thermique Android et la température batterie.",16));
         TextView speedLabel=label("Vitesse de lecture",18);panel.addView(speedLabel);SeekBar speed=new SeekBar(this);speed.setMax(100);speed.setProgress(Math.round((prefs.getFloat("speed",1.05f)-0.75f)*100));panel.addView(speed);speed.setContentDescription("Vitesse de lecture de 0,75 à 1,75");
         panel.addView(button("Diagnostic 1re phrase",INK,()->worker.execute(()->{
             try{String diag=voice.diagnoseFirstPass(this);DebugLog.append(this,"PIPER diagnostic "+diag);ui(()->status.setText("Diagnostic Piper : "+diag));}
@@ -265,7 +299,14 @@ public final class MainActivity extends Activity {
         panel.addView(button("Journal debug",INK,this::showDebugLog));
         panel.addView(button("Effacer l’historique",RED,this::confirmClear));
         ScrollView settingsScroll=new ScrollView(this);settingsScroll.addView(panel);
-        new AlertDialog.Builder(this).setTitle("Réglages").setView(settingsScroll).setPositiveButton("Enregistrer",(d,w)->{stopReading();prefs.edit().putBoolean("history",keep.isChecked()).putFloat("speed",0.75f+speed.getProgress()/100f).apply();if(!keep.isChecked())sessions.clearHistory();}).setNegativeButton("Annuler",null).show();
+        new AlertDialog.Builder(this).setTitle("Réglages").setView(settingsScroll).setPositiveButton("Enregistrer",(d,w)->{
+            stopReading();
+            int qIndex=Math.max(0,Math.min(QWEN_PROFILE_KEYS.length-1,qwenProfile.getSelectedItemPosition()));
+            String selectedQwen=QWEN_PROFILE_KEYS[qIndex];
+            prefs.edit().putBoolean("history",keep.isChecked()).putFloat("speed",0.75f+speed.getProgress()/100f).putString("qwenProfile",selectedQwen).apply();
+            DebugLog.append(this,"SETTINGS qwenProfile="+selectedQwen+" label="+QWEN_PROFILE_LABELS[qIndex]);
+            if(!keep.isChecked())sessions.clearHistory();
+        }).setNegativeButton("Annuler",null).show();
     }
     private void showDebugLog(){
         String value=DebugLog.read(this);
@@ -277,7 +318,7 @@ public final class MainActivity extends Activity {
             .setNeutralButton("Effacer",(d,w)->{DebugLog.clear(this);status.setText("Journal debug effacé.");})
             .setNegativeButton("Fermer",null).show();
     }
-    private void help(){new AlertDialog.Builder(this).setTitle("Lire avec VisionMaxRead").setMessage("1. Caméra : vise, puis Figer l’image.\n2. Photo : choisis une image du téléphone.\n3. Qwen reconnaît automatiquement le texte hors ligne.\n4. Le bouton PP-OCRv6-Small permet une seconde lecture de la même image et une comparaison.\n5. Corrige le résultat puis Lire : Jessica parle avec Piper / Sherpa-ONNX.\n\nLa première utilisation de Qwen copie son modèle local d’environ 1,3 Go ; cela peut prendre du temps et nécessite de l’espace libre. La voix est amorcée silencieusement afin de protéger le début de la première phrase.\n\nAucune permission INTERNET n’est utilisée par l’application. Les images et textes originaux ne sont pas enregistrés dans l’historique ; seul le texte masqué peut y être conservé.\n\nLAB 0.4.0 · Qwen3.5-0.8B-VL · PP-OCRv6-Small · Jessica Piper/Sherpa-ONNX.").setPositiveButton("Fermer",null).show();}
+    private void help(){new AlertDialog.Builder(this).setTitle("Lire avec VisionMaxRead").setMessage("1. Caméra : vise, puis Figer l’image.\n2. Photo : choisis une image du téléphone.\n3. Qwen reconnaît automatiquement le texte hors ligne.\n4. Le bouton PP-OCRv6-Small permet une seconde lecture de la même image et une comparaison.\n5. Corrige le résultat puis Lire : Jessica parle avec Piper / Sherpa-ONNX.\n\nLa première utilisation de Qwen copie son modèle local d’environ 1,3 Go ; cela peut prendre du temps et nécessite de l’espace libre. La voix est amorcée silencieusement afin de protéger le début de la première phrase.\n\nAucune permission INTERNET n’est utilisée par l’application. Les images et textes originaux ne sont pas enregistrés dans l’historique ; seul le texte masqué peut y être conservé.\n\nLAB 0.4.4 · Qwen3.5-0.8B-VL · profils CPU/GPU · PP-OCRv6-Small · Jessica Piper/Sherpa-ONNX.").setPositiveButton("Fermer",null).show();}
     @Override protected void onNewIntent(Intent intent){super.onNewIntent(intent);setIntent(intent);incoming(intent);}
     private void incoming(Intent intent){
         if(intent==null)return;String action=intent.getAction();
