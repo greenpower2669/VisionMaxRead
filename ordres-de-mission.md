@@ -238,3 +238,16 @@ Interdits immuables : permission INTERNET, remplacement silencieux de moteurs va
 Livrables techniques en préparation : source UI/import/moteur, CI signé LAB 0.4.4 code 8, guide `docs/VMR-007-ocr-specialise-voix-hd.md`.
 Audit du compromis : le modèle OCR supplémentaire (~1,39 Go) est importé localement par l'utilisateur après téléchargement externe ; pas d'APK 3 Go. Deux moteurs LiteRT ne doivent pas rester initialisés ensemble. Siwis ne représente pas une garantie de meilleure qualité vocale avant A/B subjectif ; Kokoro en piste ultérieure. Privilégier disponibilité, accessibilité et stabilité du téléphone.
 Première vérification requise : CI verte sur le dernier HEAD et validation effective Android 16. Faire rapport honnête en cas d'échec.
+
+### VMR-007 — preuve CI complète (14/10/2026)
+- HEAD compilé et validé : `fb59d7b1a16438f1f6d264657fc865044b687fc8`.
+- GitHub Actions : https://github.com/greenpower2669/VisionMaxRead/actions/runs/38632764998 — SUCCESS.
+- 47 contrôles contractuels PASS ; Gradle/lint/APK/AAB, archive, verify_apk verts.
+- APK test : `VisionMaxRead-0.4.4-QWEN-SIWIS-DEBUG.apk`, 1 651 093 817 octets, SHA-256 `644e77ff4a162bb980793c55191904772f7333ef7349104846f53ae5ce422dce`.
+- Package `fr.visionmaxread.labdebug`, versionName `0.4.4-debug`, versionCode `8`, ARM64, aucune permission INTERNET.
+- Certificat LAB SHA256 inchangé : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
+- AAB unsigned non publié : 1 400 474 764 octets, SHA-256 `d14062ef0ef64952588d8608f1dd7d677b92b0e771f738258369a39bbd0ac1c5`.
+- Artefact GitHub Actions binaire : `11926398102` ; métadonnées : `11926628152`.
+- Modèle additionnel PaddleOCR-VL-1.6 non intégré à l'APK : import manuellement via SAF + SHA256, format .litertlm (1 390 305 472 octets, `314df8b34d6911990d488e825602550a5bbcc5d6700cb1a8914e853e9043f4f1`).
+- CI ≠ validation Samsung : test matériel Qwen/cache/caméra, import OCR, comparatif précision, Siwis/Jessica, RAM/température toujours nécessaires.
+- Ne pas merger `main` ni créer de Release sans autorisation expresse.

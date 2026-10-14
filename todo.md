@@ -300,10 +300,24 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - [x] Conserver PP-OCR worker séparé et Qwen par défaut, fournir unload/reload plutôt que deux moteurs simultanés.
 - [x] Ajouter choix Siwis/Jessica français hors ligne avec paquet Siwis verrouillé SHA256 dans la CI.
 - [x] Incrémenter versionCode 8/versionName 0.4.4-debug, maintenir signature LAB persistante et noms APK/AAB.
-- [ ] Prouver CI verte pour le dernier HEAD VMR-007, relire logs et corriger sans modifier main.
+- [x] Prouver CI verte pour le commit source VMR-007 `fb59d7b1` (run 38632764998), relire logs et valider APK signé sans modifier main.
+- [ ] Vérifier les changements ultérieurs de documentation avant de qualifier leur HEAD comme source de l'APK.
 - [ ] Confirmer sur Samsung que Qwen 0.4.3 démarre réellement et que la caméra respecte l'aperçu validé.
 - [ ] Tester import vrai modèle 1,39 Go, mauvaise empreinte, peu de stockage et performance; aucun téléchargement depuis l'application.
 - [ ] Comparer résultats Qwen vs PP-OCRv6 vs PaddleOCR-VL-1.6 sur les mêmes photos françaises.
 - [ ] Tester audio Siwis vs Jessica (qualité subjective, chiffres, première syllabe, phonèmes, arrêt/reprise, longs textes).
 - [ ] Auditer OvisOCR2 en branche séparée (GGUF + mmproj + runtime Android natif) ; option non intégrée.
 - [ ] Consigner RAM/PSS/chauffe, version et signature exacte de l'APK CI avant de demander feu vert Release/merge.
+
+### VMR-007 — preuve CI complète (14/10/2026)
+- HEAD compilé et validé : `fb59d7b1a16438f1f6d264657fc865044b687fc8`.
+- GitHub Actions : https://github.com/greenpower2669/VisionMaxRead/actions/runs/38632764998 — SUCCESS.
+- 47 contrôles contractuels PASS ; Gradle/lint/APK/AAB, archive, verify_apk verts.
+- APK test : `VisionMaxRead-0.4.4-QWEN-SIWIS-DEBUG.apk`, 1 651 093 817 octets, SHA-256 `644e77ff4a162bb980793c55191904772f7333ef7349104846f53ae5ce422dce`.
+- Package `fr.visionmaxread.labdebug`, versionName `0.4.4-debug`, versionCode `8`, ARM64, aucune permission INTERNET.
+- Certificat LAB SHA256 inchangé : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
+- AAB unsigned non publié : 1 400 474 764 octets, SHA-256 `d14062ef0ef64952588d8608f1dd7d677b92b0e771f738258369a39bbd0ac1c5`.
+- Artefact GitHub Actions binaire : `11926398102` ; métadonnées : `11926628152`.
+- Modèle additionnel PaddleOCR-VL-1.6 non intégré à l'APK : import manuellement via SAF + SHA256, format .litertlm (1 390 305 472 octets, `314df8b34d6911990d488e825602550a5bbcc5d6700cb1a8914e853e9043f4f1`).
+- CI ≠ validation Samsung : test matériel Qwen/cache/caméra, import OCR, comparatif précision, Siwis/Jessica, RAM/température toujours nécessaires.
+- Ne pas merger `main` ni créer de Release sans autorisation expresse.

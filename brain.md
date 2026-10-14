@@ -222,3 +222,16 @@ Le changement d'orientation est désormais traité sans recréer MainActivity (`
 
 ## VMR-007 — OCR spécialisé / audio haute articulation (2026-10-14)
 Feu vert de Fab pour explorer l'OCR avancé et la qualité audio, pas pour merger `main` ni publier une Release. Branche isolée `feature/vmr007-specialist-ocr-audio-hq-v1`. Implémentation LAB 0.4.4-debug code 8 : OCR Qwen principal conservé, PP-OCR secours indépendant, import d'un fichier PaddleOCR-VL-1.6 `.litertlm` via sélecteur de documents Android puis contrôle taille+SHA256 dans le stockage privé. Une seule grosse inférence LiteRT à la fois sur `qwenWorker`. Audio Siwis français haute articulation et Jessica UPMC sélectionnables ; jamais deux TTS simultanés. Modèles vérifiés côté CI, aucune permission INTERNET. Projet encore soumis à CI et tests sur Samsung ; voir `docs/VMR-007-ocr-specialise-voix-hd.md`.
+
+### VMR-007 — preuve CI complète (14/10/2026)
+- HEAD compilé et validé : `fb59d7b1a16438f1f6d264657fc865044b687fc8`.
+- GitHub Actions : https://github.com/greenpower2669/VisionMaxRead/actions/runs/38632764998 — SUCCESS.
+- 47 contrôles contractuels PASS ; Gradle/lint/APK/AAB, archive, verify_apk verts.
+- APK test : `VisionMaxRead-0.4.4-QWEN-SIWIS-DEBUG.apk`, 1 651 093 817 octets, SHA-256 `644e77ff4a162bb980793c55191904772f7333ef7349104846f53ae5ce422dce`.
+- Package `fr.visionmaxread.labdebug`, versionName `0.4.4-debug`, versionCode `8`, ARM64, aucune permission INTERNET.
+- Certificat LAB SHA256 inchangé : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
+- AAB unsigned non publié : 1 400 474 764 octets, SHA-256 `d14062ef0ef64952588d8608f1dd7d677b92b0e771f738258369a39bbd0ac1c5`.
+- Artefact GitHub Actions binaire : `11926398102` ; métadonnées : `11926628152`.
+- Modèle additionnel PaddleOCR-VL-1.6 non intégré à l'APK : import manuellement via SAF + SHA256, format .litertlm (1 390 305 472 octets, `314df8b34d6911990d488e825602550a5bbcc5d6700cb1a8914e853e9043f4f1`).
+- CI ≠ validation Samsung : test matériel Qwen/cache/caméra, import OCR, comparatif précision, Siwis/Jessica, RAM/température toujours nécessaires.
+- Ne pas merger `main` ni créer de Release sans autorisation expresse.
