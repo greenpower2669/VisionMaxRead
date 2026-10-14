@@ -99,3 +99,14 @@ La référence binaire canonique de la LAB VMR-006 est le run `38505688283` sur 
 - Le journal est consultable/copier/effaçable depuis Réglages > Journal debug.
 - Orientation caméra : instrumentation seulement dans ce push ; aucune nouvelle formule de transform appliquée avant retour des valeurs réelles Samsung.
 - Validation CI Android attendue avant APK de test.
+
+
+### Validation CI instrumentation OCR/caméra
+- Code validé : `331b0207009477857dd9c2bfa42034558bad2937`.
+- GitHub Actions : `38558165918` — SUCCESS.
+- `PASS 47 contract checks`, Gradle/lint/APK/AAB verts, contrat d’archive vert.
+- `verify_apk.py` : APK signé, ARM64, hashes modèles conformes, aucune permission INTERNET.
+- APK : `1582759577` octets ; SHA-256 `f2d1a7604900413507f524f27bbaccdada7c398ef28eb3d2feab0ac2dde135ba`.
+- AAB unsigned : `1333003862` octets ; SHA-256 `eb570dd4bc5bf64de9e057681aa19ad17b4cc5cda8b160e47be76f5e3274d70f`.
+- Artefact principal : `11892045941` ; métadonnées : `11891441218`.
+- Validation fonctionnelle Samsung encore requise pour observer le journal caméra/OCR et corriger ensuite la formule d’orientation avec les valeurs réelles.
