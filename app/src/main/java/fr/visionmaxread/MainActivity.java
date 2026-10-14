@@ -13,25 +13,29 @@ import org.json.*;
 import java.text.DateFormat;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 import fr.visionmaxread.core.SessionGate;
 import fr.visionmaxread.core.ReaderSessions;
 
 public final class MainActivity extends Activity {
     private static final int CAMERA_PERMISSION=10,PHOTO=20;
-    private static final int INK=Color.rgb(16,44,60),PAPER=Color.rgb(255,249,238),TEAL=Color.rgb(0,105,92),RED=Color.rgb(179,38,32);
+    private static final int INK=Color.rgb(16,44,60),PAPER=Color.rgb(255,249,238),TEAL=Color.rgb(0,105,92),RED=Color.rgb(179,38,32),DISABLED=Color.rgb(145,145,145);
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
+    private final ExecutorService qwenWorker=Executors.newSingleThreadExecutor();
+    private final ExecutorService paddleWorker=Executors.newSingleThreadExecutor();
+    private final AtomicLong ocrChoice=new AtomicLong(),progressGeneration=new AtomicLong();
     private final ReaderSessions sessions=new ReaderSessions();
     private final SessionGate speech=new SessionGate();
     private final PiperSpeechEngine voice=new PiperSpeechEngine();
     private final QwenOcrService qwen=new QwenOcrService();
-    private TextureView preview;private ImageView frozen;private FrameLayout imageArea;
+    private TextureView preview;private ImageView frozen;private FrameLayout imageArea;private ProgressBar ocrProgress;
     // Only an in-memory reference to the displayed photo, never copied to persistent storage.
     private Bitmap compareBitmap;
     private EditText text;private TextView status;private Button freeze,play,compare;private CameraController camera;
     private HistoryStore history;private ModelFiles models;private SharedPreferences prefs;
-    private boolean changingText,destroyed,reading,cameraMode;private String maskedPreview="",lastQwenText="";private long lastQwenMs=-1;private float lastQwenPssMb=-1f;private int textSp=24;
+    private boolean changingText,destroyed,reading,cameraMode;private String maskedPreview="",lastQwenText="",lastQwenError="";private long lastQwenMs=-1;private float lastQwenPssMb=-1f;private int textSp=24;
     @Override public void onCreate(Bundle saved){
-        super.onCreate(saved);prefs=getSharedPreferences("settings",MODE_PRIVATE);history=new HistoryStore(this);textSp=prefs.getInt("textSize",24);
+        super.onCreate(saved);DebugLog.session(this);prefs=getSharedPreferences("settings",MODE_PRIVATE);history=new HistoryStore(this);textSp=prefs.getInt("textSize",24);
         buildUi();camera=new CameraController(this,preview,new CameraController.Listener(){
             public void captured(byte[] jpeg,long ticket){ui(()->{if(cameraMode&&sessions.sourceCurrent(ticket)){cameraMode=false;processImage(()->ImageLoader.fromJpeg(jpeg));}});}
             public void error(String message){ui(()->{if(cameraMode){status.setText(message);freeze.setEnabled(true);}});}
@@ -65,7 +69,8 @@ public final class MainActivity extends Activity {
         preview=new TextureView(this);preview.setContentDescription("Aperçu caméra pour viser uniquement");imageArea.addView(preview,new FrameLayout.LayoutParams(-1,-1));
         frozen=new ImageView(this);frozen.setScaleType(ImageView.ScaleType.FIT_CENTER);frozen.setContentDescription("Image figée à reconnaître");frozen.setBackgroundColor(Color.BLACK);frozen.setVisibility(View.GONE);imageArea.addView(frozen,new FrameLayout.LayoutParams(-1,-1));
         freeze=button("● Figer l’image",RED,()->{freeze.setEnabled(false);status.setText("Capture de la photo…");camera.freeze();});content.addView(freeze);freeze.setEnabled(false);
-        compare=button("PP-OCRv6-Small / Comparer",TEAL,this::compareOcr);compare.setVisibility(View.GONE);compare.setEnabled(false);content.addView(compare);
+        compare=button("PP-OCRv6-Small / Comparer",TEAL,this::compareOcr);compare.setVisibility(View.GONE);content.addView(compare);setCompareAvailable(false);
+        ocrProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);ocrProgress.setMax(100);ocrProgress.setVisibility(View.GONE);ocrProgress.setContentDescription("Progression de la reconnaissance de texte");content.addView(ocrProgress,new LinearLayout.LayoutParams(-1,dp(10)));
         status=label("Choisis Caméra, Photo ou colle un texte.",18);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);status.setPadding(0,dp(8),0,dp(8));content.addView(status);
         text=new EditText(this);text.setHint("Le texte apparaît ici. Tu peux le corriger ou coller un texte.");text.setTextSize(textSp);text.setTextColor(INK);text.setHintTextColor(Color.rgb(74,86,95));text.setGravity(Gravity.TOP);text.setMinLines(5);text.setSingleLine(false);text.setSelectAllOnFocus(false);text.setBackgroundTintList(android.content.res.ColorStateList.valueOf(TEAL));
         text.setImeOptions(android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
@@ -78,7 +83,11 @@ public final class MainActivity extends Activity {
         play=button("▶ Lire le texte",TEAL,()->{if(reading)stopReading();else readText();});outer.addView(play,new LinearLayout.LayoutParams(-1,dp(64)));
     }
     private void font(int delta){textSp=Math.max(18,Math.min(48,textSp+delta));text.setTextSize(textSp);prefs.edit().putInt("textSize",textSp).apply();}
-    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastQwenText="";lastQwenMs=-1;lastQwenPssMb=-1f;compareBitmap=null;if(compare!=null){compare.setEnabled(false);compare.setVisibility(View.GONE);}return sessions.replaceSource();}
+    private void setCompareAvailable(boolean available){if(compare==null)return;compare.setEnabled(available);compare.setBackgroundTintList(android.content.res.ColorStateList.valueOf(available?TEAL:DISABLED));compare.setAlpha(available?1f:0.65f);}
+    private long beginOcrProgress(int value){long id=progressGeneration.incrementAndGet();ui(()->{if(ocrProgress!=null&&progressGeneration.get()==id){ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(value);}});return id;}
+    private void updateOcrProgress(long id,int value){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(Math.max(0,Math.min(100,value)));});}
+    private void finishOcrProgress(long id){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setIndeterminate(false);ocrProgress.setProgress(100);ocrProgress.postDelayed(()->{if(progressGeneration.get()==id)ocrProgress.setVisibility(View.GONE);},900);});}
+    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastQwenText="";lastQwenError="";lastQwenMs=-1;lastQwenPssMb=-1f;compareBitmap=null;ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}return sessions.replaceSource();}
     private void startCamera(){
         newDocument();cameraMode=true;imageArea.setVisibility(View.VISIBLE);preview.setVisibility(View.VISIBLE);frozen.setVisibility(View.GONE);freeze.setVisibility(View.VISIBLE);freeze.setEnabled(true);setText("");status.setText("Vise le texte puis appuie sur Figer l’image.");
         if(checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION);
@@ -89,19 +98,43 @@ public final class MainActivity extends Activity {
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request==PHOTO&&result==RESULT_OK&&data!=null&&data.getData()!=null){Uri uri=data.getData();processImage(()->ImageLoader.fromUri(this,uri));}}
     interface LoadImage{Bitmap get()throws Exception;}
     private void processImage(LoadImage source){
-        long ticket=newDocument(),privacy=sessions.historyTicket();imageArea.setVisibility(View.VISIBLE);freeze.setVisibility(View.GONE);preview.setVisibility(View.GONE);frozen.setVisibility(View.VISIBLE);frozen.setImageDrawable(null);setText("");status.setText("Préparation de l’image…");
+        long ticket=newDocument(),privacy=sessions.historyTicket(),choice=ocrChoice.get();imageArea.setVisibility(View.VISIBLE);freeze.setVisibility(View.GONE);preview.setVisibility(View.GONE);frozen.setVisibility(View.VISIBLE);frozen.setImageDrawable(null);setText("");status.setText("Préparation de l’image…");
+        final long loadProgress=beginOcrProgress(2);
         worker.execute(()->{
             try{
                 if(!sessions.documentCurrent(ticket))return;Bitmap image=source.get();if(!sessions.documentCurrent(ticket)){image.recycle();return;}
-                ui(()->{if(sessions.documentCurrent(ticket)){frozen.setImageBitmap(image);compareBitmap=image;compare.setVisibility(View.VISIBLE);compare.setEnabled(false);status.setText("Qwen prépare la reconnaissance…");}});
-                long q0=SystemClock.elapsedRealtime();
-                String found=qwen.recognize(this,image,message->ui(()->{if(sessions.documentCurrent(ticket))status.setText(message);}));
-                long qMs=SystemClock.elapsedRealtime()-q0;
-                if(!sessions.documentCurrent(ticket))return;
-                lastQwenText=found;lastQwenMs=qMs;lastQwenPssMb=processPssMb();
-                ui(()->{if(sessions.documentCurrent(ticket)){setText(found);compare.setEnabled(true);status.setText(found.trim().isEmpty()?"Qwen : aucun texte trouvé ("+qMs+" ms). Essaie PP-OCRv6-Small.":"Qwen : texte reconnu en "+qMs+" ms. PP-OCRv6-Small est disponible pour comparer.");}});
-                if(!found.trim().isEmpty()&&prefs.getBoolean("history",true))maskAndSave(found,ticket,privacy,true);
-            }catch(Exception|OutOfMemoryError e){ui(()->{if(sessions.documentCurrent(ticket))status.setText("Impossible de reconnaître cette image. Essaie une photo plus petite ou plus nette.");});}
+                DebugLog.append(this,"IMAGE ready "+image.getWidth()+"x"+image.getHeight()+" pssMb="+formatMb(processPssMb()));
+                ui(()->{if(sessions.documentCurrent(ticket)){frozen.setImageBitmap(image);compareBitmap=image;compare.setVisibility(View.VISIBLE);setCompareAvailable(true);status.setText("Image prête. Qwen démarre ; PP-OCRv6-Small est déjà disponible.");}});
+                finishOcrProgress(loadProgress);
+                final long qProgress=beginOcrProgress(5);
+                qwenWorker.execute(()->{
+                    long q0=SystemClock.elapsedRealtime();
+                    try{
+                        String found=qwen.recognize(this,image,
+                            message->ui(()->{if(sessions.documentCurrent(ticket)&&progressGeneration.get()==qProgress)status.setText(message);}),
+                            value->updateOcrProgress(qProgress,value));
+                        long qMs=SystemClock.elapsedRealtime()-q0;
+                        if(!sessions.documentCurrent(ticket))return;
+                        lastQwenText=found;lastQwenError="";lastQwenMs=qMs;lastQwenPssMb=processPssMb();
+                        DebugLog.append(this,"QWEN done ms="+qMs+" chars="+found.length()+" pssMb="+formatMb(lastQwenPssMb));
+                        finishOcrProgress(qProgress);
+                        ui(()->{
+                            if(!sessions.documentCurrent(ticket))return;
+                            if(ocrChoice.get()==choice)setText(found);
+                            if(progressGeneration.get()==qProgress)status.setText(found.trim().isEmpty()?"Qwen : aucun texte trouvé ("+qMs+" ms). Essaie PP-OCRv6-Small.":"Qwen : texte reconnu en "+qMs+" ms. PP-OCRv6-Small est disponible pour comparer.");
+                        });
+                        if(!found.trim().isEmpty()&&prefs.getBoolean("history",true)&&ocrChoice.get()==choice)maskAndSave(found,ticket,privacy,true);
+                    }catch(Exception|OutOfMemoryError e){
+                        long qMs=SystemClock.elapsedRealtime()-q0;
+                        lastQwenText="";lastQwenError=e.getClass().getSimpleName()+(e.getMessage()==null?"":": "+e.getMessage());lastQwenMs=qMs;lastQwenPssMb=processPssMb();
+                        DebugLog.exception(this,"QWEN after "+qMs+" ms",e);finishOcrProgress(qProgress);
+                        ui(()->{if(sessions.documentCurrent(ticket)&&progressGeneration.get()==qProgress)status.setText("Qwen n’a pas terminé correctement. PP-OCRv6-Small reste disponible.");});
+                    }
+                });
+            }catch(Exception|OutOfMemoryError e){
+                DebugLog.exception(this,"IMAGE load",e);finishOcrProgress(loadProgress);
+                ui(()->{if(sessions.documentCurrent(ticket))status.setText("Impossible de préparer cette image.");});
+            }
         });
     }
 
@@ -109,35 +142,37 @@ public final class MainActivity extends Activity {
     private void compareOcr() {
         final Bitmap image=compareBitmap;
         final long ticket=sessions.documentTicket();
-        final String qwenText=lastQwenText;
-        final long qwenMs=lastQwenMs;
-        final float qwenPss=lastQwenPssMb;
         if(image==null||image.isRecycled()||!sessions.documentCurrent(ticket))return;
-        compare.setEnabled(false);
+        setCompareAvailable(false);
+        final long pProgress=beginOcrProgress(-1);
         status.setText("PP-OCRv6-Small analyse exactement la même image…");
-        worker.execute(()->{
+        DebugLog.append(this,"PADDLE start image="+image.getWidth()+"x"+image.getHeight());
+        paddleWorker.execute(()->{
             String paddleText="";
             String paddleError=null;
             long t0=SystemClock.elapsedRealtime();
             try { paddleText=new OcrService().recognize(this,image); }
-            catch(Exception|OutOfMemoryError e) { paddleError="Échec de PP-OCRv6-Small"; }
+            catch(Exception|OutOfMemoryError e) { paddleError=e.getClass().getSimpleName()+(e.getMessage()==null?"":": "+e.getMessage());DebugLog.exception(this,"PADDLE",e); }
             long paddleMs=SystemClock.elapsedRealtime()-t0;
             float paddlePss=processPssMb();
+            DebugLog.append(this,"PADDLE done ms="+paddleMs+" chars="+paddleText.length()+" pssMb="+formatMb(paddlePss)+(paddleError==null?"":" error="+paddleError));
+            finishOcrProgress(pProgress);
             if(!sessions.documentCurrent(ticket)||destroyed)return;
             final String p=paddleText,err=paddleError;final float pPss=paddlePss;
             ui(()->{
                 if(!sessions.documentCurrent(ticket)||compareBitmap!=image)return;
-                compare.setEnabled(true);
-                status.setText("Comparaison terminée. Choisis le résultat à examiner.");
+                setCompareAvailable(true);
+                status.setText(err==null?"Comparaison terminée. Choisis le résultat à examiner.":"PP-OCRv6-Small a échoué ; ouvre le journal debug pour le détail.");
+                String qState=lastQwenMs<0?"en cours / non terminé":(lastQwenError.isEmpty()?lastQwenMs+" ms, "+lastQwenText.length()+" caractères, PSS processus ≈ "+formatMb(lastQwenPssMb):"échec après "+lastQwenMs+" ms ("+lastQwenError+")");
                 String summary="Même image : "+image.getWidth()+" × "+image.getHeight()+" pixels.\n"
-                    +"Qwen3.5-0.8B-VL : "+qwenMs+" ms, "+qwenText.length()+" caractères, PSS processus ≈ "+formatMb(qwenPss)+"\n"
+                    +"Qwen3.5-0.8B-VL : "+qState+"\n"
                     +"PP-OCRv6-Small : "+paddleMs+" ms, "+p.length()+" caractères, PSS processus après test ≈ "+formatMb(pPss)+(err==null?"":" ("+err+")")+"\n\n"
                     +"Les deux moteurs ont reçu le même bitmap. Le nombre de caractères ne mesure pas à lui seul l’exactitude. "
                     +"Aucun texte de comparaison n’est envoyé sur Internet.";
                 new AlertDialog.Builder(this)
                     .setTitle("Qwen ↔ PP-OCRv6-Small")
                     .setMessage(summary)
-                    .setPositiveButton("Voir Qwen",(dialog,which)->showComparisonText("Qwen",qwenText,ticket))
+                    .setPositiveButton("Voir Qwen",(dialog,which)->showComparisonText("Qwen",lastQwenText,ticket))
                     .setNeutralButton("Voir PP-OCR",(dialog,which)->showComparisonText("PP-OCRv6-Small",p,ticket))
                     .setNegativeButton("Fermer",null).show();
             });
@@ -154,7 +189,8 @@ public final class MainActivity extends Activity {
             .setView(scroll)
             .setPositiveButton("Utiliser ce texte",(d,w)->{
                 if(!sessions.documentCurrent(ticket))return;
-                sessions.editText();maskedPreview="";stopReading();setText(value);
+                ocrChoice.incrementAndGet();sessions.editText();maskedPreview="";stopReading();setText(value);
+                DebugLog.append(this,"OCR selected engine="+name+" chars="+value.length());
                 status.setText("Texte "+name+" sélectionné. Tu peux le corriger puis le faire lire.");
             })
             .setNegativeButton("Fermer",null).show();
@@ -223,12 +259,23 @@ public final class MainActivity extends Activity {
         panel.addView(label("Le moteur est amorcé silencieusement sur le canal vocal avant la première vraie phrase.",16));
         TextView speedLabel=label("Vitesse de lecture",18);panel.addView(speedLabel);SeekBar speed=new SeekBar(this);speed.setMax(100);speed.setProgress(Math.round((prefs.getFloat("speed",1.05f)-0.75f)*100));panel.addView(speed);speed.setContentDescription("Vitesse de lecture de 0,75 à 1,75");
         panel.addView(button("Diagnostic 1re phrase",INK,()->worker.execute(()->{
-            try{String diag=voice.diagnoseFirstPass(this);ui(()->status.setText("Diagnostic Piper : "+diag));}
-            catch(Exception e){ui(()->status.setText("Diagnostic Piper indisponible."));}
+            try{String diag=voice.diagnoseFirstPass(this);DebugLog.append(this,"PIPER diagnostic "+diag);ui(()->status.setText("Diagnostic Piper : "+diag));}
+            catch(Exception e){DebugLog.exception(this,"PIPER diagnostic",e);ui(()->status.setText("Diagnostic Piper indisponible."));}
         })));
+        panel.addView(button("Journal debug",INK,this::showDebugLog));
         panel.addView(button("Effacer l’historique",RED,this::confirmClear));
         ScrollView settingsScroll=new ScrollView(this);settingsScroll.addView(panel);
         new AlertDialog.Builder(this).setTitle("Réglages").setView(settingsScroll).setPositiveButton("Enregistrer",(d,w)->{stopReading();prefs.edit().putBoolean("history",keep.isChecked()).putFloat("speed",0.75f+speed.getProgress()/100f).apply();if(!keep.isChecked())sessions.clearHistory();}).setNegativeButton("Annuler",null).show();
+    }
+    private void showDebugLog(){
+        String value=DebugLog.read(this);
+        TextView log=label(value,14);log.setTextIsSelectable(true);log.setTypeface(Typeface.MONOSPACE);
+        ScrollView scroll=new ScrollView(this);scroll.setPadding(dp(12),dp(8),dp(12),dp(8));scroll.addView(log);
+        new AlertDialog.Builder(this).setTitle("Journal debug local").setMessage("Aucun texte OCR brut ni image n’est écrit dans ce journal.")
+            .setView(scroll)
+            .setPositiveButton("Copier",(d,w)->((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("VisionMaxRead debug",value)))
+            .setNeutralButton("Effacer",(d,w)->{DebugLog.clear(this);status.setText("Journal debug effacé.");})
+            .setNegativeButton("Fermer",null).show();
     }
     private void help(){new AlertDialog.Builder(this).setTitle("Lire avec VisionMaxRead").setMessage("1. Caméra : vise, puis Figer l’image.\n2. Photo : choisis une image du téléphone.\n3. Qwen reconnaît automatiquement le texte hors ligne.\n4. Le bouton PP-OCRv6-Small permet une seconde lecture de la même image et une comparaison.\n5. Corrige le résultat puis Lire : Jessica parle avec Piper / Sherpa-ONNX.\n\nLa première utilisation de Qwen copie son modèle local d’environ 1,3 Go ; cela peut prendre du temps et nécessite de l’espace libre. La voix est amorcée silencieusement afin de protéger le début de la première phrase.\n\nAucune permission INTERNET n’est utilisée par l’application. Les images et textes originaux ne sont pas enregistrés dans l’historique ; seul le texte masqué peut y être conservé.\n\nLAB 0.4.0 · Qwen3.5-0.8B-VL · PP-OCRv6-Small · Jessica Piper/Sherpa-ONNX.").setPositiveButton("Fermer",null).show();}
     @Override protected void onNewIntent(Intent intent){super.onNewIntent(intent);setIntent(intent);incoming(intent);}
@@ -243,5 +290,5 @@ public final class MainActivity extends Activity {
     private void ui(Runnable action){runOnUiThread(()->{if(!destroyed)action.run();});}
     @Override protected void onPause(){super.onPause();if(camera!=null)camera.stop();if(freeze!=null)freeze.setEnabled(false);stopReading();}
     @Override protected void onResume(){super.onResume();if(cameraMode&&camera!=null&&checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED){camera.start(sessions.sourceTicket());freeze.setEnabled(true);}}
-    @Override protected void onDestroy(){destroyed=true;sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();qwen.release();if(camera!=null)camera.destroy();worker.shutdownNow();super.onDestroy();}
+    @Override protected void onDestroy(){destroyed=true;DebugLog.append(this,"SESSION destroy");sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();qwen.release();if(camera!=null)camera.destroy();worker.shutdownNow();qwenWorker.shutdownNow();paddleWorker.shutdownNow();super.onDestroy();}
 }
