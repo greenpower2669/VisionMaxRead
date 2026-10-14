@@ -94,15 +94,15 @@ jobs:
           badging="$("$build_tools/aapt" dump badging "$apk" | head -n1)"
           echo "$badging"
           echo "$badging" | grep -F "name='fr.visionmaxread.labdebug'"
-          echo "$badging" | grep -F "versionCode='7'"
+          echo "$badging" | grep -F "versionCode='8'"
           cert="$("$build_tools/apksigner" verify --print-certs "$apk" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print tolower($2); exit}')"
           echo "APK_CERT_SHA256=$cert"
           test "$cert" = "$VMR_LAB_CERT_SHA256"
       - name: Name artifacts and record sizes
         run: |
           mkdir artifacts
-          apk="artifacts/VisionMaxRead-0.4.3-QWEN-PIPER-DEBUG.apk"
-          aab="artifacts/VisionMaxRead-0.4.3-QWEN-PIPER-DEBUG-unsigned.aab"
+          apk="artifacts/VisionMaxRead-0.4.4-QWEN-PIPER-DEBUG.apk"
+          aab="artifacts/VisionMaxRead-0.4.4-QWEN-PIPER-DEBUG-unsigned.aab"
           cp app/build/outputs/apk/debug/app-debug.apk "$apk"
           cp app/build/outputs/bundle/release/app-release.aab "$aab"
           cp app/build/reports/lint-results-debug.html artifacts/
@@ -113,7 +113,7 @@ jobs:
             echo "APK_BYTES=$(stat -c%s "$apk")"
             echo "APK_SHA256=$(sha256sum "$apk" | awk '{print $1}')"
             echo "APK_PACKAGE=fr.visionmaxread.labdebug"
-            echo "APK_VERSION_CODE=7"
+            echo "APK_VERSION_CODE=8"
             echo "APK_CERT_SHA256=$VMR_LAB_CERT_SHA256"
             echo "AAB_NAME=$(basename "$aab")"
             echo "AAB_BYTES=$(stat -c%s "$aab")"
@@ -122,12 +122,12 @@ jobs:
       - name: Upload compact build metadata
         uses: actions/upload-artifact@v4
         with:
-          name: VisionMaxRead-0.4.3-QWEN-PIPER-DEBUG-metadata
+          name: VisionMaxRead-0.4.4-QWEN-PIPER-DEBUG-metadata
           path: artifacts/build-manifest.txt
           retention-days: 14
       - uses: actions/upload-artifact@v4
         with:
-          name: VisionMaxRead-0.4.3-QWEN-PIPER-DEBUG
+          name: VisionMaxRead-0.4.4-QWEN-PIPER-DEBUG
           path: artifacts/
           compression-level: 0
           retention-days: 14
