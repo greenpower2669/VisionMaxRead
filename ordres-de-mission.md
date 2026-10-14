@@ -229,3 +229,33 @@ Le code SHA `cf7083b5d204626617aa17bc1515c8c910f82dc6` est la version construite
 - Package : `fr.visionmaxread.labdebug` ; versionCode `7`.
 - Certificat LAB SHA-256 inchangé : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
 - `main` inchangée ; AAB unsigned non publié.
+
+
+## VMR-006 — profils Qwen CPU/GPU + indices thermiques (2026-10-14)
+- Branche : `feature/vmr006-qwen-profiles-044`.
+- Version : `0.4.4-debug`, versionCode `8`, package `fr.visionmaxread.labdebug`, signature LAB persistante inchangée.
+- Réglages Qwen ajoutés :
+  - AUTO Turbo : GPU langage + GPU vision, repli automatique CPU 4 threads ;
+  - GPU langage + GPU vision, repli CPU4 ;
+  - GPU langage + CPU vision, repli CPU4 ;
+  - CPU 4 threads + GPU vision, repli CPU4 ;
+  - CPU 4 threads + CPU vision ;
+  - CPU 2 threads + CPU vision ;
+  - CPU auto + CPU vision.
+- Profil par défaut : `AUTO Turbo`.
+- Quand un profil change, le moteur Qwen existant est fermé puis recréé au prochain OCR.
+- Les tentatives GPU sont journalisées avec profil demandé / profil actif / repli éventuel.
+- Jessica / Piper / Sherpa-ONNX reste inchangé.
+- Debug chauffe : journal `THERMAL` autour de session, init Qwen, inférence Qwen et PP-OCR.
+- Indices thermiques utilisés :
+  - `PowerManager.getCurrentThermalStatus()` : NONE/LIGHT/MODERATE/SEVERE/CRITICAL/EMERGENCY/SHUTDOWN ;
+  - température batterie Android en °C ;
+  - niveau batterie et état branché.
+- Ne jamais présenter cela comme une température CPU/GPU : Android n'expose pas une valeur matérielle standard fiable ici.
+- Code validé : `83f1be15717a7ba77bcde21a687294fe4fc8da40`.
+- GitHub Actions : `38607461741` — SUCCESS.
+- `PASS 47 contract checks`, build/lint/APK/AAB, archive, signature, modèles et absence INTERNET verts.
+- APK : `VisionMaxRead-0.4.4-QWEN-PIPER-DEBUG.apk`, `1582764529` octets, SHA-256 `e5d072bf1255b610de14495355b3bf5d3e7e4d1e8a7d8c59297cb707cf4cfb16`.
+- Certificat LAB SHA-256 : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
+- Artefact principal : `11916762186`; métadonnées : `11916022300`.
+- Aucun merge de `main` ; aucune Release directe 0.4.4 sans feu vert explicite.
