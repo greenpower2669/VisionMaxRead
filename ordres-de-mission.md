@@ -67,3 +67,7 @@ Contraintes : hors ligne, permission INTERNET absente dans l'APK final, aucune p
 
 ### VMR-006 — Note d'exécution du 14/10/2026
 La version précise de Sherpa n'était pas imposée par l'ordre utilisateur : elle peut être ajustée pour compatibilité Android tant que Piper `fr_FR-upmc-medium`, Jessica sid 0, la chaîne hors ligne et les critères fonctionnels restent inchangés. Correctif en cours sur la branche VMR-006 : Sherpa 1.13.4 / ORT 1.27.0, déverrouillage portrait/paysage, AudioTrack conservé après arrêt, diagnostics temps/PCM/PSS. Ne pas transformer cet état en preuve de livraison avant CI verte et conserver les tests Samsung comme validation humaine distincte.
+
+
+### VMR-006 — Raffinement de conformité du 14/10/2026
+Pour satisfaire littéralement « première et deuxième génération du même texte » et « rotation du terminal », le premier warm-up capture la vraie paire PCM initiale avant lecture utilisateur et MainActivity absorbe les changements orientation/screenSize afin que CameraController puisse corriger la prévisualisation sans perdre la session. La CI doit également publier une preuve textuelle légère des tailles et SHA-256 APK/AAB. Toujours : aucun merge main, aucune Release sans feu vert explicite de Fab.

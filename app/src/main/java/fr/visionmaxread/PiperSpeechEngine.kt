@@ -33,7 +33,10 @@ class PiperSpeechEngine : SpeechEngine {
     @Volatile private var warmed = false
     @Volatile private var released = false
     @Volatile private var lastInitializeMs = -1L
+    @Volatile private var firstWarmUpMs = -1L
     @Volatile private var lastWarmUpMs = -1L
+    @Volatile private var lastSpeechMs = -1L
+    @Volatile private var firstPassDiagnostic: String? = null
 
     @Synchronized override fun initialize(context: Context, status: Consumer<String>?) {
         check(!released) { "Piper engine released" }
@@ -63,10 +66,32 @@ class PiperSpeechEngine : SpeechEngine {
         if (warmed && player.hasLiveTrack()) return
         checkCancelled(cancelled)
         val started = SystemClock.elapsedRealtime()
-        val audio = requireNotNull(tts).generate(WARM_TEXT, JESSICA_SID, 1.0f)
+        val engine = requireNotNull(tts)
+        val audio = if (firstPassDiagnostic == null) {
+            val firstStart = SystemClock.elapsedRealtime()
+            val first = engine.generate(WARM_TEXT, JESSICA_SID, 1.0f)
+            val firstMs = SystemClock.elapsedRealtime() - firstStart
+            checkCancelled(cancelled)
+            val secondStart = SystemClock.elapsedRealtime()
+            val second = engine.generate(WARM_TEXT, JESSICA_SID, 1.0f)
+            val secondMs = SystemClock.elapsedRealtime() - secondStart
+            val firstHash = hash(first.samples)
+            val secondHash = hash(second.samples)
+            val verdict = if (firstHash == secondHash && first.samples.size == second.samples.size)
+                "PCM identiques : si le début audible manque, piste Android/AudioTrack à examiner."
+            else "PCM différents : génération Piper à examiner."
+            firstPassDiagnostic =
+                "PCM1=" + first.samples.size + ", gen=" + firstMs + " ms, signal=" + leadingSignalMs(first.samples, first.sampleRate) + " ms, " + firstHash +
+                "; PCM2=" + second.samples.size + ", gen=" + secondMs + " ms, signal=" + leadingSignalMs(second.samples, second.sampleRate) + " ms, " + secondHash +
+                "; fréquence=" + second.sampleRate + " Hz. " + verdict
+            second
+        } else {
+            engine.generate(WARM_TEXT, JESSICA_SID, 1.0f)
+        }
         checkCancelled(cancelled)
         player.warm(audio.samples, audio.sampleRate, cancelled)
         lastWarmUpMs = SystemClock.elapsedRealtime() - started
+        if (firstWarmUpMs < 0) firstWarmUpMs = lastWarmUpMs
         warmed = true
     }
 
@@ -74,6 +99,7 @@ class PiperSpeechEngine : SpeechEngine {
         if (text.isBlank()) return
         warmUp(context, cancelled)
         val engine = requireNotNull(tts)
+        val speechStarted = SystemClock.elapsedRealtime()
         val chunks = TextChunks.split(text, 240)
         for ((index, segment) in chunks.withIndex()) {
             checkCancelled(cancelled)
@@ -83,27 +109,13 @@ class PiperSpeechEngine : SpeechEngine {
             checkCancelled(cancelled)
             player.play(audio.samples, audio.sampleRate, GUARD_MS, cancelled)
         }
+        lastSpeechMs = SystemClock.elapsedRealtime() - speechStarted
     }
 
     @Synchronized fun diagnoseFirstPass(context: Context): String {
-        initialize(context, null)
-        val engine = requireNotNull(tts)
-        val phrase = "Bonjour, ceci est un test."
-        val aStart = SystemClock.elapsedRealtime()
-        val a = engine.generate(phrase, JESSICA_SID, 1.0f)
-        val aMs = SystemClock.elapsedRealtime() - aStart
-        val bStart = SystemClock.elapsedRealtime()
-        val b = engine.generate(phrase, JESSICA_SID, 1.0f)
-        val bMs = SystemClock.elapsedRealtime() - bStart
-        val aHash = hash(a.samples)
-        val bHash = hash(b.samples)
-        val verdict = if (aHash == bHash && a.samples.size == b.samples.size)
-            "PCM identiques : si le début audible manque, piste Android/AudioTrack à examiner."
-        else "PCM différents : génération Piper à examiner."
-        return "init=" + lastInitializeMs + " ms, amorce=" + lastWarmUpMs + " ms; " +
-            "PCM1=" + a.samples.size + ", gen=" + aMs + " ms, signal=" + leadingSignalMs(a.samples, a.sampleRate) + " ms, " + aHash +
-            "; PCM2=" + b.samples.size + ", gen=" + bMs + " ms, signal=" + leadingSignalMs(b.samples, b.sampleRate) + " ms, " + bHash +
-            ". " + verdict
+        warmUp(context, BooleanSupplier { false })
+        return "init=" + lastInitializeMs + " ms, première amorce=" + firstWarmUpMs + " ms, dernière amorce=" + lastWarmUpMs +
+            " ms, dernière lecture=" + lastSpeechMs + " ms; " + (firstPassDiagnostic ?: "PCM initial non mesuré")
     }
 
     @Synchronized override fun stop() {

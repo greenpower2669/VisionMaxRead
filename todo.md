@@ -120,3 +120,12 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 
 - [x] [VMR-006/CI] Run `38504519405` : dépendances + 47 tests passent ; échec Kotlin limité aux deux références `head(current)` manquantes.
 - [ ] [VMR-006/CI] Relancer après correction des deux références AudioTrack.
+
+
+### VMR-006 — Raffinement final avant clôture
+- [x] Préserver l'Activity/session caméra lors de rotation avec `configChanges=orientation|screenSize`.
+- [x] Capturer les deux premières générations Piper réelles du même texte dans l'amorce et exposer leur diagnostic.
+- [x] Ajouter temps init/première amorce/dernière amorce/dernière lecture et fréquence au diagnostic.
+- [x] Ajouter un `build-manifest.txt` CI avec tailles et SHA-256 APK/AAB + artifact metadata compact.
+- [ ] [CI] Revalider le SHA de ce raffinement final et relever les tailles exactes APK/AAB.
+- [ ] [HUMAIN] Tests Samsung toujours nécessaires : orientation en cours de caméra, rendu figé identique, Qwen/Paddle, Jessica, arrêt/reprise, inactivité et mode avion.

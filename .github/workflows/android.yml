@@ -69,14 +69,33 @@ jobs:
         run: bash scripts/test-archive.sh
       - name: Verify installable APK
         run: python3 scripts/verify_apk.py app/build/outputs/apk/debug/app-debug.apk
-      - name: Name artifacts
+      - name: Name artifacts and record sizes
         run: |
           mkdir artifacts
-          cp app/build/outputs/apk/debug/app-debug.apk artifacts/VisionMaxRead-0.4.0-QWEN-PIPER-LAB.apk
-          cp app/build/outputs/bundle/release/app-release.aab artifacts/VisionMaxRead-0.4.0-QWEN-PIPER-LAB-unsigned.aab
+          apk="artifacts/VisionMaxRead-0.4.0-QWEN-PIPER-LAB.apk"
+          aab="artifacts/VisionMaxRead-0.4.0-QWEN-PIPER-LAB-unsigned.aab"
+          cp app/build/outputs/apk/debug/app-debug.apk "$apk"
+          cp app/build/outputs/bundle/release/app-release.aab "$aab"
           cp app/build/reports/lint-results-debug.html artifacts/
+          {
+            echo "RUN_ID=${{ github.run_id }}"
+            echo "HEAD_SHA=${{ github.sha }}"
+            echo "APK_NAME=$(basename "$apk")"
+            echo "APK_BYTES=$(stat -c%s "$apk")"
+            echo "APK_SHA256=$(sha256sum "$apk" | awk '{print $1}')"
+            echo "AAB_NAME=$(basename "$aab")"
+            echo "AAB_BYTES=$(stat -c%s "$aab")"
+            echo "AAB_SHA256=$(sha256sum "$aab" | awk '{print $1}')"
+          } | tee artifacts/build-manifest.txt
+      - name: Upload compact build metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: VisionMaxRead-0.4.0-QWEN-PIPER-LAB-metadata
+          path: artifacts/build-manifest.txt
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         with:
           name: VisionMaxRead-0.4.0-QWEN-PIPER-LAB
           path: artifacts/
+          compression-level: 0
           retention-days: 14

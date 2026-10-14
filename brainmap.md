@@ -62,3 +62,9 @@ Le workflow `38394243158` est vert : téléchargement depuis Actions vers le dos
 - `PersistentVoicePcmPlayer` : `stop()` fait pause+flush mais conserve l'AudioTrack initialisé ; `release()` seul libère la route. L'attente de fin se base sur la progression réelle du playback head relative aux frames écrites.
 - Sherpa-ONNX 1.13.4 et Paddle partagent ORT Android 1.27.0 ; la copie native ORT de l'AAR Sherpa est retirée après vérification SHA.
 - `MainActivity.compareOcr()` affiche temps et PSS processus approximative après Qwen / après Paddle ; ce n'est pas une attribution mémoire isolée à chaque moteur.
+
+
+### VMR-006 — Preuve instrumentée finale
+- `MainActivity` conserve sa session lors de `orientation|screenSize`; la rotation est gérée par `CameraController` plutôt que par une recréation de l'écran.
+- `PiperSpeechEngine.warmUp()` capture la vraie paire génération 1 / génération 2 de `WARM_TEXT` au premier démarrage, conserve hashes/onsets/temps/fréquence, puis amorce silencieusement l'AudioTrack avec la seconde génération.
+- `.github/workflows/android.yml` produit `build-manifest.txt` avec RUN_ID, HEAD_SHA, noms, tailles exactes et SHA-256 APK/AAB, et l'upload aussi dans un petit artifact metadata séparé.

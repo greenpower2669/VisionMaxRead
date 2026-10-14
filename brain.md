@@ -48,3 +48,7 @@ Le bundle Qwen est `Qwen3.5-0.8B-VL_int8.litertlm`, 1 303 966 384 octets, SHA-25
 
 ### VMR-006 — Ajustement de compatibilité et mesures (14/10/2026)
 La branche utilise Sherpa-ONNX 1.13.4 avec ONNX Runtime Android 1.27.0 afin d'utiliser une dépendance réellement publiée et commune à Paddle/NER/Sherpa. L'AAR Sherpa est authentifié par SHA-256 avant retrait de sa copie native ORT afin de n'empaqueter qu'une seule `libonnxruntime.so`. L'Activity n'est plus verrouillée en portrait ; la rotation aperçu/JPEG suit la même formule capteur/affichage avec correction avant/arrière et recalcul lors d'un changement d'orientation. Le comparateur affiche aussi la PSS approximative du processus Android après Qwen puis après Paddle. Ces changements restent à qualifier par CI et test Samsung.
+
+
+### VMR-006 — Dernier raffinement avant preuve finale (14/10/2026)
+Le changement d'orientation est désormais traité sans recréer MainActivity (`configChanges=orientation|screenSize`) afin de conserver la session caméra pendant le passage portrait/paysage ; CameraController recalcule son transform. L'amorce TTS compare et mémorise réellement les **deux premières générations** du même texte d'amorce avant la première lecture audible, puis fait traverser la seconde au même AudioTrack en silence. Le diagnostic expose temps d'initialisation, première/dernière amorce, dernière lecture, fréquence audio et comparaison PCM initiale. Le workflow écrit maintenant taille + SHA-256 APK/AAB dans un manifeste compact. Nouvelle CI complète requise avant clôture.

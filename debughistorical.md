@@ -75,3 +75,9 @@ Audit simultané VMR-006 : le manifeste conservait `screenOrientation="portrait"
 
 ## VMR-D019 — Refactor AudioTrack : helper manquant (14/10/2026)
 Run `38504519405` : téléchargement Sherpa/Piper, Qwen et préparation des modèles réussis ; ORT 1.27.0 est bien résolu et les 47 contrôles core passent. Échec ensuite à `:app:compileDebugKotlin` sur deux appels `head(current)` laissés sans définition dans `PersistentVoicePcmPlayer`. Correction locale : lire directement `playbackHeadPosition` (non signé 32 bits) aux deux points de départ. Aucun APK n'a été produit par ce run rouge.
+
+
+## VMR-D020 — Rotation Activity et diagnostic « première génération » incomplets (14/10/2026)
+Après le run vert `38504818600`, audit de conformité fonctionnelle : retirer seulement le verrou portrait autorisait Android à recréer l'Activity lors d'une rotation, ce qui pouvait interrompre la session caméra. Ajout de `configChanges="orientation|screenSize"` pour conserver l'Activity et laisser CameraController recalculer le transform.
+
+Le diagnostic PCM générait auparavant deux échantillons seulement lorsque l'utilisateur ouvrait le diagnostic, donc après l'amorce initiale : il ne représentait pas les deux **premières** générations réelles. L'amorce initiale génère maintenant deux fois le même texte, mémorise durées/hash/début de signal/fréquence, puis envoie la seconde génération dans l'AudioTrack muet. Nouvelle CI requise.
