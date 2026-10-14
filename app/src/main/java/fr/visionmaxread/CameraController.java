@@ -110,34 +110,51 @@ final class CameraController {
         int r=display!=null?display.getRotation():((WindowManager)context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
         switch(r){case Surface.ROTATION_90:return 90;case Surface.ROTATION_180:return 180;case Surface.ROTATION_270:return 270;default:return 0;}
     }
-    /** Relative rotation: back=sensor-display, front=sensor+display then mirror. */
-    private int previewRotation(){
-        int display=displayRotationDegrees();
-        int sign=front?-1:1;
-        return (sensorRotation-display*sign+360)%360;
-    }
+    /**
+     * JPEG orientation is already proven correct on the Samsung test device.
+     * Keep this capture path independent from the TextureView preview transform.
+     */
     private int jpegOrientation(){
         int display=displayRotationDegrees();
         int sign=front?-1:1;
         return (sensorRotation-display*sign+360)%360;
     }
+    private int displayRotationConstant(){
+        Display display=view.getDisplay();
+        return display!=null?display.getRotation():((WindowManager)context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
+    }
+    /**
+     * TextureView already applies the camera sensor orientation. Only compensate
+     * the display rotation here, following the Camera2Basic TextureView pattern.
+     * This deliberately does NOT reuse JPEG/sensor rotation.
+     */
     private void transform(Size size,long ticket){view.post(()->{
         if(!current(ticket)||view.getWidth()==0||view.getHeight()==0)return;
+        int surfaceRotation=displayRotationConstant();
         lastDisplayDegrees=displayRotationDegrees();
         float w=view.getWidth(),h=view.getHeight(),cx=w/2f,cy=h/2f;
-        int rotation=previewRotation();
-        DebugLog.append(context,"CAM transform view="+Math.round(w)+"x"+Math.round(h)+" buffer="+size.getWidth()+"x"+size.getHeight()+" rotation="+rotation+" displayDeg="+lastDisplayDegrees+" sensorDeg="+sensorRotation+" front="+front);
-        boolean swap=rotation==90||rotation==270;
-        float rotatedW=swap?size.getHeight():size.getWidth();
-        float rotatedH=swap?size.getWidth():size.getHeight();
-        float scale=Math.max(w/rotatedW,h/rotatedH);
-        RectF source=new RectF(0,0,w,h);
-        RectF destination=new RectF(0,0,rotatedW*scale,rotatedH*scale);
-        destination.offset(cx-destination.centerX(),cy-destination.centerY());
         Matrix m=new Matrix();
-        m.setRectToRect(source,destination,Matrix.ScaleToFit.FILL);
-        m.postRotate(rotation,cx,cy);
+        RectF viewRect=new RectF(0,0,w,h);
+        int appliedDegrees=0;
+        if(surfaceRotation==Surface.ROTATION_90||surfaceRotation==Surface.ROTATION_270){
+            RectF bufferRect=new RectF(0,0,size.getHeight(),size.getWidth());
+            bufferRect.offset(cx-bufferRect.centerX(),cy-bufferRect.centerY());
+            m.setRectToRect(viewRect,bufferRect,Matrix.ScaleToFit.FILL);
+            float scale=Math.max(h/(float)size.getHeight(),w/(float)size.getWidth());
+            m.postScale(scale,scale,cx,cy);
+            appliedDegrees=surfaceRotation==Surface.ROTATION_90?-90:90;
+            m.postRotate(appliedDegrees,cx,cy);
+        }else if(surfaceRotation==Surface.ROTATION_180){
+            appliedDegrees=180;
+            m.postRotate(180,cx,cy);
+        }
         if(front)m.postScale(-1,1,cx,cy);
+        DebugLog.append(context,"CAM transform view="+Math.round(w)+"x"+Math.round(h)+
+            " buffer="+size.getWidth()+"x"+size.getHeight()+
+            " matrixDeg="+appliedDegrees+
+            " displayDeg="+lastDisplayDegrees+
+            " sensorDeg="+sensorRotation+
+            " front="+front);
         view.setTransform(m);
     });}
 }
