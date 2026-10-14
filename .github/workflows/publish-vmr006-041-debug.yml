@@ -1,0 +1,138 @@
+name: Publish VisionMaxRead VMR-006 v0.4.1 DEBUG direct APK
+
+on:
+  push:
+    branches:
+      - publish/vmr006-041-debug-direct-apk
+    paths:
+      - .github/workflows/publish-vmr006-041-debug.yml
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: visionmaxread-vmr006-041-debug-prerelease
+  cancel-in-progress: false
+
+jobs:
+  publish-debug-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      RUN_ID: '38576497507'
+      BUILD_SHA: '587cba2fcbb2157f364e48fcbc94a9be760832c7'
+      BUILD_BRANCH: 'feature/vmr006-stable-lab-signing'
+      TAG: 'v0.4.1-qwen-piper-debug-test'
+      ARTIFACT_NAME: 'VisionMaxRead-0.4.1-QWEN-PIPER-DEBUG'
+      APK_NAME: 'VisionMaxRead-0.4.1-QWEN-PIPER-DEBUG.apk'
+      APK_BYTES: '1582759585'
+      APK_SHA256: '6edef1b2d4a62d415823023ee56b865fba6623eecc4fced633546d3d88c5053e'
+      APK_PACKAGE: 'fr.visionmaxread.labdebug'
+      APK_VERSION_CODE: '5'
+      APK_CERT_SHA256: '2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182'
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Check out publication branch
+        uses: actions/checkout@v4
+
+      - name: Verify approved signed debug build
+        shell: bash
+        run: |
+          set -euo pipefail
+          data="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}")"
+          test "$(echo "$data" | jq -r '.head_sha')" = "$BUILD_SHA"
+          test "$(echo "$data" | jq -r '.head_branch')" = "$BUILD_BRANCH"
+          test "$(echo "$data" | jq -r '.status')" = completed
+          test "$(echo "$data" | jq -r '.conclusion')" = success
+          echo "Verified source run $RUN_ID at $BUILD_SHA"
+
+      - name: Download and extract artifact in RUNNER_TEMP
+        uses: actions/download-artifact@v4
+        with:
+          name: VisionMaxRead-0.4.1-QWEN-PIPER-DEBUG
+          run-id: 38576497507
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/vmr006-041
+
+      - name: Verify exact APK before publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="${RUNNER_TEMP}/vmr006-041/${APK_NAME}"
+          test -f "$APK"
+          test ! -L "$APK"
+          test "$(stat -c %s "$APK")" = "$APK_BYTES"
+          test "$(sha256sum "$APK" | awk '{print $1}')" = "$APK_SHA256"
+          unzip -t "$APK" >/dev/null
+          build_tools="${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools/36.0.0"
+          if [ -x "$build_tools/aapt" ]; then
+            badging="$("$build_tools/aapt" dump badging "$APK" | head -n1)"
+            echo "$badging"
+            echo "$badging" | grep -F "name='${APK_PACKAGE}'"
+            echo "$badging" | grep -F "versionCode='${APK_VERSION_CODE}'"
+          fi
+          if [ -x "$build_tools/apksigner" ]; then
+            cert="$("$build_tools/apksigner" verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print tolower($2); exit}')"
+            test "$cert" = "$APK_CERT_SHA256"
+          fi
+          echo "Exact APK verified before publication."
+
+      - name: Prepare prerelease notes
+        shell: bash
+        run: |
+          cat > "${RUNNER_TEMP}/vmr006-041-notes.md" <<'EOF'
+          # VisionMaxRead VMR-006 v0.4.1 DEBUG — installation Samsung corrigée
+
+          Préversion de test Android hors ligne.
+
+          - Package debug isolé : `fr.visionmaxread.labdebug`
+          - `versionCode 5`, `versionName 0.4.1-debug`
+          - Signature LAB persistante dédiée aux builds de test
+          - PP-OCR indépendant de Qwen
+          - Progression OCR visible
+          - Journal debug local OCR/caméra
+          - ARM64 uniquement
+          - Aucune permission INTERNET dans l'APK vérifié
+          - APK uniquement ; AAB unsigned non publié
+
+          Source validée : `587cba2fcbb2157f364e48fcbc94a9be760832c7`
+          GitHub Actions : `38576497507`
+          APK SHA-256 : `6edef1b2d4a62d415823023ee56b865fba6623eecc4fced633546d3d88c5053e`
+          Certificat LAB SHA-256 : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`
+
+          `main` reste inchangée.
+          EOF
+
+      - name: Publish isolated prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="${RUNNER_TEMP}/vmr006-041/${APK_NAME}"
+          EXISTING_TAG_SHA="$(git ls-remote --refs --tags origin "refs/tags/${TAG}" | cut -f1)"
+          if [ -n "$EXISTING_TAG_SHA" ] && [ "$EXISTING_TAG_SHA" != "$BUILD_SHA" ]; then
+            echo "::error::Existing tag $TAG points to another commit"
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            test "$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)" = true
+            gh release upload "$TAG" "$APK" --clobber
+          else
+            gh release create "$TAG" "$APK"               --target "$BUILD_SHA"               --title "VisionMaxRead VMR-006 v0.4.1 DEBUG"               --notes-file "${RUNNER_TEMP}/vmr006-041-notes.md"               --prerelease
+          fi
+
+      - name: Re-download and verify published APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh release view "$TAG" --json isPrerelease --jq .isPrerelease)" = true
+          test "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = false
+          mkdir -p "${RUNNER_TEMP}/verify"
+          gh release download "$TAG" --pattern "$APK_NAME" --dir "${RUNNER_TEMP}/verify"
+          PUBLISHED="${RUNNER_TEMP}/verify/${APK_NAME}"
+          test -f "$PUBLISHED"
+          test "$(stat -c %s "$PUBLISHED")" = "$APK_BYTES"
+          test "$(sha256sum "$PUBLISHED" | awk '{print $1}')" = "$APK_SHA256"
+          test "$(gh release view "$TAG" --json assets --jq '.assets | length')" = 1
+          echo "DIRECT_APK_URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${APK_NAME}"
