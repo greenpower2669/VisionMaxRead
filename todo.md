@@ -293,3 +293,17 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - Package : `fr.visionmaxread.labdebug` ; versionCode `7`.
 - Certificat LAB SHA-256 inchangé : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
 - `main` inchangée ; AAB unsigned non publié.
+
+## VMR-007 — OCR spécialisé / audio HD (à valider)
+- [x] Créer branche expérimentale `feature/vmr007-specialist-ocr-audio-hq-v1` depuis VMR-006 0.4.3, sans merge main.
+- [x] Ajouter import SHA256 local PaddleOCR-VL-1.6 et comparaison même bitmap sur worker LiteRT Qwen séquentiel.
+- [x] Conserver PP-OCR worker séparé et Qwen par défaut, fournir unload/reload plutôt que deux moteurs simultanés.
+- [x] Ajouter choix Siwis/Jessica français hors ligne avec paquet Siwis verrouillé SHA256 dans la CI.
+- [x] Incrémenter versionCode 8/versionName 0.4.4-debug, maintenir signature LAB persistante et noms APK/AAB.
+- [ ] Prouver CI verte pour le dernier HEAD VMR-007, relire logs et corriger sans modifier main.
+- [ ] Confirmer sur Samsung que Qwen 0.4.3 démarre réellement et que la caméra respecte l'aperçu validé.
+- [ ] Tester import vrai modèle 1,39 Go, mauvaise empreinte, peu de stockage et performance; aucun téléchargement depuis l'application.
+- [ ] Comparer résultats Qwen vs PP-OCRv6 vs PaddleOCR-VL-1.6 sur les mêmes photos françaises.
+- [ ] Tester audio Siwis vs Jessica (qualité subjective, chiffres, première syllabe, phonèmes, arrêt/reprise, longs textes).
+- [ ] Auditer OvisOCR2 en branche séparée (GGUF + mmproj + runtime Android natif) ; option non intégrée.
+- [ ] Consigner RAM/PSS/chauffe, version et signature exacte de l'APK CI avant de demander feu vert Release/merge.
