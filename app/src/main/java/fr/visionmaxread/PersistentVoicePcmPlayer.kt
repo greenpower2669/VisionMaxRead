@@ -40,7 +40,7 @@ class PersistentVoicePcmPlayer {
         val current = ensureTrack(rate)
         current.setVolume(0f)
         if (current.playState != AudioTrack.PLAYSTATE_PLAYING) current.play()
-        val startHead = head(current)
+        val startHead = current.playbackHeadPosition.toLong() and 0xffffffffL
         val written = writeAll(current, samples, cancelled)
         waitUntilConsumed(current, startHead, written, cancelled)
         current.setVolume(1f)
@@ -51,7 +51,7 @@ class PersistentVoicePcmPlayer {
         val current = ensureTrack(rate)
         current.setVolume(1f)
         if (current.playState != AudioTrack.PLAYSTATE_PLAYING) current.play()
-        val startHead = head(current)
+        val startHead = current.playbackHeadPosition.toLong() and 0xffffffffL
         var written = 0L
         val guardFrames = (rate * guardMs / 1000).coerceAtLeast(0)
         if (guardFrames > 0) written += writeAll(current, FloatArray(guardFrames), cancelled)

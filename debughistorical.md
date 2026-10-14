@@ -71,3 +71,7 @@ La CI montrait aussi des avertissements D8/R8 sur les métadonnées Kotlin 2.4. 
 Run `38436956702` : 47 contrôles core passent, puis `:ppocr-sdk:checkDebugAarMetadata` échoue car `com.microsoft.onnxruntime:onnxruntime-android:1.28.2` est introuvable dans Google/Maven Central. Le correctif D017 était donc conceptuellement aligné avec Sherpa 1.13.8 mais non résolvable par Gradle. Correction : Sherpa 1.13.4 (AAR SHA-256 `03f9c4df965f21c71269365a7951a7f23b5696fddd093fa318c80d65550ab780`) + ORT Android 1.27.0, avec une seule copie native empaquetée.
 
 Audit simultané VMR-006 : le manifeste conservait `screenOrientation="portrait"`, incompatible avec l'objectif portrait/paysage, et `previewRotation()` utilisait le signe avant/arrière opposé à la formule JPEG. Le verrou est retiré, le signe est harmonisé et un listener de rotation recalcule le transform. L'AudioTrack était également libéré par `stop()`; il est désormais conservé entre arrêt/reprise et n'est libéré qu'au `release()`. Preuve CI et appareil encore requise.
+
+
+## VMR-D019 — Refactor AudioTrack : helper manquant (14/10/2026)
+Run `38504519405` : téléchargement Sherpa/Piper, Qwen et préparation des modèles réussis ; ORT 1.27.0 est bien résolu et les 47 contrôles core passent. Échec ensuite à `:app:compileDebugKotlin` sur deux appels `head(current)` laissés sans définition dans `PersistentVoicePcmPlayer`. Correction locale : lire directement `playbackHeadPosition` (non signé 32 bits) aux deux points de départ. Aucun APK n'a été produit par ce run rouge.

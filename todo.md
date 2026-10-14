@@ -117,3 +117,6 @@ Prochains gestes : vérifier le build main après fusion, publier la préversion
 - [x] Enrichir le diagnostic première phrase (temps init/amorce, temps et début de signal des 2 PCM) et la comparaison OCR (PSS processus approximative).
 - [ ] [CI] Obtenir compilation/lint/APK/AAB/verify_apk verts sur ce correctif.
 - [ ] [HUMAIN] Valider sur Samsung orientation, audio première phrase/arrêt-reprise/inactivité, OCR et mesures PSS en mode avion.
+
+- [x] [VMR-006/CI] Run `38504519405` : dépendances + 47 tests passent ; échec Kotlin limité aux deux références `head(current)` manquantes.
+- [ ] [VMR-006/CI] Relancer après correction des deux références AudioTrack.
