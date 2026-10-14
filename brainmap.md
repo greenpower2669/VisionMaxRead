@@ -226,3 +226,9 @@ La référence binaire canonique de la LAB VMR-006 est le run `38505688283` sur 
 - Package : `fr.visionmaxread.labdebug` ; versionCode `7`.
 - Certificat LAB SHA-256 inchangé : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
 - `main` inchangée ; AAB unsigned non publié.
+
+## VMR-007 — index actif (14/10/2026)
+- Branche `feature/vmr007-specialist-ocr-audio-hq-v1`, référence documentaire `docs/VMR-007-ocr-specialise-voix-hd.md`.
+- `SpecializedOcrService.kt` : import local SHA256 de PaddleOCR-VL-1.6, session `OCR:`, engine temporaire ; `QwenOcrService.unload()` garantit une seule grosse instance LiteRT sur `qwenWorker`.
+- `PiperSpeechEngine.kt` : sélection entre Siwis et Jessica, moteur TTS unique, AudioTrack persistant. `MainActivity.java` : boutons OCR spécialisé, import SAF, réglage voix.
+- `.github/workflows/android.yml` : modèle Siwis officiel SHA256 verrouillé, LAB versionCode 8. Aucune preuve Samsung ou CI verte ne doit être inventée.
