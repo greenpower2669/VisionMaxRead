@@ -72,3 +72,18 @@ Le workflow `38394243158` est vert : téléchargement depuis Actions vers le dos
 
 ### VMR-006 — Ancrage de preuve final
 La référence binaire canonique de la LAB VMR-006 est le run `38505688283` sur le code SHA `cf7083b5d204626617aa17bc1515c8c910f82dc6`. Le petit artifact metadata `11867068707` contient `build-manifest.txt` ; le gros artifact binaire `11867298469` contient APK, AAB, lint et manifeste. Toute validation terrain doit rester distincte de cette preuve de build.
+
+
+## VMR-006 — pré-Release test directe publiée (2026-10-14)
+- Feu vert explicite de Fab reçu pour la pré-Release de test VMR-006.
+- Publication effectuée sans merge de `main`.
+- Tag : `v0.4.0-qwen-piper-lab-test`.
+- Source validée : `cf7083b5d204626617aa17bc1515c8c910f82dc6`.
+- Build source vert : GitHub Actions `38505688283`.
+- Workflow de publication : `38537482245` — succès.
+- Artefact source extrait dans `RUNNER_TEMP` côté GitHub Actions.
+- APK publié seul : `VisionMaxRead-0.4.0-QWEN-PIPER-LAB.apk`.
+- Taille : `1582753113` octets.
+- SHA-256 vérifié avant et après publication : `be97ff8f4b90f3f5aa6cccb9564e1d9a13f0cefab8b341a47fea05da4c3686af`.
+- AAB unsigned non publié.
+- Validation réelle Samsung encore à effectuer.
