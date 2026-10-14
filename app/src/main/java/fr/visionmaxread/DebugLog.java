@@ -1,8 +1,12 @@
 package fr.visionmaxread;
 
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
+import android.os.BatteryManager;
 import android.os.Build;
+import android.os.PowerManager;
 import android.util.Log;
 import java.io.*;
 import java.text.SimpleDateFormat;
@@ -71,6 +75,56 @@ final class DebugLog {
         append(context, "DEBUG journal cleared");
     }
 
+
+    static void thermal(Context context, String stage) {
+        String thermal = "unsupported";
+        int thermalCode = -1;
+        if (Build.VERSION.SDK_INT >= 29) {
+            try {
+                PowerManager power = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+                if (power != null) {
+                    thermalCode = power.getCurrentThermalStatus();
+                    thermal = thermalName(thermalCode);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        float batteryTempC = Float.NaN;
+        int batteryPercent = -1;
+        int plugged = -1;
+        try {
+            Intent battery = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (battery != null) {
+                int temp = battery.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Integer.MIN_VALUE);
+                if (temp != Integer.MIN_VALUE) batteryTempC = temp / 10f;
+                int level = battery.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                int scale = battery.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                if (level >= 0 && scale > 0) batteryPercent = Math.round(level * 100f / scale);
+                plugged = battery.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
+            }
+        } catch (Exception ignored) {}
+
+        append(context, "THERMAL " + stage +
+            " status=" + thermal + "(" + thermalCode + ")" +
+            " batteryTempC=" + (Float.isNaN(batteryTempC) ? "n/d" : String.format(Locale.US, "%.1f", batteryTempC)) +
+            " battery=" + (batteryPercent < 0 ? "n/d" : batteryPercent + "%") +
+            " plugged=" + plugged);
+    }
+
+    private static String thermalName(int value) {
+        if (Build.VERSION.SDK_INT < 29) return "unsupported";
+        switch (value) {
+            case PowerManager.THERMAL_STATUS_NONE: return "NONE";
+            case PowerManager.THERMAL_STATUS_LIGHT: return "LIGHT";
+            case PowerManager.THERMAL_STATUS_MODERATE: return "MODERATE";
+            case PowerManager.THERMAL_STATUS_SEVERE: return "SEVERE";
+            case PowerManager.THERMAL_STATUS_CRITICAL: return "CRITICAL";
+            case PowerManager.THERMAL_STATUS_EMERGENCY: return "EMERGENCY";
+            case PowerManager.THERMAL_STATUS_SHUTDOWN: return "SHUTDOWN";
+            default: return "UNKNOWN";
+        }
+    }
+
     static void session(Context context) {
         String versionName = "?";
         long versionCode = -1;
@@ -84,6 +138,7 @@ final class DebugLog {
             " sdk=" + Build.VERSION.SDK_INT +
             " device=" + Build.MANUFACTURER + "/" + Build.MODEL +
             " abi=" + (Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "unknown"));
+        thermal(context, "SESSION start");
     }
 
     private static String timestamp() {
