@@ -22,6 +22,22 @@ jobs:
         run: |
           sdkmanager_path=$(python3 -c 'import os,pathlib; print(next(pathlib.Path(os.environ["ANDROID_HOME"]).glob("cmdline-tools/*/bin/sdkmanager")))')
           "$sdkmanager_path" 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Prepare persistent LAB debug signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          key="${RUNNER_TEMP}/vmr-lab-debug.jks"
+          base64 --decode ci/vmr-lab-debug.jks.b64 > "$key"
+          test -s "$key"
+          echo "VMR_LAB_KEYSTORE=$key" >> "$GITHUB_ENV"
+          echo "VMR_LAB_STORE_PASSWORD=vmr-lab-test-2026" >> "$GITHUB_ENV"
+          echo "VMR_LAB_KEY_ALIAS=vmrlab" >> "$GITHUB_ENV"
+          echo "VMR_LAB_KEY_PASSWORD=vmr-lab-test-2026" >> "$GITHUB_ENV"
+          cert="$(keytool -list -v -keystore "$key" -storepass vmr-lab-test-2026 -alias vmrlab | awk -F'SHA256: ' '/SHA256:/{gsub(":","",$2); print tolower($2); exit}')"
+          test "$cert" = "2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182"
+          echo "VMR_LAB_CERT_SHA256=$cert" >> "$GITHUB_ENV"
+          echo "Persistent LAB certificate verified: $cert"
+
       - name: Prepare Sherpa-ONNX and Piper Jessica
         shell: bash
         run: |
@@ -69,11 +85,24 @@ jobs:
         run: bash scripts/test-archive.sh
       - name: Verify installable APK
         run: python3 scripts/verify_apk.py app/build/outputs/apk/debug/app-debug.apk
+      - name: Verify LAB package version and persistent certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="app/build/outputs/apk/debug/app-debug.apk"
+          build_tools="${ANDROID_HOME}/build-tools/36.0.0"
+          badging="$("$build_tools/aapt" dump badging "$apk" | head -n1)"
+          echo "$badging"
+          echo "$badging" | grep -F "name='fr.visionmaxread.labdebug'"
+          echo "$badging" | grep -F "versionCode='5'"
+          cert="$("$build_tools/apksigner" verify --print-certs "$apk" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print tolower($2); exit}')"
+          echo "APK_CERT_SHA256=$cert"
+          test "$cert" = "$VMR_LAB_CERT_SHA256"
       - name: Name artifacts and record sizes
         run: |
           mkdir artifacts
-          apk="artifacts/VisionMaxRead-0.4.0-QWEN-PIPER-LAB.apk"
-          aab="artifacts/VisionMaxRead-0.4.0-QWEN-PIPER-LAB-unsigned.aab"
+          apk="artifacts/VisionMaxRead-0.4.1-QWEN-PIPER-DEBUG.apk"
+          aab="artifacts/VisionMaxRead-0.4.1-QWEN-PIPER-DEBUG-unsigned.aab"
           cp app/build/outputs/apk/debug/app-debug.apk "$apk"
           cp app/build/outputs/bundle/release/app-release.aab "$aab"
           cp app/build/reports/lint-results-debug.html artifacts/
@@ -83,6 +112,9 @@ jobs:
             echo "APK_NAME=$(basename "$apk")"
             echo "APK_BYTES=$(stat -c%s "$apk")"
             echo "APK_SHA256=$(sha256sum "$apk" | awk '{print $1}')"
+            echo "APK_PACKAGE=fr.visionmaxread.labdebug"
+            echo "APK_VERSION_CODE=5"
+            echo "APK_CERT_SHA256=$VMR_LAB_CERT_SHA256"
             echo "AAB_NAME=$(basename "$aab")"
             echo "AAB_BYTES=$(stat -c%s "$aab")"
             echo "AAB_SHA256=$(sha256sum "$aab" | awk '{print $1}')"
@@ -90,12 +122,12 @@ jobs:
       - name: Upload compact build metadata
         uses: actions/upload-artifact@v4
         with:
-          name: VisionMaxRead-0.4.0-QWEN-PIPER-LAB-metadata
+          name: VisionMaxRead-0.4.1-QWEN-PIPER-DEBUG-metadata
           path: artifacts/build-manifest.txt
           retention-days: 14
       - uses: actions/upload-artifact@v4
         with:
-          name: VisionMaxRead-0.4.0-QWEN-PIPER-LAB
+          name: VisionMaxRead-0.4.1-QWEN-PIPER-DEBUG
           path: artifacts/
           compression-level: 0
           retention-days: 14
