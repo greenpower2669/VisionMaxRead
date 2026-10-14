@@ -362,5 +362,18 @@ public final class MainActivity extends Activity {
     private void ui(Runnable action){runOnUiThread(()->{if(!destroyed)action.run();});}
     @Override protected void onPause(){super.onPause();if(camera!=null)camera.stop();if(freeze!=null)freeze.setEnabled(false);stopReading();}
     @Override protected void onResume(){super.onResume();if(cameraMode&&camera!=null&&checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED){camera.start(sessions.sourceTicket());freeze.setEnabled(true);}}
+    @Override public void onTrimMemory(int level){
+        super.onTrimMemory(level);
+        if(level>=android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW&&!destroyed){
+            // Do not close a running LiteRT engine on the main thread. Wait
+            // until the active recognition and comparison tasks have completed.
+            qwenWorker.execute(()->{
+                if(destroyed)return;
+                qwen.unload();
+                specialistOcr.unload();
+                DebugLog.append(this,"OCR native engines released on memory pressure level="+level);
+            });
+        }
+    }
     @Override protected void onDestroy(){destroyed=true;DebugLog.append(this,"SESSION destroy");sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();qwen.release();specialistOcr.release();if(camera!=null)camera.destroy();worker.shutdownNow();qwenWorker.shutdownNow();paddleWorker.shutdownNow();modelWorker.shutdownNow();super.onDestroy();}
 }

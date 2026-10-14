@@ -11,6 +11,9 @@ import java.io.File
 import java.io.FileOutputStream
 import java.security.MessageDigest
 import java.util.concurrent.CancellationException
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.function.BooleanSupplier
 import java.util.function.Consumer
 import kotlin.math.abs
@@ -31,6 +34,11 @@ class PiperSpeechEngine : SpeechEngine {
     }
 
     private val player = PersistentVoicePcmPlayer()
+    // Bounded one-chunk lookahead: a playback task runs while the next
+    // sentence is synthesized, avoiding a synthesis gap between paragraphs.
+    private val playbackExecutor = Executors.newSingleThreadExecutor { task ->
+        Thread(task, "VoicePCM").apply { isDaemon = true }
+    }
     @Volatile private var highQuality = true
 
     fun voiceName(): String = if (highQuality) "Siwis" else "Jessica"
@@ -119,16 +127,42 @@ class PiperSpeechEngine : SpeechEngine {
         warmUp(context, cancelled)
         val engine = requireNotNull(tts)
         val speechStarted = SystemClock.elapsedRealtime()
-        val chunks = TextChunks.split(text, 240)
+        val chunks = TextChunks.speech(text, 340)
+        DebugLog.append(context, "TTS plan voice=" + voiceName() +
+            " segments=" + chunks.size + " chars=" + text.length)
+        var previous: Future<*>? = null
         for ((index, segment) in chunks.withIndex()) {
             checkCancelled(cancelled)
-            if (segment.isBlank()) continue
             status.accept(voiceName() + " · passage " + (index + 1) + " / " + chunks.size)
-            val audio = engine.generate(segment, VOICE_SID, speed)
+            // Synthesize one segment ahead while the previous one is audible.
+            // No simultaneous Sherpa-ONNX inference and no unbounded PCM queue.
+            val audio = engine.generate(segment.text(), VOICE_SID, speed)
             checkCancelled(cancelled)
-            player.play(audio.samples, audio.sampleRate, if (index == 0) GUARD_MS else 0, cancelled)
+            awaitPlayback(previous)
+            checkCancelled(cancelled)
+            previous = playbackExecutor.submit {
+                player.play(audio.samples, audio.sampleRate,
+                    if (index == 0) GUARD_MS else 0, segment.pauseAfterMs(), cancelled)
+            }
         }
+        awaitPlayback(previous)
+        checkCancelled(cancelled)
         lastSpeechMs = SystemClock.elapsedRealtime() - speechStarted
+    }
+
+    private fun awaitPlayback(previous: Future<*>?) {
+        if (previous == null) return
+        try {
+            previous.get()
+        } catch (interrupted: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw CancellationException("Audio playback interrupted")
+        } catch (failed: ExecutionException) {
+            val cause = failed.cause
+            if (cause is CancellationException) throw cause
+            if (cause is Exception) throw cause
+            throw IllegalStateException("Audio playback failed", cause)
+        }
     }
 
     @Synchronized fun diagnoseFirstPass(context: Context): String {
@@ -146,6 +180,7 @@ class PiperSpeechEngine : SpeechEngine {
         if (released) return
         released = true
         player.release()
+        playbackExecutor.shutdownNow()
         tts?.release()
         tts = null
         warmed = false

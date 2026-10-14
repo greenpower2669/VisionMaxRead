@@ -41,7 +41,19 @@ final class CameraController {
             public void onSurfaceTextureUpdated(SurfaceTexture surface){}
         });
     }
-    void start(long document){this.document=document;wanted=true;lastDisplayDegrees=displayRotationDegrees();DebugLog.append(context,"CAM start displayDeg="+lastDisplayDegrees);if(orientationListener.canDetectOrientation())orientationListener.enable();long ticket=generation.incrementAndGet();if(view.isAvailable())handler.post(()->open(ticket,document));}
+    void start(long document){
+        // TextureView.onSurfaceTextureAvailable and MainActivity can ask for
+        // the same session. Ignore duplicate requests instead of opening twice.
+        if(wanted && this.document==document){
+            DebugLog.append(context,"CAM duplicate start ignored document="+document);
+            return;
+        }
+        this.document=document;wanted=true;lastDisplayDegrees=displayRotationDegrees();
+        DebugLog.append(context,"CAM start displayDeg="+lastDisplayDegrees);
+        if(orientationListener.canDetectOrientation())orientationListener.enable();
+        long ticket=generation.incrementAndGet();
+        if(view.isAvailable())handler.post(()->open(ticket,document));
+    }
     void stop(){wanted=false;orientationListener.disable();generation.incrementAndGet();handler.post(this::closeCamera);}
     void destroy(){orientationListener.disable();stop();handler.post(thread::quitSafely);}
     private boolean current(long ticket){return wanted&&generation.get()==ticket;}

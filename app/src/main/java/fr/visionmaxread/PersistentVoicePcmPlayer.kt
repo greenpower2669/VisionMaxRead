@@ -5,11 +5,13 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import java.util.concurrent.CancellationException
 import java.util.function.BooleanSupplier
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.max
 
 /** Persistent streaming AudioTrack; warm-up crosses the real audio route at zero track gain. */
 class PersistentVoicePcmPlayer {
-    private var track: AudioTrack? = null
+    @Volatile private var track: AudioTrack? = null
+    private val playbackGeneration = AtomicLong(0L)
     private var sampleRate = 0
 
     @Synchronized private fun ensureTrack(rate: Int): AudioTrack {
@@ -46,17 +48,27 @@ class PersistentVoicePcmPlayer {
         current.setVolume(1f)
     }
 
-    @Synchronized fun play(samples: FloatArray, rate: Int, guardMs: Int, cancelled: BooleanSupplier) {
+    /** Playback is serialized on VoicePCM; stop() must never wait for this track. */
+    fun play(samples: FloatArray, rate: Int, guardMs: Int, tailPauseMs: Int, cancelled: BooleanSupplier) {
         if (samples.isEmpty()) return
+        val generation = playbackGeneration.get()
         val current = ensureTrack(rate)
+        val active = BooleanSupplier {
+            cancelled.asBoolean || generation != playbackGeneration.get()
+        }
+        checkCancelled(active)
         current.setVolume(1f)
         if (current.playState != AudioTrack.PLAYSTATE_PLAYING) current.play()
         val startHead = current.playbackHeadPosition.toLong() and 0xffffffffL
         var written = 0L
         val guardFrames = (rate * guardMs / 1000).coerceAtLeast(0)
-        if (guardFrames > 0) written += writeAll(current, FloatArray(guardFrames), cancelled)
-        written += writeAll(current, samples, cancelled)
-        waitUntilConsumed(current, startHead, written, cancelled)
+        if (guardFrames > 0) written += writeAll(current, FloatArray(guardFrames), active)
+        written += writeAll(current, samples, active)
+        // The only explicit additional pause is a genuine blank-line paragraph.
+        val tailFrames = (rate * tailPauseMs / 1000).coerceAtLeast(0)
+        if (tailFrames > 0) written += writeAll(current, FloatArray(tailFrames), active)
+        waitUntilConsumed(current, startHead, written, active)
+        checkCancelled(active)
     }
 
     private fun writeAll(current: AudioTrack, samples: FloatArray, cancelled: BooleanSupplier): Long {
@@ -79,14 +91,20 @@ class PersistentVoicePcmPlayer {
     }
 
     /** Stop current speech but retain the initialized AudioTrack for the next warm-up. */
-    @Synchronized fun stop() {
+    fun stop() {
+        // Invalidate queued and active playback immediately. Unlike the old
+        // synchronized stop, this cannot wait for a 10-second audio chunk.
+        playbackGeneration.incrementAndGet()
         track?.let {
             try { it.pause() } catch (_: Throwable) {}
             try { it.flush() } catch (_: Throwable) {}
             try { it.setVolume(1f) } catch (_: Throwable) {}
         }
     }
-    @Synchronized fun release() = releaseLocked()
+    @Synchronized fun release() {
+        playbackGeneration.incrementAndGet()
+        releaseLocked()
+    }
     @Synchronized fun hasLiveTrack(): Boolean = track?.state == AudioTrack.STATE_INITIALIZED
 
     private fun releaseLocked() {
