@@ -219,3 +219,6 @@ Le changement d'orientation est désormais traité sans recréer MainActivity (`
 - Package : `fr.visionmaxread.labdebug` ; versionCode `7`.
 - Certificat LAB SHA-256 inchangé : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
 - `main` inchangée ; AAB unsigned non publié.
+
+## VMR-007 — OCR spécialisé / audio haute articulation (2026-10-14)
+Feu vert de Fab pour explorer l'OCR avancé et la qualité audio, pas pour merger `main` ni publier une Release. Branche isolée `feature/vmr007-specialist-ocr-audio-hq-v1`. Implémentation LAB 0.4.4-debug code 8 : OCR Qwen principal conservé, PP-OCR secours indépendant, import d'un fichier PaddleOCR-VL-1.6 `.litertlm` via sélecteur de documents Android puis contrôle taille+SHA256 dans le stockage privé. Une seule grosse inférence LiteRT à la fois sur `qwenWorker`. Audio Siwis français haute articulation et Jessica UPMC sélectionnables ; jamais deux TTS simultanés. Modèles vérifiés côté CI, aucune permission INTERNET. Projet encore soumis à CI et tests sur Samsung ; voir `docs/VMR-007-ocr-specialise-voix-hd.md`.
