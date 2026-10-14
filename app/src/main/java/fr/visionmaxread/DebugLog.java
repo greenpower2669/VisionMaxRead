@@ -1,6 +1,7 @@
 package fr.visionmaxread;
 
 import android.content.Context;
+import android.content.pm.PackageInfo;
 import android.os.Build;
 import android.util.Log;
 import java.io.*;
@@ -71,7 +72,16 @@ final class DebugLog {
     }
 
     static void session(Context context) {
-        append(context, "SESSION start sdk=" + Build.VERSION.SDK_INT +
+        String versionName = "?";
+        long versionCode = -1;
+        try {
+            PackageInfo info = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
+            versionName = info.versionName == null ? "?" : info.versionName;
+            versionCode = Build.VERSION.SDK_INT >= 28 ? info.getLongVersionCode() : info.versionCode;
+        } catch (Exception ignored) {}
+        append(context, "SESSION start package=" + context.getPackageName() +
+            " version=" + versionName + " code=" + versionCode +
+            " sdk=" + Build.VERSION.SDK_INT +
             " device=" + Build.MANUFACTURER + "/" + Build.MODEL +
             " abi=" + (Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "unknown"));
     }
