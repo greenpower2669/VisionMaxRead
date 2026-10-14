@@ -229,3 +229,12 @@ Le code SHA `cf7083b5d204626617aa17bc1515c8c910f82dc6` est la version construite
 - Package : `fr.visionmaxread.labdebug` ; versionCode `7`.
 - Certificat LAB SHA-256 inchangé : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
 - `main` inchangée ; AAB unsigned non publié.
+
+## MISSION VMR-007 — Feu vert de Fab (14 octobre 2026)
+Demande explicite : « Ok, on se lance et l audio en qualité maximal » à la suite de la comparaison PaddleOCR-VL-1.6 / OvisOCR2 et du besoin d'une voix française plus naturelle.
+Exécution autorisée sur branche expérimentale `feature/vmr007-specialist-ocr-audio-hq-v1` uniquement, SANS MERGE MAIN et SANS RELEASE AUTOMATIQUE.
+Objectifs : tester OCR spécialisé PaddleOCR-VL-1.6 hors ligne, ne jamais casser Qwen et PP-OCR, préserver leurs workers et les logs diagnostics ; maximiser l'articulation/agrément audio avec Siwis testable et Jessica préservée.
+Interdits immuables : permission INTERNET, remplacement silencieux de moteurs validés, nouvelles clés de signature, publication AAB unsigned, annonce de succès sans run CI et test Samsung.
+Livrables techniques en préparation : source UI/import/moteur, CI signé LAB 0.4.4 code 8, guide `docs/VMR-007-ocr-specialise-voix-hd.md`.
+Audit du compromis : le modèle OCR supplémentaire (~1,39 Go) est importé localement par l'utilisateur après téléchargement externe ; pas d'APK 3 Go. Deux moteurs LiteRT ne doivent pas rester initialisés ensemble. Siwis ne représente pas une garantie de meilleure qualité vocale avant A/B subjectif ; Kokoro en piste ultérieure. Privilégier disponibilité, accessibilité et stabilité du téléphone.
+Première vérification requise : CI verte sur le dernier HEAD et validation effective Android 16. Faire rapport honnête en cas d'échec.
