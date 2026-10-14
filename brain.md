@@ -249,3 +249,19 @@ Le changement d'orientation est désormais traité sans recréer MainActivity (`
 - Certificat LAB SHA-256 : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
 - Artefact principal : `11916762186`; métadonnées : `11916022300`.
 - Aucun merge de `main` ; aucune Release directe 0.4.4 sans feu vert explicite.
+
+
+### Pré-Release directe v0.4.4 DEBUG publiée
+- Feu vert explicite de Fab reçu le 2026-10-14.
+- Tag : `v0.4.4-qwen-profiles-debug-test`.
+- Source validée : `83f1be15717a7ba77bcde21a687294fe4fc8da40`.
+- Build source : `38607461741` — SUCCESS.
+- Workflow de publication : `38613816910` — SUCCESS.
+- Artefact extrait dans `RUNNER_TEMP`, APK exact vérifié avant publication puis re-téléchargé et re-vérifié après publication.
+- APK seul : `VisionMaxRead-0.4.4-QWEN-PIPER-DEBUG.apk`.
+- Taille : `1582764529` octets.
+- SHA-256 : `e5d072bf1255b610de14495355b3bf5d3e7e4d1e8a7d8c59297cb707cf4cfb16`.
+- Package : `fr.visionmaxread.labdebug` ; versionCode `8`.
+- Certificat LAB SHA-256 inchangé : `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
+- Cette build inclut les profils Qwen CPU/GPU configurables, AUTO Turbo GPU/GPU avec repli CPU4 et les indices thermiques Android.
+- `main` inchangée ; AAB unsigned non publié.
