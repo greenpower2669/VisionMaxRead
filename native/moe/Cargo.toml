@@ -1,0 +1,20 @@
+[package]
+name = "vmr-moe-jni"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "vmr_moe"
+crate-type = ["cdylib"]
+
+[dependencies]
+hobby-rs = { path = "vendor/hobbylm/hobby-rs" }
+jni = "0.21"
+rayon = "1.10"
+
+[profile.release]
+opt-level = 2
+lto = false
+codegen-units = 8
+panic = "unwind"
