@@ -93,7 +93,7 @@ Java_fr_visionmaxread_LiquidNative_load(JNIEnv *env,jclass,jstring path){
         if(file.empty())fail("GGUF path missing");
         llama_backend_init();
         llama_model_params p=llama_model_default_params();
-        p.n_gpu_layers=0;p.use_mmap=true;
+        p.n_gpu_layers=0;
         g_model=llama_model_load_from_file(file.c_str(),p);
         if(!g_model)fail("Unable to load GGUF model");
         g_vocab=llama_model_get_vocab(g_model);
