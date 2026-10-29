@@ -100,13 +100,16 @@ Java_fr_visionmaxread_LiquidNative_load(JNIEnv *env,jclass,jstring path){
         return JNI_TRUE;
     }catch(const std::exception &e){cleanup();throwJava(env,e.what());return JNI_FALSE;}
 }
-extern "C" JNIEXPORT jstring JNICALL
+extern "C" JNIEXPORT jbyteArray JNICALL
 Java_fr_visionmaxread_LiquidNative_infer(JNIEnv *env,jclass,jstring prompt,jint maxTokens){
     std::lock_guard<std::mutex> lock(g_mutex);
     try{
         g_cancel=false;
         std::string s=generate(utf8(env,prompt),(int)maxTokens);
-        return env->NewStringUTF(s.c_str());
+        jbyteArray data=env->NewByteArray((jsize)s.size());
+        if(!data)return nullptr;
+        env->SetByteArrayRegion(data,0,(jsize)s.size(),reinterpret_cast<const jbyte*>(s.data()));
+        return data;
     }catch(const std::exception &e){throwJava(env,e.what());return nullptr;}
 }
 extern "C" JNIEXPORT void JNICALL
