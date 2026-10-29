@@ -79,7 +79,7 @@ final class IndraReadingOrder {
                         groupPairs[a][b]=(float)(sum/(groups.get(a).size()*groups.get(b).size()));
                     }
                     int[] rank=rank(groupPairs);
-                    int[] order=new int[n],pos=0;
+                    int[] order=new int[n];int pos=0;
                     for(int idx:rank)for(int v:inner.get(idx))order[pos++]=v;
                     if(!permutation(order,n))throw new IllegalStateException("OrderNet invalid permutation");
                     return new Result(order,"ordernet-layout",groups.size());
