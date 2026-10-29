@@ -34,3 +34,10 @@ Abandonner Qwen dans la prochaine variante expérimentale en raison de son poids
 
 ## Statut au 29 octobre
 Architecture définie ; **aucun code Liquid/MoE/OrderNet ajouté à l'APK dans cette mission**, aucune compilation ni validation Samsung, pas d'APK/AAB VMR-010 livré. Ne pas annoncer de travail matériel réalisé. L'étape suivante est l'intégration incrémentale sur cette branche avec tests oracle et CI, puis les essais matériels.
+
+## Réalisation constatée à l'issue du premier push et CI
+L'essai compile sur GitHub Actions : [VMR-010 run 40952014104](https://github.com/greenpower2669/VisionMaxRead/actions/runs/40952014104). APK Indra + OrderNet `VisionMaxRead-0.5.0-INDRA-ORDER-SIWIS-LAB.apk` SHA256 `9b6cc5d2401bccea217851801e38f26f5cedb01613570ca76b273bb0d3a39189` (343172170 octets), package LAB code 11, certificat inchangé, zéro permission INTERNET ; `main` intact. L'ancien texte « aucun APK » ci-dessus décrit le statut de la conception initiale, non le statut final de la branche.
+
+Le **runtime Android actuel** exécute P1 Indra det/rec, P2 `order.onnx`, P5 arbitrage conservateur qui conserve intégralement le texte ordonné. Il journalise P2B Indra LM, P3 Liquid et P4 MobileMoE en `unavailable` car aucun moteur neuronal n'a été invoqué ; une sortie de relecture sémantique n'est jamais simulée. Entraînement/portage/évaluation nécessaires. Le banc PC `scripts/mobilemoe_benchmark.py` sait lancer les modèles réels en mode explicite, mais n'est pas une preuve d'Android. Contrôle qualité sur Samsung toujours ouvert.
+
+L'export du journal brut du système ne contient aucune reconnaissance textuelle. Le bouton **Passes Indra · rapport** permet, après double confirmation, de copier un rapport qui **contient les textes** de chaque passe réellement exécutée. Il faut relire et anonymiser avant de l'envoyer à quiconque.
