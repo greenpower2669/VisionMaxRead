@@ -398,3 +398,11 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [ ] Valider sur téléphone OrderNet : multi-colonnes, tableaux, titres, orientation et recadrage avec référence visuelle ; tester sortie du modèle ONNX et qualité du texte.
 - [ ] GitHub Actions Gradle/lint/contrats, vérification APK signé, zéro permission INTERNET, artefact direct et taille après retrait Qwen ; tests Samsung ensuite.
 - [ ] Optimiser la latence, PSS et tests d'ablation; ne pas merge main/release sans accord.
+
+### VMR-010 — preuve de compilation du 29/10/2026
+- [x] GitHub Actions `40952014104`, source `dca13014e7e1223157a4d1d26cb3d03b29494bdf`, build **success**, Gradle check, lintDebug, APK/AAB, vérification modèles et confidentialité.
+- [x] APK installable `VisionMaxRead-0.5.0-INDRA-ORDER-SIWIS-LAB.apk` direct GitHub artefact `12932545953`, taille `343172170` octets, SHA256 `9b6cc5d2401bccea217851801e38f26f5cedb01613570ca76b273bb0d3a39189`.
+- [x] Package LAB `fr.visionmaxread.labdebug`, code 11, certificat SHA256 `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`, ARM64, aucune permission INTERNET.
+- [x] AAB unsigned séparé (`335166923` octets) uniquement technique, pas une livraison Play.
+- [ ] **Épreuve Samsung encore requise** : Ordre des colonnes, résultat OCR Indra et PP-OCR, TTS, mémoire, journal par passe et export volontaire des textes. VMR-010 n'exécute PAS encore les deux modèles neuronaux Liquid et MobileMoE ni la correction statistique n-gramme.
+- [ ] Ne pas fusionner `main`, ni créer de Release sans feu vert distinct.
