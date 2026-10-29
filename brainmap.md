@@ -281,3 +281,11 @@ Instruction de Fab : « Ok on garde qwen et on optimisé le reste, l audio est p
 - `LegacyModelCleanup.java` : suppression ciblée des anciens poids Qwen du cache applicatif ; garder historique utilisateur.
 - `scripts/mobilemoe_benchmark.py` : banc desktop opt-in LiquidAI GGUF et Meta MobileMoE-S-QAT, données synthétiques dans `tests/vmr010-synthetic.jsonl` ; `scripts/test_vmr010_contract.py` : garde-fous build.
 - `docs/VMR-010-indra-liquid-moe-architecture.md` + `todo.md` : choix architecture, limitations et prochaines intégrations ; pas d'APK neuronal Android annoncé.
+
+## VMR-011 — Index des améliorations suite aux journaux de Fab
+- `app/src/main/java/fr/visionmaxread/IndraNgramLM.java` : parseur pur Java de `lm.npz` et backoff original Indra.
+- `app/src/main/java/fr/visionmaxread/IndraCtcBeam.java` : décodage CTC avec 8 candidats, seulement sur lignes incertaines.
+- `app/src/main/java/fr/visionmaxread/IndraReadingOrder.java` : `rank` fidèle au decode_order officiel, regroupement des blocs, comparateur XY-cut.
+- `app/src/main/java/fr/visionmaxread/IndraOcrService.java` : P1 brut, P2 OrderNet, P2A XY-cut, P2B LM, P2C XY-cut LM, géométrie normalisée par ligne.
+- `MainActivity.java`/`OcrTrace.java` : choix de lecture et rapport avec textes uniquement sur copie explicite, debug limité aux métriques.
+- `scripts/test_indra_lm_java.py` / `tests/java/fr/visionmaxread/IndraLmOracle.java` : contrat Java de backoff et CTC ; documentation `docs/VMR-011-layout-language-model.md`.
