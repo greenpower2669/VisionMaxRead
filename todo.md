@@ -421,3 +421,14 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [x] Run final de code `40957543423`, commit `74b98023dfb1ed69c6ba97fb72929487716786a5` : **success**, Java n-gram/CTC oracle, Gradle tests, Android lint, APK/AAB, manifest offline, SHA Indra y compris `lm.npz`, certificat LAB.
 - [x] APK seul sans ZIP `VisionMaxRead-0.5.1-INDRA-LM-COLUMNS-LAB.apk`, artifact `12934910992`, `358136623` octets, SHA256 `8cc889df544afbd8cdb7b3795ff8c4df46a64f87248b9c18d12bf86a186959b4` ; version code `12` ; certificat LAB `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
 - [ ] Validation **sur Samsung** encore nécessaire : la CI ne démontre ni l'efficacité de la correction linguistique, ni l'ordre des colonnes sur la page de Fab. Tester les quatre lectures dans le rapport et vérifier `lmRuns/lmChanged/lmErrors`, mémoire et temps. Liquid/MobileMoE restent absents du runtime.
+
+## VMR-012 — Liquid Android réel et audit multi-passes
+- [x] Créer branche isolée `feature/vmr012-liquid-semantic-experts` depuis VMR-011, sans Qwen et sans fusion main.
+- [x] Intégrer `libvmr_liquid.so` JNI C++ via source llama.cpp épinglée et build NDK ARM64, source en `native/liquid`.
+- [x] Préparer fichier LiquidAI LFM2.5-230M QAD Q4_0 + SHA256 fixe, licence LFM Open 1.0 et licence MIT llama.cpp incluses dans APK, aucun téléchargement côté Android.
+- [x] Connecter bouton opt-in Liquid après Indra, limiter CPU aux deux premiers segments de 650 caractères, interroger réellement le modèle et proposer une lecture sans modifier silencieusement le texte OCR.
+- [x] Ajouter P4A/P4B audits de langue/faits et P5 arbitrage Liquid avec garde-fou des nombres et rapports individuels. **Pas un vrai Meta MobileMoE** : le P4 Meta reste `unavailable`.
+- [ ] [CI] Confirmer le dernier commit source après corrections JNI/attributions, Gradle/lint/APK signé/ARM64 SHA et absence d'Internet. Ne pas utiliser les artefacts plus anciens.
+- [ ] [SAMSUNG] Installer VMR-012 en mode avion, vérifier chargement réel modèle, latence P3/P4/P5, PSS mémoire, chauffe, arrêt, relecture Siwis ; transmettre rapport anonymisé de la lettre 1942, comparer texte et photo.
+- [ ] [RECHERCHE] Étudier vrai MobileMoE-S Meta (runtime architecture custom, quantification, licence FAIR NC, qualité français, mémoire ~0.7Go), ne pas le faire passer pour un moteur fonctionnel sans preuve.
+- [ ] [QUALITÉ] Faire une mesure CER/WER, rejet des faux chiffres/noms, impact des prompts, comparaison de documents et abstention. Pas de publication générale avant validation juridique des licences des poids et des voix.
