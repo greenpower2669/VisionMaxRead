@@ -385,3 +385,16 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [ ] [AGENT] Tests d'ablation CER/WER/ordre/hallucinations/chiffres, mode avion, mémoire, annulation et fallback OCR ; CI Gradle/lint/ARM64/signature LAB, aucune permission INTERNET ; APK/AAB au nom distinct.
 - [ ] [HUMAIN] Essais sur Samsung : pages multicolonnes, texte difficile, lecture vocale, chauffe/latence/mémoire ; valider qualité avant choix par défaut.
 - [ ] [AGENT/HUMAIN] Ne publier aucune Release ni fusionner main sans accord distinct. Aucune nouvelle APK annoncée pour VMR-010 à ce stade.
+
+### VMR-010 — suivi de l'exécution one-shot
+- [x] Retirer le Qwen principal et les poids Qwen du build CI, ses classes et LiteRT-LM ; nettoyer uniquement l'ancien modèle Qwen du dossier privé après mise à niveau.
+- [x] Connecter Indra réel automatiquement et le `order.onnx` officiel à 16 features ; repli XY-cut multi-colonnes si ordre échoue.
+- [x] Conserver PP-OCR comme secours et la voix hors ligne, identité et signature LAB.
+- [x] Journaliser les passages P1 brut, P2 OrderNet, P2B LM, P3 Liquid, P4 MobileMoE, P5 arbitrage, avec status exécuté/indisponible, temps, caractères, PSS ; copie détaillée volontaire avec mise en garde confidentialité.
+- [x] Ajouter script PC opt-in d'inférence Liquid 230M GGUF + MobileMoE-S-QAT Meta, et corpus synthétique français pour réemploi possible dans Bonze sans modifier Bonze.
+- [ ] **BLOQUANT** Faire fonctionner Liquid 230M GGUF QAD avec runtime natif Android (llama.cpp JNI) et tests de mémoire/CPU ; ne pas inventer les résultats en attendant.
+- [ ] **BLOQUANT** Porter MobileMoE-S-QAT INT4 avec vrai runtime Android compatible avec architecture Meta ; la version Transformers/PyTorch PC n'est pas un runtime Android. Vérifier la licence FAIR-NC avant diffusion.
+- [ ] Porter la correction officielle `lm.npz` via CTC beam sur Android et comparer à l'original ; l'étape P2B reste actuellement indisponible.
+- [ ] Valider sur téléphone OrderNet : multi-colonnes, tableaux, titres, orientation et recadrage avec référence visuelle ; tester sortie du modèle ONNX et qualité du texte.
+- [ ] GitHub Actions Gradle/lint/contrats, vérification APK signé, zéro permission INTERNET, artefact direct et taille après retrait Qwen ; tests Samsung ensuite.
+- [ ] Optimiser la latence, PSS et tests d'ablation; ne pas merge main/release sans accord.
