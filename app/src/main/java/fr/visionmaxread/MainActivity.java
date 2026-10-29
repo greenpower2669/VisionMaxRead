@@ -132,9 +132,9 @@ public final class MainActivity extends Activity {
                         long elapsed=SystemClock.elapsedRealtime()-start;
                         float pss=processPssMb();
                         trace.add(this,"P1_INDRA_RAW","indra-det-rec","executed",scan.raw,
-                                  scan.detectionMs+scan.recognitionMs,pss,"lines="+scan.lineCount);
+                                  scan.detectionMs+Math.max(0,scan.recognitionMs-scan.lmMs),pss,"lines="+scan.lineCount);
                         trace.add(this,"P2_ORDERNET","indra-order.onnx","executed",scan.ordered,
-                                  scan.orderMs,pss,"method="+scan.orderMethod+" blocks="+scan.blockCount);
+                                  scan.orderMs,pss,"method="+scan.orderMethod+" blocks="+scan.blockCount+" diff_positions="+scan.orderDisagreements+" geometry="+scan.layoutEvidence);
                         trace.add(this,"P2A_XYCUT","geometry-xycut","executed",scan.xycutOrdered,
                                   0,pss,"independent-order-comparison");
                         trace.add(this,"P2B_INDRA_LM","indra-lm.npz-ctc","executed",scan.lmOrdered,
