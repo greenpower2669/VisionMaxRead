@@ -406,3 +406,13 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [x] AAB unsigned séparé (`335166923` octets) uniquement technique, pas une livraison Play.
 - [ ] **Épreuve Samsung encore requise** : Ordre des colonnes, résultat OCR Indra et PP-OCR, TTS, mémoire, journal par passe et export volontaire des textes. VMR-010 n'exécute PAS encore les deux modèles neuronaux Liquid et MobileMoE ni la correction statistique n-gramme.
 - [ ] Ne pas fusionner `main`, ni créer de Release sans feu vert distinct.
+
+### VMR-011 — Indra LM + ordre des colonnes, préparation
+- [x] Brancher `lm.npz` officiel SHA256 6c0fb618a363a0acdd05d4f5b0edd9e8146d2d990541b87f6130bbfe17cea58d en build-only.
+- [x] Portage NPY/NPZ ngramme et CTC beam Java pur, conserver texte brut, repli par ligne et stats LM ; fixture JVM.
+- [x] Remplacer classement des blocs OrderNet simplifié par log-sigmoid + 4 passes de déplacement conformément au décodeur upstream.
+- [x] Générer variantes OrderNet / XY-cut brut et + LM, choix manuel accessible, notes de géométrie normalisée uniquement dans rapport détaillé volontaire.
+- [ ] Validation CI version LAB 0.5.1 code12, modèle hashé, APK ARM64 signé, sans INTERNET, fichier APK direct sans ZIP.
+- [ ] Essai Samsung sur **la même photo de magazine** : extraire les quatre lectures, chronométrer LM, relever nombre de lignes modifiées/erreurs et ordre exact ; comparer visuellement les colonnes. Tester TTS.
+- [ ] Vérifier précision réelle du beam CTC sur oracles officiels Python, limites de mémoire et stabilisation des blocs ; ne pas annoncer améliorations de qualité avant test.
+- [ ] Liquid/MobileMoE neural Android à réaliser plus tard ; pas de merge main ni GitHub Release sans validation.
