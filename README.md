@@ -1,3 +1,11 @@
+# VisionMaxRead 0.5.1 LAB — Indra OCR + correction linguistique et comparaison colonnes
+
+**VMR-011 expérimental (sans Qwen).** Indra reconnait la photo, son modèle n-gramme latin `lm.npz` réexamine les lignes incertaines par beam CTC, OrderNet recompose les blocs et XY-cut fournit un autre ordre de lecture. Bouton **Passes Indra · rapport** → **Comparer les ordres** : visualiser/choisir OrderNet+LM, XY-cut+LM et les deux versions sans LM. Les textes d'origine restent consultables dans le rapport. Mode avion, voix Siwis/Jessica et secours PP-OCR conservés.
+
+L'essai de magazine remonté par Fab a motivé ces correctifs ; **aucune précision de lecture VMR-011 encore prouvée sur Samsung**. Le journal standard ne garde que les métriques ; le rapport complet avec textes/boîtes est copié uniquement avec deux confirmations. Les moteurs neuronaux **Liquid et MobileMoE restent non implémentés sur Android** : ils apparaissent en `unavailable`, jamais comme des corrections réalisées. La licence des poids Indra est modifiée OpenRAIL-M. Voir [VMR-011](docs/VMR-011-layout-language-model.md).
+
+---
+
 # VisionMaxRead LAB 0.5.0 — Indra + OrderNet, sans Qwen
 
 **VMR-010 expérimental, branche `feature/vmr010-indra-liquid-moe-review`.** Reconnaissance primaire hors ligne : Indra latin (det/rec) avec ordre de lecture `order.onnx` et repli XY-cut pour les colonnes ; PP-OCRv6-Small conserve un bouton de secours. Caméra, corrections manuelles, synthèse Siwis/Jessica et masquage d'historique sont conservés. Le poids Qwen (~1,3 Go) et la dépendance LiteRT-LM sont retirés ; le fichier Qwen privé d'une ancienne LAB est nettoyé précisément au démarrage, sans effacement de l'historique.
