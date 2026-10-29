@@ -20,6 +20,12 @@ with zipfile.ZipFile(apk) as z:
   with z.open('assets/models/'+entry['path']+('.xz' if entry.get('packaging')=='xz-shuffle4' else '')) as raw:
    for b in decoded_chunks(raw,entry.get('packaging')=='xz-shuffle4'):h.update(b);count+=len(b)
   assert count==entry['size'] and h.hexdigest()==entry['sha256'],entry['path']
+ indra_manifest=json.loads(z.read('assets/indra/manifest.json'))
+ assert indra_manifest['revision']=='bd02167fdf2005a19962cc15188f8496a2c87d3b'
+ for name in ('det.onnx','rec.onnx','meta.json','LICENSE'):
+  raw=z.read('assets/indra/'+name)
+  meta=indra_manifest[name]
+  assert len(raw)==meta['size'] and hashlib.sha256(raw).hexdigest()==meta['sha256'], 'Indra '+name
  libs=[p for p in z.namelist() if p.startswith('lib/') and p.endswith('.so')]
  assert libs and all(p.startswith('lib/arm64-v8a/') for p in libs)
-print('APK verified: signed, ARM64, all model hashes match, no INTERNET permission')
+print('APK verified: signed, ARM64, all model hashes match (including Indra), no INTERNET permission')
