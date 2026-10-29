@@ -109,15 +109,61 @@ final class IndraReadingOrder {
         }
         return groups;
     }
+    /** Faithful Java translation of Indra's pairwise decode_order insertion search.
+     * Initial ranking uses log probabilities (rather than raw score sums).
+     * Then move each group to the position maximizing all pairwise relations.
+     * This especially avoids splitting the final short line of a column.
+     */
     private static int[] rank(float[][] matrix){
-        int n=matrix.length;Integer[] indexes=new Integer[n];float[] value=new float[n];
+        int n=matrix.length;if(n<2){int[] one=new int[n];if(n==1)one[0]=0;return one;}
+        double[][] logp=new double[n][n];
+        double[] totals=new double[n];
+        Integer[] order=new Integer[n];
         for(int i=0;i<n;i++){
-            indexes[i]=i;
-            for(int j=0;j<n;j++)if(i!=j)value[i]+=matrix[i][j]-matrix[j][i];
+            order[i]=i;
+            for(int j=0;j<n;j++){
+                logp[i][j]=logSigmoid(matrix[i][j]);
+                totals[i]+=logp[i][j]-logSigmoid(matrix[j][i]);
+            }
         }
-        Arrays.sort(indexes,(a,b)->Float.compare(value[b],value[a]));
-        int[] out=new int[n];for(int i=0;i<n;i++)out[i]=indexes[i];
+        Arrays.sort(order,(a,b)->Double.compare(totals[b],totals[a]));
+        for(int sweep=0;sweep<4;sweep++){
+            boolean changed=false;
+            Integer[] snapshot=order.clone();
+            for(int moved:snapshot){
+                int[] others=new int[n-1];int current=-1,p=0;
+                for(int i=0;i<n;i++){
+                    if(order[i]==moved){current=i;continue;}
+                    others[p++]=order[i];
+                }
+                if(current<0)throw new IllegalStateException("OrderNet decoding lost block");
+                double[] gains=new double[n];
+                double after=0;
+                for(int i=0;i<others.length;i++)after+=logp[moved][others[i]];
+                gains[0]=after;
+                double before=0;
+                for(int k=0;k<others.length;k++){
+                    before+=logp[others[k]][moved];
+                    after-=logp[moved][others[k]];
+                    gains[k+1]=before+after;
+                }
+                int selected=current;
+                for(int k=0;k<n;k++)if(gains[k]>gains[selected]+1e-6)selected=k;
+                if(selected!=current){
+                    Integer[] updated=new Integer[n];
+                    int j=0;
+                    for(int i=0;i<n;i++)updated[i]=i==selected?moved:others[j++];
+                    order=updated;changed=true;
+                }
+            }
+            if(!changed)break;
+        }
+        int[] out=new int[n];for(int i=0;i<n;i++)out[i]=order[i];
         return out;
+    }
+    private static double logSigmoid(double x){
+        if(x>=0)return -Math.log1p(Math.exp(-x));
+        return x-Math.log1p(Math.exp(x));
     }
     private static boolean permutation(int[] indices,int n){
         if(indices.length!=n)return false;
