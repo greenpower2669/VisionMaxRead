@@ -76,6 +76,20 @@ jobs:
           test -s app/src/main/assets/tts/piper/siwis/tokens.txt
           test -d app/src/main/assets/tts/piper/siwis/espeak-ng-data
 
+      - name: Diagnose pinned Qwen source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 2 --silent --show-error \
+            'https://huggingface.co/api/models/litert-community/Qwen3.5-0.8B/commits/main' \
+            -o "\u0024{RUNNER_TEMP}/qwen-history.json"
+          python3 - <<'PY'
+          import json,os,pathlib
+          history=json.loads((pathlib.Path(os.environ['RUNNER_TEMP'])/'qwen-history.json').read_text())
+          for entry in history:
+           if '2026-10-11' <= entry.get('date','')[:10] <= '2026-10-17':
+            print('QWEN HISTORY:',entry.get('date'),entry.get('id'),entry.get('title'))
+          PY
       - name: Prepare Qwen3.5 0.8B VL OCR model
         shell: bash
         run: |
