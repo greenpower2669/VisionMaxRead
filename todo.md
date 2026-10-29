@@ -363,3 +363,12 @@ Instruction de Fab : « Ok on garde qwen et on optimisé le reste, l audio est p
 - [ ] [HUMAIN] Installer APK LAB et comparer documents imprimés français, colonnes et manuscrit en mode avion. Vérifier latence, PSS, fiabilité caméra/audio et source Indra réelle.
 - [ ] [AGENT] Suivant les mesures : ajouter orientation, ordre de lecture, LM et langues, ou éliminer le prototype si bénéfice insuffisant.
 - [ ] [AGENT/HUMAIN] Publication éventuelle APK direct après CI verte et accord explicite ; aucun merge main automatique.
+
+### VMR-009 — preuve de construction Android (29/10/2026)
+- [x] Révision de Qwen figée au commit HF \`efb93fca20bc4b65df078b2b0a365d3350b3dcfb\` du 12/10 : bundle Qwen préexistant taille/SHA identiques (aucun changement de modèle), correctif du téléchargement CI.
+- [x] Modèles Indra \`det.onnx\` et \`rec.onnx\` épinglés aux SHA256 officiels (licence fournie).
+- [x] GitHub Actions run \`40941725735\` (code \`de2369940182019b52c8e2cdc8bc49b3b1ed4355\`) : SUCCESS. Tests core/Gradle, Android lint, APK/AAB, archive, modèle et signature vérifiés, ARM64, aucune permission INTERNET.
+- [x] APK direct sans ZIP : \`VisionMaxRead-0.4.6-QWEN-SIWIS-INDRA-DEBUG.apk\`, artefact \`12927727403\`, 1 656 190 797 octets, SHA256 \`62a4e2fbd24cff3cdc6f61fc10061f847cf365cc86a3b3650b2d236880075cf2\`.
+- [x] Signature LAB persistante : \`2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182\`, package \`fr.visionmaxread.labdebug\`, code 10.
+- [ ] Essais sur téléphone Samsung à réaliser : fiabilité Indra et comparatif Qwen/PP-OCR, qualité et ordre de lecture, temps, PSS, consommation, température, mode avion.
+- [ ] Étalonner le portage Android sur des oracles Python Indra, notamment interpolation, rotation, ordre de lecture et textes en colonnes ; ne pas présenter les performances desktop comme des mesures Android.
