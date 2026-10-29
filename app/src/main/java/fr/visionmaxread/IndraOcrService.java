@@ -16,12 +16,22 @@ final class IndraOcrService {
     float x0,y0,x1,y1;
     Box(float a,float b,float c,float d){x0=a;y0=b;x1=c;y1=d;}
   }
-  String recognize(Context context,Bitmap bitmap)throws Exception{
+  static final class Scan {
+    final String raw,ordered,orderMethod;final int lineCount,blockCount;
+    final long detectionMs,recognitionMs,orderMs;
+    Scan(String raw,String ordered,String method,int lines,int blocks,long detMs,long recMs,long ordMs){
+      this.raw=raw;this.ordered=ordered;this.orderMethod=method;this.lineCount=lines;this.blockCount=blocks;
+      this.detectionMs=detMs;this.recognitionMs=recMs;this.orderMs=ordMs;
+    }
+  }
+  String recognize(Context context,Bitmap bitmap)throws Exception{return scan(context,bitmap).ordered;}
+  Scan scan(Context context,Bitmap bitmap)throws Exception{
     if(bitmap==null||bitmap.isRecycled())throw new IOException("Image absente");
     JSONObject manifest=manifest(context);
     JSONObject meta=meta(context,manifest);
     File detector=install(context,"det.onnx",manifest.getJSONObject("det.onnx"));
     File recognizer=install(context,"rec.onnx",manifest.getJSONObject("rec.onnx"));
+    File orderModel=install(context,"order.onnx",manifest.getJSONObject("order.onnx"));
     int w=bitmap.getWidth(),h=bitmap.getHeight();
     if((long)w*h>20_000_000)throw new IOException("Image trop grande");
     int[] argb=new int[w*h];bitmap.getPixels(argb,0,w,0,0,w,h);
@@ -38,13 +48,32 @@ final class IndraOcrService {
     opts.setIntraOpNumThreads(2);
     try(OrtSession det=env.createSession(detector.getAbsolutePath(),opts);
         OrtSession rec=env.createSession(recognizer.getAbsolutePath(),opts)){
+      long d0=android.os.SystemClock.elapsedRealtime();
       List<Box> boxes=detect(env,det,gray,w,h,meta.optInt("det_long_side",1024));
-      StringBuilder text=new StringBuilder();
+      long detMs=android.os.SystemClock.elapsedRealtime()-d0,recStart=android.os.SystemClock.elapsedRealtime();
+      List<String> lines=new ArrayList<>();
+      List<IndraReadingOrder.Box> locations=new ArrayList<>();
       for(Box b:boxes){
         String line=recognizeLine(env,rec,gray,w,h,b,recH,win,chars);
-        if(!line.isEmpty()){if(text.length()>0)text.append('\n');text.append(line);}
+        if(!line.isBlank()){
+          lines.add(line);
+          locations.add(new IndraReadingOrder.Box(b.x0,b.y0,b.x1,b.y1));
+        }
       }
-      return text.toString();
+      long recMs=android.os.SystemClock.elapsedRealtime()-recStart;
+      String raw=String.join("\n",lines);
+      long orderStart=android.os.SystemClock.elapsedRealtime();
+      IndraReadingOrder.Result layout;
+      try(OrtSession order=env.createSession(orderModel.getAbsolutePath(),opts)){
+        layout=IndraReadingOrder.sort(env,order,locations,lines,w,h);
+      }catch(Exception e){
+        layout=IndraReadingOrder.sort(env,null,locations,lines,w,h);
+        android.util.Log.w("VisionMaxRead","OrderNet fallback: "+e.getClass().getSimpleName());
+      }
+      List<String> ordered=new ArrayList<>();
+      for(int idx:layout.indexes)ordered.add(lines.get(idx));
+      long ordMs=android.os.SystemClock.elapsedRealtime()-orderStart;
+      return new Scan(raw,String.join("\n",ordered),layout.method,lines.size(),layout.blocks,detMs,recMs,ordMs);
     }finally{opts.close();}
   }
   private static List<Box> detect(OrtEnvironment env,OrtSession net,byte[] gray,int sw,int sh,int side)throws Exception{
