@@ -33,6 +33,21 @@ with zipfile.ZipFile(apk) as z:
  assert len(license)==liquid['license_size'] and hashlib.sha256(license).hexdigest()==liquid['license_sha256'], 'LFM license missing or corrupt'
  assert len(z.read('assets/liquid/LLAMA_CPP_LICENSE'))>400, 'llama.cpp static library license missing'
  assert 'lib/arm64-v8a/libvmr_liquid.so' in z.namelist(), 'Missing native llama.cpp JNI'
+ moe_manifest=json.loads(z.read('assets/moe/manifest.json'))
+ assert 'lib/arm64-v8a/libvmr_moe.so' in z.namelist(), 'Missing true MoE Rust ARM64 library'
+ model_hash=hashlib.sha256()
+ model_size=0
+ with z.open('assets/moe/hobbylm-1b-sft-3450-Q4_K_M.gguf') as reader:
+  while True:
+   block=reader.read(1024*1024)
+   if not block:break
+   model_hash.update(block);model_size+=len(block)
+ assert model_size==moe_manifest['size'] and model_hash.hexdigest()==moe_manifest['sha256'], 'HobbyLM MoE GGUF mismatch'
+ for license_file in ('LICENSE','NOTICE'):
+  entry='assets/moe/'+license_file
+  assert hashlib.sha256(z.read(entry)).hexdigest()==moe_manifest['files'][license_file]['sha256'], 'Missing model legal notices'
+ assert b'Apache-2.0' in z.read('assets/moe/HOBBYLM_SOURCE_README.txt'), 'Missing source license grant'
+
  assert not any(p.startswith('assets/qwen/') for p in z.namelist()), 'Qwen assets must be absent'
  libs=[p for p in z.namelist() if p.startswith('lib/') and p.endswith('.so')]
  assert libs and all(p.startswith('lib/arm64-v8a/') for p in libs)
