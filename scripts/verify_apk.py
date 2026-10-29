@@ -22,7 +22,7 @@ with zipfile.ZipFile(apk) as z:
   assert count==entry['size'] and h.hexdigest()==entry['sha256'],entry['path']
  indra_manifest=json.loads(z.read('assets/indra/manifest.json'))
  assert indra_manifest['revision']=='bd02167fdf2005a19962cc15188f8496a2c87d3b'
- for name in ('det.onnx','rec.onnx','order.onnx','meta.json','LICENSE'):
+ for name in ('det.onnx','rec.onnx','order.onnx','lm.npz','meta.json','LICENSE'):
   raw=z.read('assets/indra/'+name)
   meta=indra_manifest[name]
   assert len(raw)==meta['size'] and hashlib.sha256(raw).hexdigest()==meta['sha256'], 'Indra '+name
