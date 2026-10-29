@@ -137,7 +137,7 @@ public final class MainActivity extends Activity {
                                   scan.orderMs,pss,"method="+scan.orderMethod+" blocks="+scan.blockCount+" diff_positions="+scan.orderDisagreements+" geometry="+scan.layoutEvidence);
                         trace.add(this,"P2A_XYCUT","geometry-xycut","executed",scan.xycutOrdered,
                                   0,pss,"independent-order-comparison");
-                        trace.add(this,"P2B_INDRA_LM","indra-lm.npz-ctc","executed",scan.lmOrdered,
+                        trace.add(this,"P2B_INDRA_LM","indra-lm.npz-ctc",scan.lmLoaded?"executed":"unavailable",scan.lmLoaded?scan.lmOrdered:"",
                                   scan.lmMs,pss,"uncertain_lines="+scan.lmRuns+" corrections="+scan.lmChanged+" fallback_errors="+scan.lmErrors);
                         trace.add(this,"P2C_XYCUT_LM","xycut-plus-IndraLM","executed",scan.xycutLm,
                                   0,pss,"same-CTC-hypotheses-different-line-order");
