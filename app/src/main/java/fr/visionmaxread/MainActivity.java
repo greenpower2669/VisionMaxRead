@@ -32,7 +32,7 @@ public final class MainActivity extends Activity {
     private TextureView preview;private ImageView frozen;private FrameLayout imageArea;private ProgressBar ocrProgress;
     // Only an in-memory reference to the displayed photo, never copied to persistent storage.
     private Bitmap compareBitmap;
-    private EditText text;private TextView status;private Button freeze,play,compare,indra,liquid;private CameraController camera;
+    private EditText text;private TextView status;private Button freeze,play,compare,indra,liquid,copyLogs,copyResults;private CameraController camera;
     private HistoryStore history;private ModelFiles models;private SharedPreferences prefs;
     private boolean changingText,destroyed,reading,cameraMode;private String maskedPreview="";private int textSp=24;
     private volatile OcrTrace lastTrace;
@@ -76,6 +76,10 @@ public final class MainActivity extends Activity {
         freeze=button("● Figer l’image",RED,()->{freeze.setEnabled(false);status.setText("Capture de la photo…");camera.freeze();});content.addView(freeze);freeze.setEnabled(false);
         compare=button("PP-OCRv6-Small / Comparer",TEAL,this::compareOcr);compare.setVisibility(View.GONE);content.addView(compare);setCompareAvailable(false);
         indra=button("Passes Indra · rapport",TEAL,this::compareIndra);indra.setVisibility(View.GONE);content.addView(indra);setIndraAvailable(false);
+        copyLogs=button("Copier logs techniques",INK,this::copyTechnicalLogs);
+        copyResults=button("Copier résultats · toutes les passes",TEAL,this::confirmCopyAllPasses);
+        row(content,copyLogs,copyResults);
+        copyLogs.setEnabled(false);copyResults.setEnabled(false);
         liquid=button("Tester Liquid + experts (hors ligne)",INK,this::startLiquidReview);
         liquid.setVisibility(View.GONE);liquid.setEnabled(false);content.addView(liquid);
         ocrProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);ocrProgress.setMax(100);ocrProgress.setVisibility(View.GONE);ocrProgress.setContentDescription("Progression de la reconnaissance de texte");content.addView(ocrProgress,new LinearLayout.LayoutParams(-1,dp(10)));
@@ -96,7 +100,7 @@ public final class MainActivity extends Activity {
     private long beginOcrProgress(int value){long id=progressGeneration.incrementAndGet();ui(()->{if(ocrProgress!=null&&progressGeneration.get()==id){ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(value);}});return id;}
     private void updateOcrProgress(long id,int value){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(Math.max(0,Math.min(100,value)));});}
     private void finishOcrProgress(long id){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setIndeterminate(false);ocrProgress.setProgress(100);ocrProgress.postDelayed(()->{if(progressGeneration.get()==id)ocrProgress.setVisibility(View.GONE);},900);});}
-    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastTrace=null;lastScan=null;lastReview=null;compareBitmap=null;if(LiquidNative.available())LiquidNative.stop();ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}if(liquid!=null){liquid.setEnabled(false);liquid.setVisibility(View.GONE);}return sessions.replaceSource();}
+    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastTrace=null;lastScan=null;lastReview=null;compareBitmap=null;if(copyLogs!=null)copyLogs.setEnabled(false);if(copyResults!=null)copyResults.setEnabled(false);if(LiquidNative.available())LiquidNative.stop();ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}if(liquid!=null){liquid.setEnabled(false);liquid.setVisibility(View.GONE);}return sessions.replaceSource();}
     private void startCamera(){
         newDocument();cameraMode=true;imageArea.setVisibility(View.VISIBLE);preview.setVisibility(View.VISIBLE);frozen.setVisibility(View.GONE);freeze.setVisibility(View.VISIBLE);freeze.setEnabled(true);setText("");status.setText("Vise le texte puis appuie sur Figer l’image.");
         if(checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION);
@@ -157,7 +161,7 @@ public final class MainActivity extends Activity {
                         finishOcrProgress(progress);
                         ui(()->{
                             if(!sessions.documentCurrent(ticket)||compareBitmap!=image)return;
-                            setIndraAvailable(true);liquid.setVisibility(View.VISIBLE);liquid.setEnabled(LiquidNative.available());
+                            setIndraAvailable(true);copyLogs.setEnabled(true);copyResults.setEnabled(true);liquid.setVisibility(View.VISIBLE);liquid.setEnabled(LiquidNative.available());
                             if(ocrChoice.get()==choice)setText(scan.lmOrdered);
                             status.setText("Indra + LM : "+scan.lineCount+" lignes, "+elapsed+" ms. "+
                                 "Correction de "+scan.lmChanged+" ligne(s) ; OrderNet/XY-cut à comparer dans le rapport.");
@@ -168,7 +172,7 @@ public final class MainActivity extends Activity {
                         DebugLog.exception(this,"INDRA pipeline",e);
                         trace.add(this,"P1_INDRA_RAW","indra-det-rec","error","",
                                   SystemClock.elapsedRealtime()-start,processPssMb(),e.getClass().getSimpleName());
-                        lastTrace=trace;finishOcrProgress(progress);
+                        lastTrace=trace;finishOcrProgress(progress);ui(()->{if(sessions.documentCurrent(ticket)){copyLogs.setEnabled(true);copyResults.setEnabled(true);}});
                         ui(()->{if(sessions.documentCurrent(ticket)){
                             setIndraAvailable(true);
                             status.setText("Indra indisponible. PP-OCRv6-Small reste utilisable ; consulte le journal.");
@@ -262,13 +266,59 @@ public final class MainActivity extends Activity {
     private void compareIndra(){
         final OcrTrace trace=lastTrace;final long ticket=sessions.documentTicket();
         if(trace==null||!sessions.documentCurrent(ticket))return;
-        new AlertDialog.Builder(this).setTitle("Analyse multicouche — VMR-012")
-            .setMessage(trace.summary()+"\nLiquid se lance séparément avec le bouton Tester. Meta MobileMoE reste non intégré. "+
-               "Les journaux standards ne contiennent aucun texte privé.")
-            .setPositiveButton("Voir les passes et textes",(d,w)->showSensitiveReport(trace,ticket))
+        new AlertDialog.Builder(this).setTitle("Analyse multicouche — VMR-013")
+            .setMessage(trace.summary()+"\nLes boutons sous le rapport copient les logs techniques ou le texte intégral. "+
+                "Chaque passe est aussi copiable séparément. MobileMoE Meta n'est pas encore exécuté.")
+            .setPositiveButton("Copier une passe",(d,w)->choosePassToCopy(trace,ticket))
             .setNeutralButton("Comparer les ordres",(d,w)->showReadingAlternatives(ticket))
             .setNegativeButton("Fermer",null).show();
     }
+    /** One tap: anonymized technical diagnostics (never the OCR text). */
+    private void copyTechnicalLogs(){
+        final OcrTrace trace=lastTrace;final long ticket=sessions.documentTicket();
+        if(trace==null||!sessions.documentCurrent(ticket)){status.setText("Aucun rapport à copier.");return;}
+        String message=trace.metricsReport()+"\n=== JOURNAL DEBUG ===\n"+DebugLog.read(this);
+        copyToClipboard("VisionMaxRead diagnostics sans texte",message,ticket,false);
+    }
+    /** Text exports require explicit user confirmation. No screenshots needed. */
+    private void confirmCopyAllPasses(){
+        final OcrTrace trace=lastTrace;final long ticket=sessions.documentTicket();
+        if(trace==null||!sessions.documentCurrent(ticket))return;
+        confirmSensitiveCopy("Copier TOUTES les passes",trace.fullReport(),ticket);
+    }
+    private void choosePassToCopy(OcrTrace trace,long ticket){
+        if(!sessions.documentCurrent(ticket))return;
+        List<OcrTrace.Pass> passes=trace.snapshot();
+        if(passes.isEmpty()){status.setText("Aucune passe à copier.");return;}
+        String[] labels=new String[passes.size()];
+        for(int i=0;i<passes.size();i++){
+            OcrTrace.Pass p=passes.get(i);
+            labels[i]=p.key+" · "+p.status+" · "+p.text.length()+" caractères";
+        }
+        new AlertDialog.Builder(this).setTitle("Choisir une passe à copier")
+            .setItems(labels,(d,which)->{
+                if(!sessions.documentCurrent(ticket))return;
+                OcrTrace.Pass pass=passes.get(which);
+                confirmSensitiveCopy("Copier "+pass.key,trace.passReport(which),ticket);
+            }).setNegativeButton("Fermer",null).show();
+    }
+    private void confirmSensitiveCopy(String title,String value,long ticket){
+        if(!sessions.documentCurrent(ticket))return;
+        new AlertDialog.Builder(this).setTitle(title)
+            .setMessage("Cette copie peut contenir des textes privés, noms, dates ou références. "+
+                "Le presse-papiers est accessible à d'autres applications. "+
+                "Relis et anonymise avant de me l'envoyer.")
+            .setPositiveButton("Copier",(d,w)->copyToClipboard(title,value,ticket,true))
+            .setNegativeButton("Annuler",null).show();
+    }
+    private void copyToClipboard(String title,String value,long ticket,boolean sensitive){
+        if(!sessions.documentCurrent(ticket))return;
+        ((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE))
+            .setPrimaryClip(ClipData.newPlainText(title,value));
+        status.setText(sensitive?"Résultats copiés. Pense à anonymiser avant partage.":
+                  "Logs techniques copiés : colle-les directement dans notre discussion.");
+    }
+
     private void showReadingAlternatives(long ticket){
         final IndraOcrService.Scan scan=lastScan;
         if(scan==null||!sessions.documentCurrent(ticket))return;
@@ -398,7 +448,7 @@ public final class MainActivity extends Activity {
             .setNeutralButton("Effacer",(d,w)->{DebugLog.clear(this);status.setText("Journal debug effacé.");})
             .setNegativeButton("Fermer",null).show();
     }
-    private void help(){new AlertDialog.Builder(this).setTitle("Lire avec VisionMaxRead").setMessage("1. Caméra ou Photo : choisir une image.\n2. Indra reconnaît le texte et OrderNet reconstruit les colonnes.\n3. Le bouton Rapport présente toutes les passes, y compris celles indisponibles.\n4. PP-OCRv6-Small sert de secours.\n5. Lire vocalement avec Siwis ou Jessica.\n\nLe journal standard contient des métriques, jamais les textes. L'export avec textes nécessite une confirmation.\n\nVMR-012 LAB · Indra + LM + LiquidAI sur CPU, relectures spécialisées expérimentales sur demande ; Meta MobileMoE non porté.").setPositiveButton("Fermer",null).show();}
+    private void help(){new AlertDialog.Builder(this).setTitle("Lire avec VisionMaxRead").setMessage("1. Caméra ou Photo : choisir une image.\n2. Indra reconnaît le texte et OrderNet reconstruit les colonnes.\n3. Le bouton Rapport présente toutes les passes, y compris celles indisponibles.\n4. PP-OCRv6-Small sert de secours.\n5. Lire vocalement avec Siwis ou Jessica.\n\nLe journal standard contient des métriques, jamais les textes. L'export avec textes nécessite une confirmation.\n\nVMR-013 LAB · Indra + Liquid hors ligne, boutons Copier logs / Copier résultats et Copier une passe ; Meta MobileMoE non porté.").setPositiveButton("Fermer",null).show();}
     @Override protected void onNewIntent(Intent intent){super.onNewIntent(intent);setIntent(intent);incoming(intent);}
     private void incoming(Intent intent){
         if(intent==null)return;String action=intent.getAction();
