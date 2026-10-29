@@ -432,3 +432,11 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [ ] [SAMSUNG] Installer VMR-012 en mode avion, vérifier chargement réel modèle, latence P3/P4/P5, PSS mémoire, chauffe, arrêt, relecture Siwis ; transmettre rapport anonymisé de la lettre 1942, comparer texte et photo.
 - [ ] [RECHERCHE] Étudier vrai MobileMoE-S Meta (runtime architecture custom, quantification, licence FAIR NC, qualité français, mémoire ~0.7Go), ne pas le faire passer pour un moteur fonctionnel sans preuve.
 - [ ] [QUALITÉ] Faire une mesure CER/WER, rejet des faux chiffres/noms, impact des prompts, comparaison de documents et abstention. Pas de publication générale avant validation juridique des licences des poids et des voix.
+
+### VMR-012 — Build final signé et direct confirmé (29/10/2026)
+- [x] GitHub Actions **run `40971403081`**, code HEAD `3b51607dba476d508b6b29e5fcdd23f6b1f31391` : SUCCESS. Java core tests, lint, APK/AAB, contrats d'archive, signature et hash Indra/Liquid, permission Internet absente. Compilateur C++ ARM64 llama.cpp `36a0e2ffc0b352b774f8d71c43668b75b3061ef5` OK.
+- [x] Fichier modèle Liquid vérifié (149081056 octets) + licence LFM et MIT embarquées ; aucune inférence sur réseau ; P3/P4A/P4B/P5 seulement sur bouton demandé.
+- [x] APK direct sans ZIP `VisionMaxRead-0.6.0-LIQUID-EXPERTS-LAB.apk` artifact `12940647519` : **522168389 octets**, SHA256 `28cfe4c658a7813f802564e991b540d88da8ec26c8d3f5d6de80c251c02dab91`.
+- [x] LAB package `fr.visionmaxread.labdebug`, versionCode **13**, certificat SHA256 `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`, même certificat qu'avant. AAB non signé 505040026 octets non destiné à l'installation.
+- [ ] **Essai Samsung avant conclusion fonctionnelle** : chargement réel du moteur natif, génération P3, P4A/P4B, vote P5 ; PSS/chauffe/vitesse, report/copie texte, mode avion, TTS. `CI success` ne valide pas cette exécution matérielle. Meta MobileMoE absent.
+- [ ] Aucune fusion `main` ni GitHub Release sans validation distincte de Fab.
