@@ -18,26 +18,23 @@ import fr.visionmaxread.core.SessionGate;
 import fr.visionmaxread.core.ReaderSessions;
 
 public final class MainActivity extends Activity {
-    private static final int CAMERA_PERMISSION=10,PHOTO=20,SPECIALIST_MODEL=30;
+    private static final int CAMERA_PERMISSION=10,PHOTO=20;
     private static final int INK=Color.rgb(16,44,60),PAPER=Color.rgb(255,249,238),TEAL=Color.rgb(0,105,92),RED=Color.rgb(179,38,32),DISABLED=Color.rgb(145,145,145);
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
-    private final ExecutorService qwenWorker=Executors.newSingleThreadExecutor();
     private final ExecutorService paddleWorker=Executors.newSingleThreadExecutor();
     private final ExecutorService indraWorker=Executors.newSingleThreadExecutor();
-    private final ExecutorService modelWorker=Executors.newSingleThreadExecutor();
     private final AtomicLong ocrChoice=new AtomicLong(),progressGeneration=new AtomicLong();
     private final ReaderSessions sessions=new ReaderSessions();
     private final SessionGate speech=new SessionGate();
     private final PiperSpeechEngine voice=new PiperSpeechEngine();
-    private final QwenOcrService qwen=new QwenOcrService();
-    private final SpecializedOcrService specialistOcr=new SpecializedOcrService();
     private final IndraOcrService indraOcr=new IndraOcrService();
     private TextureView preview;private ImageView frozen;private FrameLayout imageArea;private ProgressBar ocrProgress;
     // Only an in-memory reference to the displayed photo, never copied to persistent storage.
     private Bitmap compareBitmap;
-    private EditText text;private TextView status;private Button freeze,play,compare,specialist,indra;private CameraController camera;
+    private EditText text;private TextView status;private Button freeze,play,compare,indra;private CameraController camera;
     private HistoryStore history;private ModelFiles models;private SharedPreferences prefs;
-    private boolean changingText,destroyed,reading,cameraMode;private String maskedPreview="",lastQwenText="",lastQwenError="";private long lastQwenMs=-1;private float lastQwenPssMb=-1f;private int textSp=24;
+    private boolean changingText,destroyed,reading,cameraMode;private String maskedPreview="";private int textSp=24;
+    private volatile OcrTrace lastTrace;
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);DebugLog.session(this);prefs=getSharedPreferences("settings",MODE_PRIVATE);history=new HistoryStore(this);textSp=prefs.getInt("textSize",24);
         voice.selectVoice(prefs.getBoolean("voiceHD",true));buildUi();camera=new CameraController(this,preview,new CameraController.Listener(){
@@ -74,9 +71,7 @@ public final class MainActivity extends Activity {
         frozen=new ImageView(this);frozen.setScaleType(ImageView.ScaleType.FIT_CENTER);frozen.setContentDescription("Image figée à reconnaître");frozen.setBackgroundColor(Color.BLACK);frozen.setVisibility(View.GONE);imageArea.addView(frozen,new FrameLayout.LayoutParams(-1,-1));
         freeze=button("● Figer l’image",RED,()->{freeze.setEnabled(false);status.setText("Capture de la photo…");camera.freeze();});content.addView(freeze);freeze.setEnabled(false);
         compare=button("PP-OCRv6-Small / Comparer",TEAL,this::compareOcr);compare.setVisibility(View.GONE);content.addView(compare);setCompareAvailable(false);
-        indra=button("Indra OCR (latin) / Comparer",TEAL,this::compareIndra);indra.setVisibility(View.GONE);content.addView(indra);setIndraAvailable(false);
-        specialist=button("🔎 PaddleOCR-VL-1.6 / Comparer",TEAL,this::compareSpecialist);
-        specialist.setVisibility(View.GONE);content.addView(specialist);setSpecialistAvailable(false);
+        indra=button("Passes Indra · rapport",TEAL,this::compareIndra);indra.setVisibility(View.GONE);content.addView(indra);setIndraAvailable(false);
         ocrProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);ocrProgress.setMax(100);ocrProgress.setVisibility(View.GONE);ocrProgress.setContentDescription("Progression de la reconnaissance de texte");content.addView(ocrProgress,new LinearLayout.LayoutParams(-1,dp(10)));
         status=label("Choisis Caméra, Photo ou colle un texte.",18);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);status.setPadding(0,dp(8),0,dp(8));content.addView(status);
         text=new EditText(this);text.setHint("Le texte apparaît ici. Tu peux le corriger ou coller un texte.");text.setTextSize(textSp);text.setTextColor(INK);text.setHintTextColor(Color.rgb(74,86,95));text.setGravity(Gravity.TOP);text.setMinLines(5);text.setSingleLine(false);text.setSelectAllOnFocus(false);text.setBackgroundTintList(android.content.res.ColorStateList.valueOf(TEAL));
@@ -92,208 +87,143 @@ public final class MainActivity extends Activity {
     private void font(int delta){textSp=Math.max(18,Math.min(48,textSp+delta));text.setTextSize(textSp);prefs.edit().putInt("textSize",textSp).apply();}
     private void setCompareAvailable(boolean available){if(compare==null)return;compare.setEnabled(available);compare.setBackgroundTintList(android.content.res.ColorStateList.valueOf(available?TEAL:DISABLED));compare.setAlpha(available?1f:0.65f);}
     private void setIndraAvailable(boolean available){if(indra==null)return;indra.setEnabled(available);indra.setBackgroundTintList(android.content.res.ColorStateList.valueOf(available?TEAL:DISABLED));indra.setAlpha(available?1f:0.65f);}
-    private void setSpecialistAvailable(boolean available){if(specialist==null)return;specialist.setEnabled(available);specialist.setBackgroundTintList(android.content.res.ColorStateList.valueOf(available?TEAL:DISABLED));specialist.setAlpha(available?1f:0.65f);}
     private long beginOcrProgress(int value){long id=progressGeneration.incrementAndGet();ui(()->{if(ocrProgress!=null&&progressGeneration.get()==id){ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(value);}});return id;}
     private void updateOcrProgress(long id,int value){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(Math.max(0,Math.min(100,value)));});}
     private void finishOcrProgress(long id){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setIndeterminate(false);ocrProgress.setProgress(100);ocrProgress.postDelayed(()->{if(progressGeneration.get()==id)ocrProgress.setVisibility(View.GONE);},900);});}
-    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastQwenText="";lastQwenError="";lastQwenMs=-1;lastQwenPssMb=-1f;compareBitmap=null;ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(specialist!=null){setSpecialistAvailable(false);specialist.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}return sessions.replaceSource();}
+    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastTrace=null;compareBitmap=null;ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}return sessions.replaceSource();}
     private void startCamera(){
         newDocument();cameraMode=true;imageArea.setVisibility(View.VISIBLE);preview.setVisibility(View.VISIBLE);frozen.setVisibility(View.GONE);freeze.setVisibility(View.VISIBLE);freeze.setEnabled(true);setText("");status.setText("Vise le texte puis appuie sur Figer l’image.");
         if(checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION);
     }
     private void choosePhoto(){newDocument();Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE);try{startActivityForResult(pick,PHOTO);}catch(ActivityNotFoundException e){status.setText("Aucun sélecteur de photos disponible.");}}
-    private void chooseSpecialistModel(){
-        Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE);
-        try{startActivityForResult(pick,SPECIALIST_MODEL);}
-        catch(ActivityNotFoundException e){status.setText("Aucun gestionnaire de fichiers disponible.");}
-    }
-    private void importSpecialistModel(Uri uri){
-        status.setText("Import local de PaddleOCR-VL-1.6 : vérification SHA-256…");
-        modelWorker.execute(()->{
-            try{
-                specialistOcr.importModel(this,uri,p->ui(()->status.setText("Import du modèle OCR spécialisé : "+p+" %")));
-                DebugLog.append(this,"SPECIALIST model installed");
-                ui(()->{
-                    setSpecialistAvailable(compareBitmap!=null&&!compareBitmap.isRecycled());
-                    status.setText("PaddleOCR-VL-1.6 importé et vérifié. Capture une image pour comparer.");
-                });
-            }catch(Exception|OutOfMemoryError e){
-                DebugLog.exception(this,"SPECIALIST import",e);
-                ui(()->status.setText("Import OCR spécialisé refusé ou incomplet : fichier, empreinte ou espace de stockage non conforme."));
-            }
-        });
-    }
     private void manualText(){newDocument();imageArea.setVisibility(View.GONE);freeze.setVisibility(View.GONE);status.setText("Colle ou écris ton texte, puis appuie sur Lire.");text.requestFocus();}
     @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results){super.onRequestPermissionsResult(request,permissions,results);if(request==CAMERA_PERMISSION&&cameraMode){if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else{freeze.setEnabled(false);status.setText("Caméra refusée. Photo et Texte restent disponibles.");}}}
-    @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(result==RESULT_OK&&data!=null&&data.getData()!=null){Uri uri=data.getData();if(request==PHOTO)processImage(()->ImageLoader.fromUri(this,uri));else if(request==SPECIALIST_MODEL)importSpecialistModel(uri);}}
+    @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(result==RESULT_OK&&data!=null&&data.getData()!=null){Uri uri=data.getData();if(request==PHOTO)processImage(()->ImageLoader.fromUri(this,uri));}}
     interface LoadImage{Bitmap get()throws Exception;}
     private void processImage(LoadImage source){
-        long ticket=newDocument(),privacy=sessions.historyTicket(),choice=ocrChoice.get();imageArea.setVisibility(View.VISIBLE);freeze.setVisibility(View.GONE);preview.setVisibility(View.GONE);frozen.setVisibility(View.VISIBLE);frozen.setImageDrawable(null);setText("");status.setText("Préparation de l’image…");
-        final long loadProgress=beginOcrProgress(2);
+        long ticket=newDocument(),privacy=sessions.historyTicket(),choice=ocrChoice.get();
+        imageArea.setVisibility(View.VISIBLE);freeze.setVisibility(View.GONE);preview.setVisibility(View.GONE);
+        frozen.setVisibility(View.VISIBLE);frozen.setImageDrawable(null);setText("");
+        status.setText("Préparation de l'image…");
+        long loading=beginOcrProgress(2);
         worker.execute(()->{
-            try{
-                if(!sessions.documentCurrent(ticket))return;Bitmap image=source.get();if(!sessions.documentCurrent(ticket)){image.recycle();return;}
+            try {
+                if(!sessions.documentCurrent(ticket))return;
+                Bitmap image=source.get();
+                if(!sessions.documentCurrent(ticket)){image.recycle();return;}
                 DebugLog.append(this,"IMAGE ready "+image.getWidth()+"x"+image.getHeight()+" pssMb="+formatMb(processPssMb()));
-                ui(()->{if(sessions.documentCurrent(ticket)){frozen.setImageBitmap(image);compareBitmap=image;setCompareAvailable(true);compare.setVisibility(View.VISIBLE);indra.setVisibility(View.VISIBLE);setIndraAvailable(true);specialist.setVisibility(View.VISIBLE);setSpecialistAvailable(specialistOcr.isInstalled(this));status.setText("Image prête. Qwen démarre ; les OCR de comparaison sont disponibles.");}});
-                finishOcrProgress(loadProgress);
-                final long qProgress=beginOcrProgress(5);
-                qwenWorker.execute(()->{
-                    long q0=SystemClock.elapsedRealtime();
-                    try{
-                        specialistOcr.unload();
-                        String found=qwen.recognize(this,image,
-                            message->ui(()->{if(sessions.documentCurrent(ticket)&&progressGeneration.get()==qProgress)status.setText(message);}),
-                            value->updateOcrProgress(qProgress,value));
-                        long qMs=SystemClock.elapsedRealtime()-q0;
-                        if(!sessions.documentCurrent(ticket))return;
-                        lastQwenText=found;lastQwenError="";lastQwenMs=qMs;lastQwenPssMb=processPssMb();
-                        DebugLog.append(this,"QWEN done ms="+qMs+" chars="+found.length()+" pssMb="+formatMb(lastQwenPssMb));
-                        finishOcrProgress(qProgress);
+                ui(()->{
+                    if(!sessions.documentCurrent(ticket))return;
+                    frozen.setImageBitmap(image);compareBitmap=image;
+                    setCompareAvailable(true);compare.setVisibility(View.VISIBLE);
+                    indra.setVisibility(View.VISIBLE);setIndraAvailable(false);
+                    status.setText("Indra OCR lit l'image, puis vérifie l'ordre des colonnes…");
+                });
+                finishOcrProgress(loading);
+                final long progress=beginOcrProgress(-1);
+                indraWorker.execute(()->{
+                    OcrTrace trace=new OcrTrace("doc-"+ticket);
+                    long start=SystemClock.elapsedRealtime();
+                    try {
+                        IndraOcrService.Scan scan=indraOcr.scan(this,image);
+                        if(!sessions.documentCurrent(ticket)||destroyed)return;
+                        long elapsed=SystemClock.elapsedRealtime()-start;
+                        float pss=processPssMb();
+                        trace.add(this,"P1_INDRA_RAW","indra-det-rec","executed",scan.raw,
+                                  scan.detectionMs+scan.recognitionMs,pss,"lines="+scan.lineCount);
+                        trace.add(this,"P2_ORDERNET","indra-order.onnx","executed",scan.ordered,
+                                  scan.orderMs,pss,"method="+scan.orderMethod+" blocks="+scan.blockCount);
+                        // Explicit non-execution: the official n-gram beam and
+                        // both neural language engines still need Android runtimes.
+                        trace.add(this,"P2B_INDRA_LM","indra-lm.npz","unavailable","",0,pss,
+                                  "ctc-ngram-beam-not-ported");
+                        trace.add(this,"P3_LIQUID","LFM2.5-230M","unavailable","",0,pss,
+                                  "android-runtime-not-validated");
+                        trace.add(this,"P4_MOBILE_MOE","MobileMoE-S-QAT","unavailable","",0,pss,
+                                  "mobile-int4-runtime-not-validated");
+                        // This is a verifiable no-hallucination fallback, NOT a
+                        // neural MoE arbitration pass or a semantic correction.
+                        trace.add(this,"P5_ARBITRAGE","conservative-fallback","executed",scan.ordered,0,
+                                  processPssMb(),"preserve-original-tokens-only");
+                        lastTrace=trace;
+                        finishOcrProgress(progress);
                         ui(()->{
-                            if(!sessions.documentCurrent(ticket))return;
-                            if(ocrChoice.get()==choice)setText(found);
-                            if(progressGeneration.get()==qProgress)status.setText(found.trim().isEmpty()?"Qwen : aucun texte trouvé ("+qMs+" ms). Essaie PP-OCRv6-Small.":"Qwen : texte reconnu en "+qMs+" ms. PP-OCRv6-Small est disponible pour comparer.");
+                            if(!sessions.documentCurrent(ticket)||compareBitmap!=image)return;
+                            setIndraAvailable(true);
+                            if(ocrChoice.get()==choice)setText(scan.ordered);
+                            status.setText("Indra : "+scan.lineCount+" lignes, "+elapsed+" ms. "+
+                                "Colonnes : "+scan.orderMethod+". Liquid et MobileMoE à porter. Rapport disponible.");
                         });
-                        if(!found.trim().isEmpty()&&prefs.getBoolean("history",true)&&ocrChoice.get()==choice)maskAndSave(found,ticket,privacy,true);
+                        if(!scan.ordered.isBlank()&&prefs.getBoolean("history",true)&&ocrChoice.get()==choice)
+                            maskAndSave(scan.ordered,ticket,privacy,true);
                     }catch(Exception|OutOfMemoryError e){
-                        long qMs=SystemClock.elapsedRealtime()-q0;
-                        lastQwenText="";lastQwenError=e.getClass().getSimpleName()+(e.getMessage()==null?"":": "+e.getMessage());lastQwenMs=qMs;lastQwenPssMb=processPssMb();
-                        DebugLog.exception(this,"QWEN after "+qMs+" ms",e);finishOcrProgress(qProgress);
-                        ui(()->{if(sessions.documentCurrent(ticket)&&progressGeneration.get()==qProgress)status.setText("Qwen n’a pas terminé correctement. PP-OCRv6-Small reste disponible.");});
+                        DebugLog.exception(this,"INDRA pipeline",e);
+                        trace.add(this,"P1_INDRA_RAW","indra-det-rec","error","",
+                                  SystemClock.elapsedRealtime()-start,processPssMb(),e.getClass().getSimpleName());
+                        lastTrace=trace;finishOcrProgress(progress);
+                        ui(()->{if(sessions.documentCurrent(ticket)){
+                            setIndraAvailable(true);
+                            status.setText("Indra indisponible. PP-OCRv6-Small reste utilisable ; consulte le journal.");
+                        }});
                     }
                 });
             }catch(Exception|OutOfMemoryError e){
-                DebugLog.exception(this,"IMAGE load",e);finishOcrProgress(loadProgress);
+                DebugLog.exception(this,"IMAGE load",e);finishOcrProgress(loading);
                 ui(()->{if(sessions.documentCurrent(ticket))status.setText("Impossible de préparer cette image.");});
             }
         });
     }
 
-    /**
-     * Serializes LiteRT engines on qwenWorker. Release Qwen's native resources
-     * before initializing the larger specialist model to avoid double RAM.
-     * PP-OCR stays on its independent worker as an emergency fallback.
-     */
-    private void compareSpecialist(){
-        final Bitmap image=compareBitmap;
-        final long ticket=sessions.documentTicket();
-        if(image==null||image.isRecycled()||!specialistOcr.isInstalled(this)||!sessions.documentCurrent(ticket))return;
-        setSpecialistAvailable(false);
-        final long specProgress=beginOcrProgress(-1);
-        status.setText("PaddleOCR-VL-1.6 démarre après la tâche Qwen active…");
-        qwenWorker.execute(()->{
-            final long start=SystemClock.elapsedRealtime();
-            String value="",error=null;
-            try{
-                qwen.unload();
-                value=specialistOcr.recognize(this,image,message->ui(()->{
-                    if(sessions.documentCurrent(ticket)&&progressGeneration.get()==specProgress)status.setText(message);
-                }));
-            }catch(Exception|OutOfMemoryError e){
-                error=e.getClass().getSimpleName()+(e.getMessage()==null?"":": "+e.getMessage());
-                DebugLog.exception(this,"SPECIALIST OCR",e);
-            }
-            final long elapsed=SystemClock.elapsedRealtime()-start;
-            final float pss=processPssMb();
-            DebugLog.append(this,"SPECIALIST result ms="+elapsed+" chars="+value.length()+" pssMb="+formatMb(pss)+(error==null?"":" error="+error));
-            finishOcrProgress(specProgress);
-            final String textResult=value,errorResult=error;
-            ui(()->{
-                if(!sessions.documentCurrent(ticket)||compareBitmap!=image)return;
-                setSpecialistAvailable(true);
-                if(errorResult!=null){
-                    status.setText("PaddleOCR-VL a échoué. Qwen et PP-OCR restent accessibles.");
-                    return;
-                }
-                status.setText("OCR spécialisé terminé en "+elapsed+" ms ; mémoire processus ≈ "+formatMb(pss)+".");
-                showComparisonText("PaddleOCR-VL-1.6",textResult,ticket);
-            });
-        });
-    }
-
-    /** Run the known-good PP-OCRv6-Small on the exact bitmap already sent to Qwen. */
-    private void compareOcr() {
-        final Bitmap image=compareBitmap;
-        final long ticket=sessions.documentTicket();
+    /** Independent PP-OCR fallback; comparison runs on the same pixels. */
+    private void compareOcr(){
+        final Bitmap image=compareBitmap;final long ticket=sessions.documentTicket();
         if(image==null||image.isRecycled()||!sessions.documentCurrent(ticket))return;
-        setCompareAvailable(false);
-        final long pProgress=beginOcrProgress(-1);
-        status.setText("PP-OCRv6-Small analyse exactement la même image…");
-        DebugLog.append(this,"PADDLE start image="+image.getWidth()+"x"+image.getHeight());
+        setCompareAvailable(false);final long progress=beginOcrProgress(-1);
+        status.setText("PP-OCRv6-Small analyse la même image…");
         paddleWorker.execute(()->{
-            String paddleText="";
-            String paddleError=null;
-            long t0=SystemClock.elapsedRealtime();
-            try { paddleText=new OcrService().recognize(this,image); }
-            catch(Exception|OutOfMemoryError e) { paddleError=e.getClass().getSimpleName()+(e.getMessage()==null?"":": "+e.getMessage());DebugLog.exception(this,"PADDLE",e); }
-            long paddleMs=SystemClock.elapsedRealtime()-t0;
-            float paddlePss=processPssMb();
-            DebugLog.append(this,"PADDLE done ms="+paddleMs+" chars="+paddleText.length()+" pssMb="+formatMb(paddlePss)+(paddleError==null?"":" error="+paddleError));
-            finishOcrProgress(pProgress);
-            if(!sessions.documentCurrent(ticket)||destroyed)return;
-            final String p=paddleText,err=paddleError;final float pPss=paddlePss;
+            String value="",error=null;long start=SystemClock.elapsedRealtime();
+            try{value=new OcrService().recognize(this,image);}
+            catch(Exception|OutOfMemoryError e){error=e.getClass().getSimpleName();DebugLog.exception(this,"PADDLE",e);}
+            long ms=SystemClock.elapsedRealtime()-start;
+            DebugLog.append(this,"PADDLE done ms="+ms+" chars="+value.length()+" pssMb="+formatMb(processPssMb())+
+                             " result="+(error==null?"ok":error));
+            finishOcrProgress(progress);
+            final String found=value,failure=error;
             ui(()->{
                 if(!sessions.documentCurrent(ticket)||compareBitmap!=image)return;
                 setCompareAvailable(true);
-                status.setText(err==null?"Comparaison terminée. Choisis le résultat à examiner.":"PP-OCRv6-Small a échoué ; ouvre le journal debug pour le détail.");
-                String qState=lastQwenMs<0?"en cours / non terminé":(lastQwenError.isEmpty()?lastQwenMs+" ms, "+lastQwenText.length()+" caractères, PSS processus ≈ "+formatMb(lastQwenPssMb):"échec après "+lastQwenMs+" ms ("+lastQwenError+")");
-                String summary="Même image : "+image.getWidth()+" × "+image.getHeight()+" pixels.\n"
-                    +"Qwen3.5-0.8B-VL : "+qState+"\n"
-                    +"PP-OCRv6-Small : "+paddleMs+" ms, "+p.length()+" caractères, PSS processus après test ≈ "+formatMb(pPss)+(err==null?"":" ("+err+")")+"\n\n"
-                    +"Les deux moteurs ont reçu le même bitmap. Le nombre de caractères ne mesure pas à lui seul l’exactitude. "
-                    +"Aucun texte de comparaison n’est envoyé sur Internet.";
-                new AlertDialog.Builder(this)
-                    .setTitle("Qwen ↔ PP-OCRv6-Small")
-                    .setMessage(summary)
-                    .setPositiveButton("Voir Qwen",(dialog,which)->showComparisonText("Qwen",lastQwenText,ticket))
-                    .setNeutralButton("Voir PP-OCR",(dialog,which)->showComparisonText("PP-OCRv6-Small",p,ticket))
-                    .setNegativeButton("Fermer",null).show();
+                if(failure==null)showComparisonText("PP-OCRv6-Small ("+ms+" ms)",found,ticket);
+                else status.setText("PP-OCR a échoué : consulte le journal. Indra reste disponible.");
             });
         });
     }
-    /** Independent experimental Indra Latin inference on the exact capture bitmap. */
     private void compareIndra(){
-        final Bitmap image=compareBitmap;
-        final long ticket=sessions.documentTicket();
-        if(image==null||image.isRecycled()||!sessions.documentCurrent(ticket))return;
-        setIndraAvailable(false);
-        final long progress=beginOcrProgress(-1);
-        status.setText("Indra OCR (latin) analyse la même image, sans réseau…");
-        indraWorker.execute(()->{
-            long start=SystemClock.elapsedRealtime();String result="",error=null;
-            try{result=indraOcr.recognize(this,image);}
-            catch(Exception|OutOfMemoryError e){
-                error=e.getClass().getSimpleName()+(e.getMessage()==null?"":": "+e.getMessage());
-                DebugLog.exception(this,"INDRA OCR",e);
-            }
-            long duration=SystemClock.elapsedRealtime()-start;
-            float pss=processPssMb();
-            DebugLog.append(this,"INDRA done ms="+duration+" chars="+result.length()+" pssMb="+formatMb(pss)+(error==null?"":" error="+error));
-            finishOcrProgress(progress);
-            final String answer=result,err=error;
-            ui(()->{
-                if(!sessions.documentCurrent(ticket)||compareBitmap!=image)return;
-                setIndraAvailable(true);
-                if(err!=null){
-                    status.setText("Indra OCR indisponible : Qwen et PP-OCR restent accessibles.");
-                    new AlertDialog.Builder(this).setTitle("Indra — erreur de test")
-                        .setMessage("Indra n'a pas reconnu cette image : "+err+"\nLes autres moteurs restent utilisables.")
-                        .setPositiveButton("Fermer",null).show();
-                    return;
-                }
-                status.setText("Indra OCR : "+duration+" ms, "+answer.length()+" caractères ; PSS processus ≈ "+formatMb(pss)+".");
-                new AlertDialog.Builder(this).setTitle("Essai Indra OCR (latin)")
-                    .setMessage("Même image : "+image.getWidth()+" × "+image.getHeight()+" pixels.\n"
-                        +"Indra : "+duration+" ms · "+answer.length()+" caractères\n"
-                        +"PSS du processus après Indra : ≈ "+formatMb(pss)+"\n"
-                        +"Qwen : "+(lastQwenMs<0?"en cours":lastQwenMs+" ms")+"\n\n"
-                        +"Le nombre de caractères n'est pas une mesure d'exactitude. Aucun texte envoyé sur Internet.")
-                    .setPositiveButton("Voir Indra",(d,w)->showComparisonText("Indra OCR (latin)",answer,ticket))
-                    .setNegativeButton("Fermer",null).show();
-            });
-        });
+        final OcrTrace trace=lastTrace;final long ticket=sessions.documentTicket();
+        if(trace==null||!sessions.documentCurrent(ticket))return;
+        new AlertDialog.Builder(this).setTitle("Analyse multicouche — VMR-010")
+            .setMessage(trace.summary()+"\nPour l'instant Liquid et MobileMoE ne sont pas exécutés sur Android. "+
+               "Les journaux standards ne contiennent aucun texte privé.")
+            .setPositiveButton("Voir les passes et textes",(d,w)->showSensitiveReport(trace,ticket))
+            .setNegativeButton("Fermer",null).show();
     }
-
+    private void showSensitiveReport(OcrTrace trace,long ticket){
+        if(!sessions.documentCurrent(ticket))return;
+        ScrollView scroll=new ScrollView(this);
+        TextView t=label(trace.fullReport(),15);t.setTextIsSelectable(true);scroll.addView(t);
+        new AlertDialog.Builder(this).setTitle("Rapport AVEC textes : données sensibles")
+            .setView(scroll)
+            .setPositiveButton("Copier après vérification",(d,w)->{
+                if(!sessions.documentCurrent(ticket))return;
+                new AlertDialog.Builder(this).setTitle("Confirmer la copie")
+                    .setMessage("Ce rapport contient les textes reconnus, éventuellement des noms et données privées. "+
+                        "Le presse-papiers Android peut être lu par d'autres applications : partage uniquement après relecture.")
+                    .setPositiveButton("Copier",(a,b)->{
+                        ((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE))
+                            .setPrimaryClip(ClipData.newPlainText("VisionMaxRead étapes OCR — sensible",trace.fullReport()));
+                        status.setText("Rapport copié : relis/anonymise avant de le transmettre.");
+                    }).setNegativeButton("Annuler",null).show();
+            }).setNegativeButton("Fermer",null).show();
+    }
     private void showComparisonText(String name,String value,long ticket){
         if(!sessions.documentCurrent(ticket))return;
         ScrollView scroll=new ScrollView(this);
@@ -373,9 +303,6 @@ public final class MainActivity extends Activity {
         CheckBox keep=new CheckBox(this);keep.setText("Conserver les textes après masquage local");keep.setTextSize(18);keep.setChecked(prefs.getBoolean("history",true));panel.addView(keep);
         CheckBox hdVoice=new CheckBox(this);hdVoice.setText("Voix Siwis HD (français, articulation précise)");hdVoice.setTextSize(18);hdVoice.setChecked(prefs.getBoolean("voiceHD",true));panel.addView(hdVoice);
         panel.addView(label("Siwis HD ou Jessica (voix originale), moteur Sherpa-ONNX/Piper hors ligne ; une seule voix chargée.",16));
-        panel.addView(button("Importer PaddleOCR-VL-1.6 (fichier .litertlm)",INK,this::chooseSpecialistModel));
-        panel.addView(label("Le fichier doit être exactement PaddleOCR-VL-1.6.litertlm (1,39 Go), contrôlé SHA-256. L'application ne télécharge rien.",16));
-        panel.addView(label("Le moteur est amorcé silencieusement sur le canal vocal avant la première vraie phrase.",16));
         TextView speedLabel=label("Vitesse de lecture",18);panel.addView(speedLabel);SeekBar speed=new SeekBar(this);speed.setMax(100);speed.setProgress(Math.round((prefs.getFloat("speed",1.0f)-0.75f)*100));panel.addView(speed);speed.setContentDescription("Vitesse de lecture de 0,75 à 1,75");
         panel.addView(button("Diagnostic 1re phrase",INK,()->worker.execute(()->{
             try{String diag=voice.diagnoseFirstPass(this);DebugLog.append(this,"PIPER diagnostic "+diag);ui(()->status.setText("Diagnostic Piper : "+diag));}
@@ -396,7 +323,7 @@ public final class MainActivity extends Activity {
             .setNeutralButton("Effacer",(d,w)->{DebugLog.clear(this);status.setText("Journal debug effacé.");})
             .setNegativeButton("Fermer",null).show();
     }
-    private void help(){new AlertDialog.Builder(this).setTitle("Lire avec VisionMaxRead").setMessage("1. Caméra : vise, puis Figer l’image.\n2. Photo : choisis une image du téléphone.\n3. Qwen reconnaît automatiquement le texte hors ligne.\n4. Le bouton PP-OCRv6-Small permet une seconde lecture de la même image et une comparaison.\n5. Corrige le résultat puis Lire : Jessica parle avec Piper / Sherpa-ONNX.\n\nLa première utilisation de Qwen copie son modèle local d’environ 1,3 Go ; cela peut prendre du temps et nécessite de l’espace libre. La voix est amorcée silencieusement afin de protéger le début de la première phrase.\n\nAucune permission INTERNET n’est utilisée par l’application. Les images et textes originaux ne sont pas enregistrés dans l’historique ; seul le texte masqué peut y être conservé.\n\nLAB 0.4.5 · Qwen + PP-OCR + PaddleOCR-VL optionnel · Siwis/Jessica Piper hors ligne.").setPositiveButton("Fermer",null).show();}
+    private void help(){new AlertDialog.Builder(this).setTitle("Lire avec VisionMaxRead").setMessage("1. Caméra ou Photo : choisir une image.\n2. Indra reconnaît le texte et OrderNet reconstruit les colonnes.\n3. Le bouton Rapport présente toutes les passes, y compris celles indisponibles.\n4. PP-OCRv6-Small sert de secours.\n5. Lire vocalement avec Siwis ou Jessica.\n\nLe journal standard contient des métriques, jamais les textes. L'export avec textes nécessite une confirmation.\n\nVMR-010 LAB · Indra + OrderNet ; Liquid/MobileMoE encore à porter pour Android hors ligne.").setPositiveButton("Fermer",null).show();}
     @Override protected void onNewIntent(Intent intent){super.onNewIntent(intent);setIntent(intent);incoming(intent);}
     private void incoming(Intent intent){
         if(intent==null)return;String action=intent.getAction();
@@ -409,18 +336,6 @@ public final class MainActivity extends Activity {
     private void ui(Runnable action){runOnUiThread(()->{if(!destroyed)action.run();});}
     @Override protected void onPause(){super.onPause();if(camera!=null)camera.stop();if(freeze!=null)freeze.setEnabled(false);stopReading();}
     @Override protected void onResume(){super.onResume();if(cameraMode&&camera!=null&&checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED){camera.start(sessions.sourceTicket());freeze.setEnabled(true);}}
-    @Override public void onTrimMemory(int level){
-        super.onTrimMemory(level);
-        if(level>=android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW&&!destroyed){
-            // Do not close a running LiteRT engine on the main thread. Wait
-            // until the active recognition and comparison tasks have completed.
-            qwenWorker.execute(()->{
-                if(destroyed)return;
-                qwen.unload();
-                specialistOcr.unload();
-                DebugLog.append(this,"OCR native engines released on memory pressure level="+level);
-            });
-        }
-    }
-    @Override protected void onDestroy(){destroyed=true;DebugLog.append(this,"SESSION destroy");sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();qwen.release();specialistOcr.release();if(camera!=null)camera.destroy();worker.shutdownNow();qwenWorker.shutdownNow();paddleWorker.shutdownNow();indraWorker.shutdownNow();modelWorker.shutdownNow();super.onDestroy();}
+    @Override public void onTrimMemory(int level){super.onTrimMemory(level);if(level>=android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW)DebugLog.append(this,"MEMORY trim level="+level+" pssMb="+formatMb(processPssMb()));}
+    @Override protected void onDestroy(){destroyed=true;DebugLog.append(this,"SESSION destroy");sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();if(camera!=null)camera.destroy();worker.shutdownNow();paddleWorker.shutdownNow();indraWorker.shutdownNow();super.onDestroy();}
 }
