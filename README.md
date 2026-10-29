@@ -1,3 +1,13 @@
+# VisionMaxRead VMR-014 — premier vrai MoE sur Android (EXPÉRIMENTAL)
+
+**À ne pas confondre avec la LAB 0.6.1, plus stable, qui ajoute déjà tous les boutons de copie.** VMR-014 `feature/vmr014-hobbylm-moe-android` tente un **véritable réseau MoE HobbyLM-1B**, indépendant de Liquid, avec 64 experts routés et 8 activés par jeton. C'est une *alternative* au Meta MobileMoE-S-QAT (gated 401, licences de recherche non commerciale), pas une version Meta.
+
+Le bouton **Tester vrai MoE · HobbyLM (hors ligne)** tente une correction des 460 premiers caractères OCR Indra. Le reste demeure inchangé ; les chiffres sont comparés et l'utilisateur choisit explicitement toute proposition à utiliser. Les appels Indra, Liquid et MoE sont sérialisés, aucun texte personnel n'est envoyé en ligne. Boutons permanents après OCR : **Copier logs techniques**, **Copier résultats · toutes les passes** et **Copier une passe** depuis le rapport. Aucun besoin de screenshots, les logs s'envoient par copier-coller. Les textes sont potentiellement sensibles : anonymiser avant partage.
+
+**Modèle expérimental ~729 Mo + stockage et mémoire de travail supplémentaires.** LLM entraîné surtout en anglais, aucun gain de fidélité français démontré. La CI vérifie compilation, signatures, hashes et licence, mais seul le Samsung vérifie la possibilité réelle de charger le modèle Rust à 1B et la vitesse. En cas de défaillance, garder Indra et utiliser la LAB 0.6.1 comme secours. Voir [documentation détaillée VMR-014](docs/VMR-014-hobbylm-real-moe.md), [VMR-013 boutons de copie](docs/VMR-013-copy-logs-moe.md).
+
+---
+
 # VisionMaxRead 0.6.0 LAB — Indra + LiquidAI hors ligne
 
 **VMR-012, branche `feature/vmr012-liquid-semantic-experts`.** Version expérimentale sans Qwen. Le lecteur conserve Indra brut, OrderNet, XY-cut, LM Indra, PP-OCR et la synthèse Siwis/Jessica. Nouveau bouton opt-in **Tester Liquid + experts (hors ligne)** après capture : un vrai modèle `LiquidAI/LFM2.5-230M-QAD-Q4_0.gguf` (GGUF quantifié Q4) s'exécute via `llama.cpp` JNI CPU ARM64, téléchargé et verrouillé uniquement à la compilation de l'APK. Le téléphone n'a pas besoin d'Internet.
