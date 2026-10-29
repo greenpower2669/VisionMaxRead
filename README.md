@@ -1,3 +1,13 @@
+# VisionMaxRead LAB 0.5.0 — Indra + OrderNet, sans Qwen
+
+**VMR-010 expérimental, branche `feature/vmr010-indra-liquid-moe-review`.** Reconnaissance primaire hors ligne : Indra latin (det/rec) avec ordre de lecture `order.onnx` et repli XY-cut pour les colonnes ; PP-OCRv6-Small conserve un bouton de secours. Caméra, corrections manuelles, synthèse Siwis/Jessica et masquage d'historique sont conservés. Le poids Qwen (~1,3 Go) et la dépendance LiteRT-LM sont retirés ; le fichier Qwen privé d'une ancienne LAB est nettoyé précisément au démarrage, sans effacement de l'historique.
+
+**Rapports de passes :** bouton « Passes Indra · rapport » après traitement ; P1 OCR brut, P2 ordre, P2B modèle linguistique, P3 Liquid, P4 MobileMoE, P5 choix final. Les étapes non portées apparaissent **indisponibles**, sans résultat fictif ; seuls P1/P2 et l'arbitrage conservateur s'exécutent dans cette LAB. Le journal standard stocke **durées, longueur, statut, PSS** sans texte privé. Un rapport comprenant les textes peut être copié après une double confirmation explicite ; relire/anonymiser avant toute transmission.
+
+**LiquidAI et MobileMoE ne sont pas encore des moteurs Android exécutables ici.** Le banc desktop facultatif `scripts/mobilemoe_benchmark.py` est prévu pour de vrais essais avec modèles installés localement. Voir [architecture et limites](docs/VMR-010-indra-liquid-moe-architecture.md) et [todo](todo.md). La compilation CI ne prouve pas encore la précision sur Samsung. Aucune fusion `main`, aucune Release automatique.
+
+---
+
 # VisionMaxRead — branche expérimentale Indra OCR VMR-009
 
 **LAB Android 0.4.6-indra-debug / code 10 (non validé sur Samsung)** : cette branche, issue de VMR-008, conserve l'OCR automatique Qwen3.5, le bouton PP-OCRv6-Small, le module spécialisé optionnel et la voix Siwis/Jessica. Elle ajoute **« Indra OCR (latin) / Comparer »**, qui reconnaît la même photo via un portage Android expérimental d'Indra (`det.onnx` + `rec.onnx`, ONNX Runtime CPU). Résultats à lire et à corriger, aucune reconnaissance en ligne ; mesure de la latence et de la PSS totale du processus. Le portage n'intègre pas encore les langues non latines, la détection d'orientation, le modèle de langage ou la mise en page d'Indra Python. Il n'a pas encore passé une CI complète ni un test téléphone.
