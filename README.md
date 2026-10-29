@@ -1,3 +1,11 @@
+# VisionMaxRead — branche expérimentale Indra OCR VMR-009
+
+**LAB Android 0.4.6-indra-debug / code 10 (non validé sur Samsung)** : cette branche, issue de VMR-008, conserve l'OCR automatique Qwen3.5, le bouton PP-OCRv6-Small, le module spécialisé optionnel et la voix Siwis/Jessica. Elle ajoute **« Indra OCR (latin) / Comparer »**, qui reconnaît la même photo via un portage Android expérimental d'Indra (`det.onnx` + `rec.onnx`, ONNX Runtime CPU). Résultats à lire et à corriger, aucune reconnaissance en ligne ; mesure de la latence et de la PSS totale du processus. Le portage n'intègre pas encore les langues non latines, la détection d'orientation, le modèle de langage ou la mise en page d'Indra Python. Il n'a pas encore passé une CI complète ni un test téléphone.
+
+Construire : `python3 scripts/prepare_indra_models.py`, `python3 scripts/prepare_models.py`, puis Gradle et `python3 scripts/verify_apk.py`. Les poids Indra sont téléchargés au **build**, pas depuis le téléphone. Modèles `det` et `rec` épinglés SHA256 ; fichiers de licence inclus. Cf. [VMR-009](docs/VMR-009-indra-ocr-latin.md). Aucune fusion `main` ou publication Release autorisée pour cet essai.
+
+---
+
 > **LAB VMR-006 — branche `feature/qwen-piper-camera-v1`** : Qwen3.5-0.8B-VL est l'OCR automatique ; **PP-OCRv6-Small** remplace ML Kit comme référence/comparateur sur le même bitmap ; la voix est **Jessica (Piper/Sherpa-ONNX, sid 0)** avec amorce silencieuse ; l'orientation Camera2 utilise maintenant capteur + Display. Cette LAB 0.4.0 n'est ni fusionnée sur `main` ni publiée. Le modèle Qwen fait ~1,30 Go et impose une validation de stockage/RAM sur téléphone. État de build : correction Kotlin 2.4 en cours après un premier échec CI avant APK.
 
 # VisionMaxRead
