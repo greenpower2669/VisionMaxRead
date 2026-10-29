@@ -82,7 +82,7 @@ jobs:
           set -euo pipefail
           curl --fail --location --retry 2 --silent --show-error \
             'https://huggingface.co/api/models/litert-community/Qwen3.5-0.8B/commits/main' \
-            -o "\u0024{RUNNER_TEMP}/qwen-history.json"
+            -o "${RUNNER_TEMP}/qwen-history.json"
           python3 - <<'PY'
           import json,os,pathlib
           history=json.loads((pathlib.Path(os.environ['RUNNER_TEMP'])/'qwen-history.json').read_text())
