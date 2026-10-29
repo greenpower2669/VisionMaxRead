@@ -108,7 +108,7 @@ final class IndraOcrService {
     }
     try(OnnxTensor t=OnnxTensor.createTensor(env,FloatBuffer.wrap(input),new long[]{1,1,outH,padded});
         OnnxTensor wd=OnnxTensor.createTensor(env,LongBuffer.wrap(new long[]{outW}),new long[]{1});
-        OrtSession.Result r=rec.run(Map.of("x",t,"widths",wd))){
+        OrtSession.Result r=rec.run(new java.util.HashMap<String,OnnxTensor>(){{put("x",t);put("widths",wd);}})){
       Object seq=Array.get(r.get("ids").orElseThrow(()->new IOException("ids absents")).getValue(),0);
       Object probs=Array.get(r.get("conf").orElseThrow(()->new IOException("conf absente")).getValue(),0);
       Object lens=r.get("lengths").orElseThrow(()->new IOException("lengths absents")).getValue();
