@@ -1,10 +1,6 @@
 name: Experimental Meta MobileMoE French OCR (PC only)
 on:
   workflow_dispatch:
-  push:
-    branches: ['feature/vmr013-moe-copy-passes']
-    paths:
-      - '.github/workflows/mobilemoe-cpu-probe.yml'
 permissions:
   contents: read
 jobs:
