@@ -372,3 +372,16 @@ Instruction de Fab : « Ok on garde qwen et on optimisé le reste, l audio est p
 - [x] Signature LAB persistante : \`2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182\`, package \`fr.visionmaxread.labdebug\`, code 10.
 - [ ] Essais sur téléphone Samsung à réaliser : fiabilité Indra et comparatif Qwen/PP-OCR, qualité et ordre de lecture, temps, PSS, consommation, température, mode avion.
 - [ ] Étalonner le portage Android sur des oracles Python Indra, notamment interpolation, rotation, ordre de lecture et textes en colonnes ; ne pas présenter les performances desktop comme des mesures Android.
+
+## VMR-010 — Architecture Indra / LiquidAI / MoE (décision de Fab, 29/10/2026)
+Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document canonique : `docs/VMR-010-indra-liquid-moe-architecture.md`. Aucune fusion main.
+- [x] [ARCHITECTURE] Choisir Indra OCR + OrderNet/LM officiel + LiquidAI en première reconstruction + experts MoE en seconde lecture + revalidation conditionnelle croisée, avec conservation du brut.
+- [x] [DOCUMENTATION] Séparer l'ordre des colonnes de la reconstruction linguistique ; définir preuves, abstention, garde-fous chiffres/noms et tests comparatifs.
+- [ ] [AGENT] Porter `order.onnx` et `lm.npz` avec sorties blocs/lignes conservées et oracles Python/Android ; tester 2–3 colonnes, titres transversaux, tableaux et pages inclinées.
+- [ ] [AGENT] Retirer Qwen des assets, dépendances et chemin OCR **dans VMR-010 uniquement** ; laisser VMR-009 intact ; vérifier réduction de taille et d'empreinte mémoire.
+- [ ] [AGENT] Tester LFM2.5-230M quantifié sur Android hors ligne (chargement, inférence, latence et PSS) ; correction ciblée avec provenance et possibilité de refuser.
+- [ ] [AGENT] Définir/entraîner puis évaluer les experts de correction indépendamment du premier résultat Liquid ; ne pas baptiser « MoE neuronal » un simple routeur de règles.
+- [ ] [AGENT] Arbitrage MoE sur original + hypothèses + preuves OCR, en passe supplémentaire **seulement** si ambigu ; calibrer sur jeu étiqueté ; aucune probabilité fictive.
+- [ ] [AGENT] Tests d'ablation CER/WER/ordre/hallucinations/chiffres, mode avion, mémoire, annulation et fallback OCR ; CI Gradle/lint/ARM64/signature LAB, aucune permission INTERNET ; APK/AAB au nom distinct.
+- [ ] [HUMAIN] Essais sur Samsung : pages multicolonnes, texte difficile, lecture vocale, chauffe/latence/mémoire ; valider qualité avant choix par défaut.
+- [ ] [AGENT/HUMAIN] Ne publier aucune Release ni fusionner main sans accord distinct. Aucune nouvelle APK annoncée pour VMR-010 à ce stade.
