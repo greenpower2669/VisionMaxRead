@@ -289,3 +289,11 @@ Instruction de Fab : « Ok on garde qwen et on optimisé le reste, l audio est p
 - `app/src/main/java/fr/visionmaxread/IndraOcrService.java` : P1 brut, P2 OrderNet, P2A XY-cut, P2B LM, P2C XY-cut LM, géométrie normalisée par ligne.
 - `MainActivity.java`/`OcrTrace.java` : choix de lecture et rapport avec textes uniquement sur copie explicite, debug limité aux métriques.
 - `scripts/test_indra_lm_java.py` / `tests/java/fr/visionmaxread/IndraLmOracle.java` : contrat Java de backoff et CTC ; documentation `docs/VMR-011-layout-language-model.md`.
+
+## VMR-012 — carte du runtime sémantique natif
+- `native/liquid/vmr_liquid.cpp` et `CMakeLists.txt` : JNI vers vrai llama.cpp LFM2.5 GGUF, CPU deux threads, taille de contexte bornée, génération, stop/unload et UTF-8 en octets.
+- `scripts/build_liquid_android.sh` : compile sous NDK Android 27.2 depuis commit llama.cpp SHA fixe et copie `libvmr_liquid.so` ARM64 + licence MIT.
+- `scripts/prepare_liquid.py` : télécharge au build uniquement GGUF QAD Q4_0 avec empreinte fixe, licence officielle du modèle ; pas de permission Internet.
+- `app/src/main/java/fr/visionmaxread/LiquidNative.java` : vérification locale SHA, copie vers dossier privé, JNI/fermeture.
+- `LiquidOcrReview.java` : P3 proposition, P4A linguistique, P4B faits, P5 vote A/B ; taille segment bornée et contrôle chiffres. Ceci est multi-experts **par prompts**, pas Meta MobileMoE.
+- `MainActivity.java` : bouton d'essai optionnel, rapport détaillé et choix utilisateur, base Indra inchangée en cas d'échec. `scripts/verify_apk.py` impose modèle+licences+JNI.
