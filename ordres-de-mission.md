@@ -274,3 +274,6 @@ Instruction de Fab : « Ok on garde qwen et on optimisé le reste, l audio est p
 - Vérifications matérielles nécessaires : 1 seul CAM start/open par session, bonne orientation réelle, 2+ phrases audio à débit continu, arrêt immédiat, changement Siwis/Jessica, Qwen 1ère et 2e image, PP-OCR, PSS/pression mémoire, mode avion.
 - **Interdictions** : pas de merge sur \`main\`, pas de Release ni publication Play sans nouvel accord explicite de Fab. La compilation CI n'est pas une validation Samsung.
 
+## VMR-009 — Indra OCR à tester (29/10/2026)
+Demande explicite : « Implémente le dans vision max read, on va le tester non? ».
+Portée autorisée : nouvelle branche d'essai depuis VMR-008, prototype Indra local Android avec comparaison sur le même bitmap ; les moteurs Qwen et Paddle, la lecture audio, la confidentialité et la clé/identité LAB ne sont pas remplacés. L'implémentation initiale peut être limitée au Latin imprimé à condition d'être clairement marquée « prototype », sans présenter les fonctionnalités Indra Python complètes comme disponibles. Livraison seulement après CI et preuve d'APK ; aucune publication Release ni fusion main sans accord supplémentaire. Détails : docs/VMR-009-indra-ocr-latin.md.
