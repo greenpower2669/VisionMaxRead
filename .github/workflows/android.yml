@@ -76,20 +76,6 @@ jobs:
           test -s app/src/main/assets/tts/piper/siwis/tokens.txt
           test -d app/src/main/assets/tts/piper/siwis/espeak-ng-data
 
-      - name: Diagnose pinned Qwen source revision
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl --fail --location --retry 2 --silent --show-error \
-            'https://huggingface.co/api/models/litert-community/Qwen3.5-0.8B/commits/main' \
-            -o "${RUNNER_TEMP}/qwen-history.json"
-          python3 - <<'PY'
-          import json,os,pathlib
-          history=json.loads((pathlib.Path(os.environ['RUNNER_TEMP'])/'qwen-history.json').read_text())
-          for entry in history:
-           if '2026-10-11' <= entry.get('date','')[:10] <= '2026-10-17':
-            print('QWEN HISTORY:',entry.get('date'),entry.get('id'),entry.get('title'))
-          PY
       - name: Prepare Qwen3.5 0.8B VL OCR model
         shell: bash
         run: |
@@ -98,7 +84,7 @@ jobs:
           target="app/src/main/assets/qwen/Qwen3.5-0.8B-VL_int8.litertlm"
           curl --fail --location --retry 3 --retry-all-errors \
             -o "$target" \
-            "https://huggingface.co/litert-community/Qwen3.5-0.8B/resolve/main/Qwen3.5-0.8B-VL_int8.litertlm?download=true"
+            "https://huggingface.co/litert-community/Qwen3.5-0.8B/resolve/efb93fca20bc4b65df078b2b0a365d3350b3dcfb/Qwen3.5-0.8B-VL_int8.litertlm?download=true"
           test "$(stat -c%s "$target")" = "1303966384"
           qwen_sha="$(sha256sum "$target" | awk '{print $1}')"
           echo "QWEN_SHA256=$qwen_sha"
