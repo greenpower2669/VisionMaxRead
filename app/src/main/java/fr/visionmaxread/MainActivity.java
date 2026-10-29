@@ -44,6 +44,7 @@ public final class MainActivity extends Activity {
         incoming(getIntent());
         // Warm Piper through the real muted audio route before the first user reading.
         worker.execute(()->{
+            try{LegacyModelCleanup.run(this);}catch(Exception e){DebugLog.exception(this,"LEGACY cleanup",e);}
             try{
                 voice.initialize(this,message->ui(()->{if(!reading&&text.getText().length()==0)status.setText(message);}));
                 voice.warmUp(this,()->destroyed);
