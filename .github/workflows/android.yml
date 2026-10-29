@@ -102,6 +102,17 @@ jobs:
         run: python3 scripts/prepare_hobby_moe.py --verify
       - name: Compile genuine routed sparse MoE ARM64 runtime
         run: bash scripts/build_hobby_moe_android.sh
+      - name: Real sparse MoE CPU smoke test (1B Instruct GGUF)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --manifest-path native/moe/vendor/hobbylm/hobby-rs/Cargo.toml --release --bin hobby-rs
+          timeout 240s native/moe/vendor/hobbylm/hobby-rs/target/release/hobby-rs \
+            --model app/src/main/assets/moe/hobbylm-1b-sft-3450-Q4_K_M.gguf \
+            --prompt 'USER: Corrige OCR: Madame la Presidente. ASSISTANT:' \
+            --n 12 --temp 0 --threads 2 > /tmp/vmr014-moe-smoke.txt
+          test -s /tmp/vmr014-moe-smoke.txt
+          echo 'Genuine routed HobbyLM MoE CPU inference smoke verified (not Android)' 
       - name: Tests, lint, APK and AAB
         run: ./gradlew :core:check :app:lintDebug :app:assembleDebug :app:bundleRelease --no-daemon
       - name: Lossless archive contract
