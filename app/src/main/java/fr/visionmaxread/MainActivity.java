@@ -23,6 +23,7 @@ public final class MainActivity extends Activity {
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private final ExecutorService paddleWorker=Executors.newSingleThreadExecutor();
     private final ExecutorService indraWorker=Executors.newSingleThreadExecutor();
+    private final ExecutorService semanticWorker=Executors.newSingleThreadExecutor();
     private final AtomicLong ocrChoice=new AtomicLong(),progressGeneration=new AtomicLong();
     private final ReaderSessions sessions=new ReaderSessions();
     private final SessionGate speech=new SessionGate();
@@ -31,11 +32,12 @@ public final class MainActivity extends Activity {
     private TextureView preview;private ImageView frozen;private FrameLayout imageArea;private ProgressBar ocrProgress;
     // Only an in-memory reference to the displayed photo, never copied to persistent storage.
     private Bitmap compareBitmap;
-    private EditText text;private TextView status;private Button freeze,play,compare,indra;private CameraController camera;
+    private EditText text;private TextView status;private Button freeze,play,compare,indra,liquid;private CameraController camera;
     private HistoryStore history;private ModelFiles models;private SharedPreferences prefs;
     private boolean changingText,destroyed,reading,cameraMode;private String maskedPreview="";private int textSp=24;
     private volatile OcrTrace lastTrace;
     private volatile IndraOcrService.Scan lastScan;
+    private volatile LiquidOcrReview.Result lastReview;
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);DebugLog.session(this);prefs=getSharedPreferences("settings",MODE_PRIVATE);history=new HistoryStore(this);textSp=prefs.getInt("textSize",24);
         voice.selectVoice(prefs.getBoolean("voiceHD",true));buildUi();camera=new CameraController(this,preview,new CameraController.Listener(){
@@ -74,6 +76,8 @@ public final class MainActivity extends Activity {
         freeze=button("● Figer l’image",RED,()->{freeze.setEnabled(false);status.setText("Capture de la photo…");camera.freeze();});content.addView(freeze);freeze.setEnabled(false);
         compare=button("PP-OCRv6-Small / Comparer",TEAL,this::compareOcr);compare.setVisibility(View.GONE);content.addView(compare);setCompareAvailable(false);
         indra=button("Passes Indra · rapport",TEAL,this::compareIndra);indra.setVisibility(View.GONE);content.addView(indra);setIndraAvailable(false);
+        liquid=button("Tester Liquid + experts (hors ligne)",INK,this::startLiquidReview);
+        liquid.setVisibility(View.GONE);liquid.setEnabled(false);content.addView(liquid);
         ocrProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);ocrProgress.setMax(100);ocrProgress.setVisibility(View.GONE);ocrProgress.setContentDescription("Progression de la reconnaissance de texte");content.addView(ocrProgress,new LinearLayout.LayoutParams(-1,dp(10)));
         status=label("Choisis Caméra, Photo ou colle un texte.",18);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);status.setPadding(0,dp(8),0,dp(8));content.addView(status);
         text=new EditText(this);text.setHint("Le texte apparaît ici. Tu peux le corriger ou coller un texte.");text.setTextSize(textSp);text.setTextColor(INK);text.setHintTextColor(Color.rgb(74,86,95));text.setGravity(Gravity.TOP);text.setMinLines(5);text.setSingleLine(false);text.setSelectAllOnFocus(false);text.setBackgroundTintList(android.content.res.ColorStateList.valueOf(TEAL));
@@ -92,7 +96,7 @@ public final class MainActivity extends Activity {
     private long beginOcrProgress(int value){long id=progressGeneration.incrementAndGet();ui(()->{if(ocrProgress!=null&&progressGeneration.get()==id){ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(value);}});return id;}
     private void updateOcrProgress(long id,int value){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(Math.max(0,Math.min(100,value)));});}
     private void finishOcrProgress(long id){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setIndeterminate(false);ocrProgress.setProgress(100);ocrProgress.postDelayed(()->{if(progressGeneration.get()==id)ocrProgress.setVisibility(View.GONE);},900);});}
-    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastTrace=null;lastScan=null;compareBitmap=null;ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}return sessions.replaceSource();}
+    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastTrace=null;lastScan=null;lastReview=null;compareBitmap=null;LiquidNative.stop();ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}if(liquid!=null){liquid.setEnabled(false);liquid.setVisibility(View.GONE);}return sessions.replaceSource();}
     private void startCamera(){
         newDocument();cameraMode=true;imageArea.setVisibility(View.VISIBLE);preview.setVisibility(View.VISIBLE);frozen.setVisibility(View.GONE);freeze.setVisibility(View.VISIBLE);freeze.setEnabled(true);setText("");status.setText("Vise le texte puis appuie sur Figer l’image.");
         if(checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION);
@@ -141,8 +145,8 @@ public final class MainActivity extends Activity {
                                   scan.lmMs,pss,"uncertain_lines="+scan.lmRuns+" corrections="+scan.lmChanged+" fallback_errors="+scan.lmErrors);
                         trace.add(this,"P2C_XYCUT_LM","xycut-plus-IndraLM","executed",scan.xycutLm,
                                   0,pss,"same-CTC-hypotheses-different-line-order");
-                        trace.add(this,"P3_LIQUID","LFM2.5-230M","unavailable","",0,pss,
-                                  "android-runtime-not-validated");
+                        trace.add(this,"P3_LIQUID","LFM2.5-230M",LiquidNative.available()?"not_run":"unavailable","",0,pss,
+                                  "tap-experimental-Liquid-button-to-run");
                         trace.add(this,"P4_MOBILE_MOE","MobileMoE-S-QAT","unavailable","",0,pss,
                                   "mobile-int4-runtime-not-validated");
                         // This is a verifiable no-hallucination fallback, NOT a
@@ -153,7 +157,7 @@ public final class MainActivity extends Activity {
                         finishOcrProgress(progress);
                         ui(()->{
                             if(!sessions.documentCurrent(ticket)||compareBitmap!=image)return;
-                            setIndraAvailable(true);
+                            setIndraAvailable(true);liquid.setVisibility(View.VISIBLE);liquid.setEnabled(LiquidNative.available());
                             if(ocrChoice.get()==choice)setText(scan.lmOrdered);
                             status.setText("Indra + LM : "+scan.lineCount+" lignes, "+elapsed+" ms. "+
                                 "Correction de "+scan.lmChanged+" ligne(s) ; OrderNet/XY-cut à comparer dans le rapport.");
@@ -201,11 +205,65 @@ public final class MainActivity extends Activity {
             });
         });
     }
+    private void startLiquidReview(){
+        final IndraOcrService.Scan scan=lastScan;
+        final OcrTrace trace=lastTrace;
+        final long ticket=sessions.documentTicket();
+        if(scan==null||trace==null||!sessions.documentCurrent(ticket))return;
+        if(!LiquidNative.available()){
+            status.setText("Moteur Liquid natif indisponible sur cet appareil.");
+            return;
+        }
+        if(!liquid.isEnabled())return;
+        new AlertDialog.Builder(this).setTitle("Reconstruction sémantique expérimentale")
+            .setMessage("LiquidAI tourne localement sur CPU. Pour limiter la mémoire, il examine les deux premiers blocs "+
+                "de 650 caractères maximum, puis deux relectures spécialisées et un arbitrage. "+
+                "Les autres blocs sont laissés intacts. Ne remplace jamais le texte automatiquement. "+
+                "Cela peut durer plusieurs dizaines de secondes et chauffer le téléphone.")
+            .setPositiveButton("Lancer",(d,w)->{
+                liquid.setEnabled(false);
+                status.setText("Liquid charge son modèle local puis examine les premières lignes…");
+                final long progress=beginOcrProgress(-1);
+                semanticWorker.execute(()->{
+                    try{
+                        LiquidOcrReview.Result result=LiquidOcrReview.run(this,scan.lmOrdered,trace);
+                        if(!sessions.documentCurrent(ticket)||destroyed)return;
+                        lastReview=result;finishOcrProgress(progress);
+                        DebugLog.append(this,"LIQUID completed="+result.completed+" total="+result.total+
+                           " conflicts="+result.criticalConflicts+" elapsedMs="+result.elapsedMs);
+                        ui(()->{
+                            if(!sessions.documentCurrent(ticket))return;
+                            liquid.setEnabled(true);
+                            status.setText("Liquid : "+result.completed+"/"+result.total+" blocs examinés, "+
+                                result.elapsedMs+" ms. Texte OCR inchangé ; consulte et choisis.");
+                            new AlertDialog.Builder(this).setTitle("Révision Liquid disponible")
+                                .setMessage("Une proposition de texte a été générée. "+
+                                    "La sélection de l'arbitre n'est pas une preuve indépendante : "+
+                                    "vérifie la transcription face à l'image avant de l'utiliser.")
+                                .setPositiveButton("Voir proposition",(a,b)->
+                                    showComparisonText("Liquid — proposition expérimentale",result.proposal,ticket))
+                                .setNeutralButton("Voir arbitrage",(a,b)->
+                                    showComparisonText("Liquid — arbitrage (à vérifier)",result.selection,ticket))
+                                .setNegativeButton("Fermer",null).show();
+                        });
+                    }catch(Exception|OutOfMemoryError e){
+                        DebugLog.exception(this,"LIQUID review",e);
+                        trace.add(this,"P3_LIQUID_ERROR","LiquidAI-LFM2.5-230M","error","",
+                            0,processPssMb(),e.getClass().getSimpleName());
+                        finishOcrProgress(progress);
+                        ui(()->{if(sessions.documentCurrent(ticket)){
+                            liquid.setEnabled(true);status.setText("Liquid : erreur de test, OCR Indra conservé. Consulte le rapport.");
+                        }});
+                    }
+                });
+            }).setNegativeButton("Annuler",null).show();
+    }
+
     private void compareIndra(){
         final OcrTrace trace=lastTrace;final long ticket=sessions.documentTicket();
         if(trace==null||!sessions.documentCurrent(ticket))return;
-        new AlertDialog.Builder(this).setTitle("Analyse multicouche — VMR-011")
-            .setMessage(trace.summary()+"\nPour l'instant Liquid et MobileMoE ne sont pas exécutés sur Android. "+
+        new AlertDialog.Builder(this).setTitle("Analyse multicouche — VMR-012")
+            .setMessage(trace.summary()+"\nLiquid se lance séparément avec le bouton Tester. Meta MobileMoE reste non intégré. "+
                "Les journaux standards ne contiennent aucun texte privé.")
             .setPositiveButton("Voir les passes et textes",(d,w)->showSensitiveReport(trace,ticket))
             .setNeutralButton("Comparer les ordres",(d,w)->showReadingAlternatives(ticket))
@@ -340,7 +398,7 @@ public final class MainActivity extends Activity {
             .setNeutralButton("Effacer",(d,w)->{DebugLog.clear(this);status.setText("Journal debug effacé.");})
             .setNegativeButton("Fermer",null).show();
     }
-    private void help(){new AlertDialog.Builder(this).setTitle("Lire avec VisionMaxRead").setMessage("1. Caméra ou Photo : choisir une image.\n2. Indra reconnaît le texte et OrderNet reconstruit les colonnes.\n3. Le bouton Rapport présente toutes les passes, y compris celles indisponibles.\n4. PP-OCRv6-Small sert de secours.\n5. Lire vocalement avec Siwis ou Jessica.\n\nLe journal standard contient des métriques, jamais les textes. L'export avec textes nécessite une confirmation.\n\nVMR-011 LAB · Indra + OrderNet + LM réel, comparaison XY-cut ; Liquid/MobileMoE restent non portés sous Android.").setPositiveButton("Fermer",null).show();}
+    private void help(){new AlertDialog.Builder(this).setTitle("Lire avec VisionMaxRead").setMessage("1. Caméra ou Photo : choisir une image.\n2. Indra reconnaît le texte et OrderNet reconstruit les colonnes.\n3. Le bouton Rapport présente toutes les passes, y compris celles indisponibles.\n4. PP-OCRv6-Small sert de secours.\n5. Lire vocalement avec Siwis ou Jessica.\n\nLe journal standard contient des métriques, jamais les textes. L'export avec textes nécessite une confirmation.\n\nVMR-012 LAB · Indra + LM + LiquidAI sur CPU, relectures spécialisées expérimentales sur demande ; Meta MobileMoE non porté.").setPositiveButton("Fermer",null).show();}
     @Override protected void onNewIntent(Intent intent){super.onNewIntent(intent);setIntent(intent);incoming(intent);}
     private void incoming(Intent intent){
         if(intent==null)return;String action=intent.getAction();
@@ -354,5 +412,5 @@ public final class MainActivity extends Activity {
     @Override protected void onPause(){super.onPause();if(camera!=null)camera.stop();if(freeze!=null)freeze.setEnabled(false);stopReading();}
     @Override protected void onResume(){super.onResume();if(cameraMode&&camera!=null&&checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED){camera.start(sessions.sourceTicket());freeze.setEnabled(true);}}
     @Override public void onTrimMemory(int level){super.onTrimMemory(level);if(level>=android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW)DebugLog.append(this,"MEMORY trim level="+level+" pssMb="+formatMb(processPssMb()));}
-    @Override protected void onDestroy(){destroyed=true;DebugLog.append(this,"SESSION destroy");sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();if(camera!=null)camera.destroy();worker.shutdownNow();paddleWorker.shutdownNow();indraWorker.shutdownNow();super.onDestroy();}
+    @Override protected void onDestroy(){destroyed=true;DebugLog.append(this,"SESSION destroy");sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();if(camera!=null)camera.destroy();if(LiquidNative.available())LiquidNative.stop();semanticWorker.shutdownNow();worker.shutdownNow();paddleWorker.shutdownNow();indraWorker.shutdownNow();super.onDestroy();}
 }
