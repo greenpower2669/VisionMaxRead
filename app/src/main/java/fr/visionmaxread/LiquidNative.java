@@ -15,7 +15,7 @@ final class LiquidNative implements AutoCloseable {
         catch(UnsatisfiedLinkError e){enabled=false;}
     }
     private static native boolean load(String path);
-    private static native String infer(String prompt,int maxTokens);
+    private static native byte[] infer(String prompt,int maxTokens);
     static native void stop();
     private static native void unload();
     static boolean available(){return enabled;}
@@ -51,9 +51,9 @@ final class LiquidNative implements AutoCloseable {
     String generate(String prompt,int maxTokens){
         if(!loaded)throw new IllegalStateException("Model closed");
         if(maxTokens<1||maxTokens>320||prompt.length()>9000)throw new IllegalArgumentException("Prompt oversized");
-        String result=infer(prompt,maxTokens);
+        byte[] result=infer(prompt,maxTokens);
         if(result==null)throw new IllegalStateException("Empty inference");
-        return result.trim();
+        return new String(result,java.nio.charset.StandardCharsets.UTF_8).trim();
     }
     @Override public void close(){
         if(loaded){loaded=false;unload();}
