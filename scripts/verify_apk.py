@@ -29,6 +29,8 @@ with zipfile.ZipFile(apk) as z:
  liquid=json.loads(z.read('assets/liquid/manifest.json'))
  lm=z.read('assets/liquid/LFM2.5-230M-QAD-Q4_0.gguf')
  assert len(lm)==liquid['size'] and hashlib.sha256(lm).hexdigest()==liquid['sha256'], 'Liquid weight SHA mismatch'
+ license=z.read('assets/liquid/LICENSE')
+ assert len(license)==liquid['license_size'] and hashlib.sha256(license).hexdigest()==liquid['license_sha256'], 'LFM license missing or corrupt'
  assert 'lib/arm64-v8a/libvmr_liquid.so' in z.namelist(), 'Missing native llama.cpp JNI'
  assert not any(p.startswith('assets/qwen/') for p in z.namelist()), 'Qwen assets must be absent'
  libs=[p for p in z.namelist() if p.startswith('lib/') and p.endswith('.so')]
