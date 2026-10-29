@@ -26,6 +26,10 @@ with zipfile.ZipFile(apk) as z:
   raw=z.read('assets/indra/'+name)
   meta=indra_manifest[name]
   assert len(raw)==meta['size'] and hashlib.sha256(raw).hexdigest()==meta['sha256'], 'Indra '+name
+ liquid=json.loads(z.read('assets/liquid/manifest.json'))
+ lm=z.read('assets/liquid/LFM2.5-230M-QAD-Q4_0.gguf')
+ assert len(lm)==liquid['size'] and hashlib.sha256(lm).hexdigest()==liquid['sha256'], 'Liquid weight SHA mismatch'
+ assert 'lib/arm64-v8a/libvmr_liquid.so' in z.namelist(), 'Missing native llama.cpp JNI'
  assert not any(p.startswith('assets/qwen/') for p in z.namelist()), 'Qwen assets must be absent'
  libs=[p for p in z.namelist() if p.startswith('lib/') and p.endswith('.so')]
  assert libs and all(p.startswith('lib/arm64-v8a/') for p in libs)
