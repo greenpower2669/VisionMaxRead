@@ -80,6 +80,8 @@ jobs:
         run: |
           python3 scripts/test_vmr010_contract.py
           python3 scripts/mobilemoe_benchmark.py --cases tests/vmr010-synthetic.jsonl --output /tmp/vmr010-synthetic-metrics.json
+      - name: VMR-011 Java n-gram and CTC oracle
+        run: python3 scripts/test_indra_lm_java.py
       - name: Prepare pinned offline models
         run: python3 scripts/prepare_models.py
       - name: Prepare Indra Latin test models (build-time only)
