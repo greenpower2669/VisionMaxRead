@@ -25,7 +25,7 @@ final class OcrTrace {
         passes.add(pass);
         DebugLog.append(context,"PIPELINE stage="+key+" engine="+engine+" outcome="+status+
             " ms="+ms+" chars="+pass.text.length()+" pssMb="+String.format(Locale.ROOT,"%.1f",pss)+
-            " note="+detail.replaceAll("[^a-zA-Z0-9_.=:-]","_"));
+            " note="+detail.substring(0,Math.min(120,detail.length())).replaceAll("[^a-zA-Z0-9_.=:-]","_"));
     }
     synchronized String summary(){
         StringBuilder b=new StringBuilder("Passes OCR — "+passes.size()+" étapes\n");
