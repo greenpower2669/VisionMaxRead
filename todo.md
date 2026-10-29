@@ -353,3 +353,13 @@ Instruction de Fab : « Ok on garde qwen et on optimisé le reste, l audio est p
 - [ ] Mesurer PSS après OCR Qwen → PP-OCR et sous Android onTrimMemory.
 - [ ] Consigner améliorations et arbitrer avec Fab avant Release ou merge.
 
+## VMR-009 — Essai Indra OCR (29/10/2026)
+- [x] Identifier la branche VMR-008 comme référence fonctionnelle ; préserver Qwen et PP-OCR.
+- [x] Créer feature/vmr009-indra-ocr-latin-test sans fusion main.
+- [x] Ajouter portage natif Android minimal Indra det/rec Latin ONNX, bouton comparatif sur image identique, métriques et échec isolé.
+- [x] Préparer téléchargement build-only depuis révision Indra fixe, contrôle SHA embarqué, notices de licence et test de contenu APK.
+- [ ] [CI] Confirmer compilation/Android lint/test APK signé avec 0 permission INTERNET, dépendances, assets Indra et SHA vérifiés.
+- [ ] [AGENT] Épingler les empreintes upstream des poids indépendamment de leur téléchargement ; vérifier exactitude du prétraitement/CTC à partir de cas oracles.
+- [ ] [HUMAIN] Installer APK LAB et comparer documents imprimés français, colonnes et manuscrit en mode avion. Vérifier latence, PSS, fiabilité caméra/audio et source Indra réelle.
+- [ ] [AGENT] Suivant les mesures : ajouter orientation, ordre de lecture, LM et langues, ou éliminer le prototype si bénéfice insuffisant.
+- [ ] [AGENT/HUMAIN] Publication éventuelle APK direct après CI verte et accord explicite ; aucun merge main automatique.
