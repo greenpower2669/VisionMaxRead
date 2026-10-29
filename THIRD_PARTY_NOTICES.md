@@ -11,3 +11,9 @@
 - ONNX Runtime/OpenCV and AndroidX/Kotlin dependencies under their respective upstream licenses.
 
 VMR-007 does not package or execute ML Kit, Supertonic 3, or the Android system-TTS prototype. No user document is used for training. The application is required to remain without `android.permission.INTERNET`; CI verifies the compiled APK, not merely the source manifest.
+
+## Indra OCR — essai VMR-009 (latin uniquement)
+Source : https://github.com/datalab-to/indra (code Apache-2.0).
+Poids : https://huggingface.co/datalab-to/indra-ocr (licence OpenRAIL-M modifiée, conditions d'utilisation commerciales particulières).
+Révision des modèles : bd02167fdf2005a19962cc15188f8496a2c87d3b.
+L'APK d'essai embarque le texte original de licence dans assets/indra/LICENSE. Portage Android expérimental du détecteur et du reconnaisseur latin, non affilié à Datalab.
