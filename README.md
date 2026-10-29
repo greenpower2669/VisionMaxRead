@@ -1,3 +1,13 @@
+# VisionMaxRead 0.6.0 LAB — Indra + LiquidAI hors ligne
+
+**VMR-012, branche `feature/vmr012-liquid-semantic-experts`.** Version expérimentale sans Qwen. Le lecteur conserve Indra brut, OrderNet, XY-cut, LM Indra, PP-OCR et la synthèse Siwis/Jessica. Nouveau bouton opt-in **Tester Liquid + experts (hors ligne)** après capture : un vrai modèle `LiquidAI/LFM2.5-230M-QAD-Q4_0.gguf` (GGUF quantifié Q4) s'exécute via `llama.cpp` JNI CPU ARM64, téléchargé et verrouillé uniquement à la compilation de l'APK. Le téléphone n'a pas besoin d'Internet.
+
+**Passes du test :** P3 Liquid propose un texte ; P4A/P4B font deux contrôles spécialisés par le **même Liquid** ; P5 arbitre sous contrainte de conservation des chiffres. Deux premiers blocs de ~650 caractères maximum seulement pour commencer ; le reste est conservé original. Aucune correction n'est appliquée automatiquement au document ; le bouton Rapport garde les preuves (textes seulement dans le rapport sensible confirmé). **Meta MobileMoE-S n'est pas inclus** : les sous-passes ne sont pas un vrai MoE neuronal. La qualité de correction, la mémoire et la vitesse ne sont **pas encore validées sur Samsung**.
+
+Modèles et licences : poids LFM Open License v1.0 (termes commerciaux et attribution), code llama.cpp MIT, Indra OCR poids OpenRAIL-M modifiée. Voir [l'architecture et le protocole VMR-012](docs/VMR-012-liquid-offline-multiexperts.md) et [les notices de tiers](THIRD_PARTY_NOTICES.md). Pas de fusion `main`, pas de Release sans accord.
+
+---
+
 # VisionMaxRead 0.5.1 LAB — Indra OCR + correction linguistique et comparaison colonnes
 
 **VMR-011 expérimental (sans Qwen).** Indra reconnait la photo, son modèle n-gramme latin `lm.npz` réexamine les lignes incertaines par beam CTC, OrderNet recompose les blocs et XY-cut fournit un autre ordre de lecture. Bouton **Passes Indra · rapport** → **Comparer les ordres** : visualiser/choisir OrderNet+LM, XY-cut+LM et les deux versions sans LM. Les textes d'origine restent consultables dans le rapport. Mode avion, voix Siwis/Jessica et secours PP-OCR conservés.
