@@ -76,6 +76,10 @@ jobs:
           test -s app/src/main/assets/tts/piper/siwis/tokens.txt
           test -d app/src/main/assets/tts/piper/siwis/espeak-ng-data
 
+      - name: VMR-010 source and semantic benchmark contract
+        run: |
+          python3 scripts/test_vmr010_contract.py
+          python3 scripts/mobilemoe_benchmark.py --cases tests/vmr010-synthetic.jsonl --output /tmp/vmr010-synthetic-metrics.json
       - name: Prepare pinned offline models
         run: python3 scripts/prepare_models.py
       - name: Prepare Indra Latin test models (build-time only)
