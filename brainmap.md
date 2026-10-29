@@ -297,3 +297,11 @@ Instruction de Fab : « Ok on garde qwen et on optimisé le reste, l audio est p
 - `app/src/main/java/fr/visionmaxread/LiquidNative.java` : vérification locale SHA, copie vers dossier privé, JNI/fermeture.
 - `LiquidOcrReview.java` : P3 proposition, P4A linguistique, P4B faits, P5 vote A/B ; taille segment bornée et contrôle chiffres. Ceci est multi-experts **par prompts**, pas Meta MobileMoE.
 - `MainActivity.java` : bouton d'essai optionnel, rapport détaillé et choix utilisateur, base Indra inchangée en cas d'échec. `scripts/verify_apk.py` impose modèle+licences+JNI.
+
+## VMR-013/014 — composants et chemins
+- `OcrTrace.java`: snapshot, metricsReport, passReport, fullReport ; `MainActivity.java` boutons Copier logs techniques, Copier résultats toutes les passes, Copier une passe ; traces Liquid et erreurs sans écran.
+- `scripts/test_vmr013_copy_contract.py` : test présence export et absence de texte privé dans diagnostics ; VMR-013 APK 0.6.1 code14 CI success.
+- `scripts/mobilemoe_cpu_probe.py` + `.github/workflows/mobilemoe-cpu-probe.yml` : tentative vrai Meta QAT (seulement sur PC) **bloquée 401 gated** ; accès HF autorisé et `HF_TOKEN` uniquement via GitHub Secrets si acceptation de licence, jamais dans les logs. Ne pas confondre avec HobbyLM.
+- `native/moe/src/lib.rs`, `Cargo.toml`: véritable MoE HobbyLM via Rust Engine::load/GenOpts, JNI annulation, ARM64. `scripts/build_hobby_moe_android.sh`: clone du SHA upstream, compilation cargo aarch64 Android.
+- `scripts/prepare_hobby_moe.py`: GGUF HobbyLM-1B-Instruct Q4_K_M SHA officiel + LICENSE/NOTICE, assets embarqués. `HobbyMoeNative.java`: copie privée vérifiée et JNI. `HobbyMoeReview.java`: 460 caractères Indra LM, Liquid optionnel, P4 MoE et P5 chiffres, résultat à choisir explicitement.
+- `docs/VMR-014-hobbylm-real-moe.md` : conditions, licence, limites, protocole Samsung. VMR-014 version 0.6.2 code15 prévue, ne pas annoncer CI verte avant résultat.
