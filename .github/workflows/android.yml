@@ -113,8 +113,8 @@ jobs:
             --n 12 --temp 0 --threads 2 > /tmp/vmr014-moe-smoke.txt
           test -s /tmp/vmr014-moe-smoke.txt
           echo 'Genuine routed HobbyLM MoE CPU inference smoke verified (not Android)' 
-      - name: Tests, lint, APK and AAB
-        run: ./gradlew :core:check :app:lintDebug :app:assembleDebug :app:bundleRelease --no-daemon
+      - name: Tests, lint and signed APK only (VMR-014 experimental)
+        run: ./gradlew :core:check :app:lintDebug :app:assembleDebug --no-daemon
       - name: Lossless archive contract
         run: bash scripts/test-archive.sh
       - name: Verify installable APK
@@ -136,9 +136,7 @@ jobs:
         run: |
           mkdir artifacts
           apk="artifacts/VisionMaxRead-0.6.2-REAL-MOE-LAB.apk"
-          aab="artifacts/VisionMaxRead-0.6.2-REAL-MOE-LAB-unsigned.aab"
           cp app/build/outputs/apk/debug/app-debug.apk "$apk"
-          cp app/build/outputs/bundle/release/app-release.aab "$aab"
           cp app/build/reports/lint-results-debug.html artifacts/
           {
             echo "RUN_ID=${{ github.run_id }}"
@@ -149,9 +147,6 @@ jobs:
             echo "APK_PACKAGE=fr.visionmaxread.labdebug"
             echo "APK_VERSION_CODE=15"
             echo "APK_CERT_SHA256=$VMR_LAB_CERT_SHA256"
-            echo "AAB_NAME=$(basename "$aab")"
-            echo "AAB_BYTES=$(stat -c%s "$aab")"
-            echo "AAB_SHA256=$(sha256sum "$aab" | awk '{print $1}')"
           } | tee artifacts/build-manifest.txt
       - name: Upload compact build metadata
         uses: actions/upload-artifact@v4
@@ -166,14 +161,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           path: artifacts/VisionMaxRead-0.6.2-REAL-MOE-LAB.apk
-          archive: false
-          if-no-files-found: error
-          retention-days: 14
-      # The unsigned AAB is a separate technical artifact, never an installable APK.
-      - name: Upload unsigned AAB separately
-        uses: actions/upload-artifact@v7
-        with:
-          path: artifacts/VisionMaxRead-0.6.2-REAL-MOE-LAB-unsigned.aab
           archive: false
           if-no-files-found: error
           retention-days: 14
