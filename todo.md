@@ -416,3 +416,8 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [ ] Essai Samsung sur **la même photo de magazine** : extraire les quatre lectures, chronométrer LM, relever nombre de lignes modifiées/erreurs et ordre exact ; comparer visuellement les colonnes. Tester TTS.
 - [ ] Vérifier précision réelle du beam CTC sur oracles officiels Python, limites de mémoire et stabilisation des blocs ; ne pas annoncer améliorations de qualité avant test.
 - [ ] Liquid/MobileMoE neural Android à réaliser plus tard ; pas de merge main ni GitHub Release sans validation.
+
+### VMR-011 — Livraison CI vérifiée du 29/10/2026
+- [x] Run final de code `40957543423`, commit `74b98023dfb1ed69c6ba97fb72929487716786a5` : **success**, Java n-gram/CTC oracle, Gradle tests, Android lint, APK/AAB, manifest offline, SHA Indra y compris `lm.npz`, certificat LAB.
+- [x] APK seul sans ZIP `VisionMaxRead-0.5.1-INDRA-LM-COLUMNS-LAB.apk`, artifact `12934910992`, `358136623` octets, SHA256 `8cc889df544afbd8cdb7b3795ff8c4df46a64f87248b9c18d12bf86a186959b4` ; version code `12` ; certificat LAB `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
+- [ ] Validation **sur Samsung** encore nécessaire : la CI ne démontre ni l'efficacité de la correction linguistique, ni l'ordre des colonnes sur la page de Fab. Tester les quatre lectures dans le rapport et vérifier `lmRuns/lmChanged/lmErrors`, mémoire et temps. Liquid/MobileMoE restent absents du runtime.
