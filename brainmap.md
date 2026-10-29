@@ -273,3 +273,11 @@ Instruction de Fab : « Ok on garde qwen et on optimisé le reste, l audio est p
 - scripts/prepare_indra_models.py : acquiert les modèles au build uniquement depuis une révision HF fixe et génère le manifeste avec SHA ; scripts/verify_apk.py valide les assets du binaire.
 - MainActivity : bouton Indra OCR, worker distinct, même bitmap, durée et PSS processus, dialogue texte sélectionnable, sans modifier Qwen/Paddle/synthèse.
 - docs/VMR-009-indra-ocr-latin.md : périmètre, écarts au pipeline officiel et protocole de test. Test CI et Samsung à confirmer.
+
+## VMR-010 — Parcours nouveau lecteur et analyses par passes
+- `app/src/main/java/fr/visionmaxread/MainActivity.java` : automatique Indra → ordre de lecture → dossier de passes ; comparateur PP-OCR et lecture vocale conservés ; bouton « Passes Indra · rapport ».
+- `IndraOcrService.java` + `IndraReadingOrder.java` : det/rec puis OrderNet officiel, fallback XY-cut si modèle incompatible ; `order.onnx` verrouillé et téléchargé uniquement en CI.
+- `OcrTrace.java` : journal métrique par étape, texte brut seulement sur copie confirmée ; Liquid/MobileMoE explicitement « unavailable » dans LAB actuelle.
+- `LegacyModelCleanup.java` : suppression ciblée des anciens poids Qwen du cache applicatif ; garder historique utilisateur.
+- `scripts/mobilemoe_benchmark.py` : banc desktop opt-in LiquidAI GGUF et Meta MobileMoE-S-QAT, données synthétiques dans `tests/vmr010-synthetic.jsonl` ; `scripts/test_vmr010_contract.py` : garde-fous build.
+- `docs/VMR-010-indra-liquid-moe-architecture.md` + `todo.md` : choix architecture, limitations et prochaines intégrations ; pas d'APK neuronal Android annoncé.
