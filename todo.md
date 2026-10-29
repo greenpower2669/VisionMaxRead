@@ -440,3 +440,15 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [x] LAB package `fr.visionmaxread.labdebug`, versionCode **13**, certificat SHA256 `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`, même certificat qu'avant. AAB non signé 505040026 octets non destiné à l'installation.
 - [ ] **Essai Samsung avant conclusion fonctionnelle** : chargement réel du moteur natif, génération P3, P4A/P4B, vote P5 ; PSS/chauffe/vitesse, report/copie texte, mode avion, TTS. `CI success` ne valide pas cette exécution matérielle. Meta MobileMoE absent.
 - [ ] Aucune fusion `main` ni GitHub Release sans validation distincte de Fab.
+
+## VMR-013 — livraison boutons de copie confirmée
+- [x] `0.6.1-copy-logs-lab` code14 : Copier logs techniques (sans texte) / Copier tous les résultats (confirmation) / Copier une passe (sélection), logs d'erreur Liquid et métriques.
+- [x] GitHub Actions `40975513380` **SUCCESS**, APK direct `12941924736`, 522171009 octets, SHA256 `d787c4891a6e46a6aee7916dac0cbb712fe7c1b37aebebcce6e0b705bafab52b`.
+- [x] Modèle Meta MobileMoE-S-QAT véritable tenté via GitHub Actions `40975194290`, **non exécuté** : HF 401 gated, aucun accès aux poids ; GitHub workflow de recherche manuel uniquement (token autorisé en secret HF_TOKEN).
+- [ ] Test Samsung VMR-013 : copier sans captures d'écran les métriques et une ou plusieurs passes pour diagnostiquer précisément l'insuffisance de Liquid.
+## VMR-014 — expérimentation vrai HobbyLM MoE Android
+- [x] Branche isolée et code natif Rust JNI du véritable sparse MoE HobbyLM-1B-Instruct, prompt sur une zone courte, validation chiffres, sortie choisie manuellement, logs P4/P5.
+- [x] Script de build source upstream épinglée, modèle Q4_K_M SHA `0a1d1d4a7e545c51e8fdaa61707b5bf7d09cb4e948fc9b09c3ec2789c493cdbb` (729 Mo), licence Apache, signature LAB code15 visée.
+- [ ] **BLOQUANT** CI VMR-014 compile réellement Rust aarch64, télécharge modèle public, valide APK et hash/signature, puis fournir APK direct non zip si succès. Ne pas livrer un APK de run échoué.
+- [ ] **BLOQUANT** Premier essai Samsung de chargement/inférence HobbyLM (moteur Rust créé à l'origine pour 500M) : mémoire, stabilité, qualité français manuscrit, sauvegarde Indra et débit; si échec, diagnostiquer via boutons de copie VMR-013.
+- [ ] Aucune fusion main ni publication de Release, éviter de déclarer le modèle Meta exécuté ; vérifier licences et utilité réelle avant Bonze.
