@@ -23,6 +23,7 @@ jobs:
       - name: Run actual Meta MobileMoE on synthetic French OCR
         env:
           HF_HUB_DISABLE_TELEMETRY: '1'
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           TOKENIZERS_PARALLELISM: 'false'
           OMP_NUM_THREADS: '2'
         run: |
