@@ -17,10 +17,10 @@ final class IndraOcrService {
     Box(float a,float b,float c,float d){x0=a;y0=b;x1=c;y1=d;}
   }
   static final class Scan {
-    final String raw,ordered,lmOrdered,xycutOrdered,xycutLm,orderMethod,layoutEvidence;final int lineCount,blockCount,lmRuns,lmChanged,lmErrors,orderDisagreements;
+    final String raw,ordered,lmOrdered,xycutOrdered,xycutLm,orderMethod,layoutEvidence;final int lineCount,blockCount,lmRuns,lmChanged,lmErrors,orderDisagreements;final boolean lmLoaded;
     final long detectionMs,recognitionMs,orderMs,lmMs;
-    Scan(String raw,String ordered,String corrected,String xycut,String xycutCorrected,String method,String geometry,int disagreements,int lines,int blocks,long detMs,long recMs,long ordMs,long lmMs,int lmRuns,int lmChanged,int lmErrors){
-      this.raw=raw;this.ordered=ordered;this.lmOrdered=corrected;this.xycutOrdered=xycut;this.xycutLm=xycutCorrected;this.orderMethod=method;this.layoutEvidence=geometry;this.orderDisagreements=disagreements;this.lineCount=lines;this.blockCount=blocks;
+    Scan(String raw,String ordered,String corrected,String xycut,String xycutCorrected,String method,String geometry,int disagreements,boolean lmLoaded,int lines,int blocks,long detMs,long recMs,long ordMs,long lmMs,int lmRuns,int lmChanged,int lmErrors){
+      this.raw=raw;this.ordered=ordered;this.lmOrdered=corrected;this.xycutOrdered=xycut;this.xycutLm=xycutCorrected;this.orderMethod=method;this.layoutEvidence=geometry;this.orderDisagreements=disagreements;this.lmLoaded=lmLoaded;this.lineCount=lines;this.blockCount=blocks;
       this.detectionMs=detMs;this.recognitionMs=recMs;this.orderMs=ordMs;this.lmMs=lmMs;
       this.lmRuns=lmRuns;this.lmChanged=lmChanged;this.lmErrors=lmErrors;
     }
@@ -33,8 +33,14 @@ final class IndraOcrService {
     File detector=install(context,"det.onnx",manifest.getJSONObject("det.onnx"));
     File recognizer=install(context,"rec.onnx",manifest.getJSONObject("rec.onnx"));
     File orderModel=install(context,"order.onnx",manifest.getJSONObject("order.onnx"));
-    IndraNgramLM lm;
-    try(InputStream lmInput=context.getAssets().open("indra/lm.npz")){lm=IndraNgramLM.load(lmInput);}
+    IndraNgramLM resolved=null;
+    try(InputStream lmInput=context.getAssets().open("indra/lm.npz")){resolved=IndraNgramLM.load(lmInput);}
+    catch(Exception|OutOfMemoryError ex){
+      // A broken/oversized model may disable language correction but must not
+      // disable the working Indra recognizer or cause a blank reading.
+      android.util.Log.w("VisionMaxRead","Indra LM unavailable: "+ex.getClass().getSimpleName());
+    }
+    final IndraNgramLM lm=resolved;
     int w=bitmap.getWidth(),h=bitmap.getHeight();
     if((long)w*h>20_000_000)throw new IOException("Image trop grande");
     int[] argb=new int[w*h];bitmap.getPixels(argb,0,w,0,0,w,h);
@@ -99,7 +105,7 @@ final class IndraOcrService {
       }
       long ordMs=android.os.SystemClock.elapsedRealtime()-orderStart;
       return new Scan(raw,String.join("\n",ordered),String.join("\n",corrected),String.join("\n",geom),String.join("\n",geomLm),
-          layout.method,geometry.toString(),disagreements,lines.size(),layout.blocks,detMs,recMs,ordMs,lmElapsed,lmRuns,lmChanged,lmErrors);
+          layout.method,geometry.toString(),disagreements,lm!=null,lines.size(),layout.blocks,detMs,recMs,ordMs,lmElapsed,lmRuns,lmChanged,lmErrors);
     }finally{opts.close();}
   }
   private static List<Box> detect(OrtEnvironment env,OrtSession net,byte[] gray,int sw,int sh,int side)throws Exception{
@@ -184,7 +190,7 @@ final class IndraOcrService {
       if(greedy.isBlank()||count==0)return new LineResult(greedy,greedy,false,false,0);
       double gate=meta.optJSONObject("lm_params")!=null?meta.optJSONObject("lm_params").optJSONObject("base")!=null?
           meta.optJSONObject("lm_params").optJSONObject("base").optDouble("gate",.9):.9:.9;
-      if(conf/count>=gate)return new LineResult(greedy,greedy,false,false,0);
+      if(lm==null||conf/count>=gate)return new LineResult(greedy,greedy,false,false,0);
       long t0=android.os.SystemClock.elapsedRealtime();
       try {
         Object rawBlank=r.get("blank").orElseThrow(()->new IOException("CTC blank output missing")).getValue();
