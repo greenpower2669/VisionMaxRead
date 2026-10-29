@@ -1,3 +1,12 @@
+# VMR-014 — avis pour la variante expérimentale « vrai MoE »
+
+- **HobbyLM-1B Instruct (vrai sparse MoE)**, poids et GGUF de `harims95/hobbylm-1B-gguf`, licence **Apache-2.0**, révision `f8bc034403026b2706f5275702d3801753b87c34` du dépôt et fichier Q4_K_M SHA256 `0a1d1d4a7e545c51e8fdaa61707b5bf7d09cb4e948fc9b09c3ec2789c493cdbb`. `LICENSE` et `NOTICE` distribués dans `assets/moe/` et vérifiés dans l'APK. Les données d'entraînement peuvent porter d'autres droits (lire NOTICE et la carte modèle).
+- **Runtime Rust HobbyLM `hobby-rs`**, source `https://github.com/harishsg993010/HobbyLM`, SHA `817878f52bf054a4d9aabfdd5360341dd7ce3fa6`. L'auteur annonce Apache-2.0 dans README, copie README embarquée dans `assets/moe/HOBBYLM_SOURCE_README.txt` ; dépendances Rust sous leurs licences respectives (jni/rayon/etc.).
+- **Ce n'est pas le modèle Meta MobileMoE.** Meta MobileMoE-S-QAT reste absent des APK ; accès HF gated, licence FAIR Noncommercial Research ; aucune licence Meta ne s'applique aux poids HobbyLM.
+- Tous les composants VMR-012 encore présents (Indra, PP-OCR, BERT, Piper, LiquidAI GGUF et moteur llama.cpp) conservent leurs propres licences décrites plus bas. Qwen n'est pas emballé.
+
+---
+
 # VMR-012 — Licences des composants réellement présents dans la LAB
 
 **Version expérimentale `0.6.0-liquid-experts-lab`.** Les lignes VMR-007 ci-dessous documentent les anciennes variantes et ne constituent **pas** l'inventaire du paquet VMR-012. **Qwen, LiteRT-LM et PaddleOCR-VL ne sont pas distribués ou exécutés dans VMR-012**.
