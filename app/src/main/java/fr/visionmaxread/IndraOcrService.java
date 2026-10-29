@@ -17,10 +17,10 @@ final class IndraOcrService {
     Box(float a,float b,float c,float d){x0=a;y0=b;x1=c;y1=d;}
   }
   static final class Scan {
-    final String raw,ordered,lmOrdered,orderMethod;final int lineCount,blockCount,lmRuns,lmChanged,lmErrors;
+    final String raw,ordered,lmOrdered,xycutOrdered,xycutLm,orderMethod;final int lineCount,blockCount,lmRuns,lmChanged,lmErrors;
     final long detectionMs,recognitionMs,orderMs,lmMs;
-    Scan(String raw,String ordered,String corrected,String method,int lines,int blocks,long detMs,long recMs,long ordMs,long lmMs,int lmRuns,int lmChanged,int lmErrors){
-      this.raw=raw;this.ordered=ordered;this.lmOrdered=corrected;this.orderMethod=method;this.lineCount=lines;this.blockCount=blocks;
+    Scan(String raw,String ordered,String corrected,String xycut,String xycutCorrected,String method,int lines,int blocks,long detMs,long recMs,long ordMs,long lmMs,int lmRuns,int lmChanged,int lmErrors){
+      this.raw=raw;this.ordered=ordered;this.lmOrdered=corrected;this.xycutOrdered=xycut;this.xycutLm=xycutCorrected;this.orderMethod=method;this.lineCount=lines;this.blockCount=blocks;
       this.detectionMs=detMs;this.recognitionMs=recMs;this.orderMs=ordMs;this.lmMs=lmMs;
       this.lmRuns=lmRuns;this.lmChanged=lmChanged;this.lmErrors=lmErrors;
     }
@@ -80,8 +80,11 @@ final class IndraOcrService {
       }
       List<String> ordered=new ArrayList<>(),corrected=new ArrayList<>();
       for(int idx:layout.indexes){ordered.add(lines.get(idx));corrected.add(withLm.get(idx));}
+      int[] baseline=IndraReadingOrder.xycut(locations);
+      List<String> geom=new ArrayList<>(),geomLm=new ArrayList<>();
+      for(int idx:baseline){geom.add(lines.get(idx));geomLm.add(withLm.get(idx));}
       long ordMs=android.os.SystemClock.elapsedRealtime()-orderStart;
-      return new Scan(raw,String.join("\n",ordered),String.join("\n",corrected),layout.method,lines.size(),layout.blocks,detMs,recMs,ordMs,lmElapsed,lmRuns,lmChanged,lmErrors);
+      return new Scan(raw,String.join("\n",ordered),String.join("\n",corrected),String.join("\n",geom),String.join("\n",geomLm),layout.method,lines.size(),layout.blocks,detMs,recMs,ordMs,lmElapsed,lmRuns,lmChanged,lmErrors);
     }finally{opts.close();}
   }
   private static List<Box> detect(OrtEnvironment env,OrtSession net,byte[] gray,int sw,int sh,int side)throws Exception{
