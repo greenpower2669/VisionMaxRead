@@ -268,3 +268,8 @@ Instruction de Fab : « Ok on garde qwen et on optimisé le reste, l audio est p
 - Vérifications matérielles nécessaires : 1 seul CAM start/open par session, bonne orientation réelle, 2+ phrases audio à débit continu, arrêt immédiat, changement Siwis/Jessica, Qwen 1ère et 2e image, PP-OCR, PSS/pression mémoire, mode avion.
 - **Interdictions** : pas de merge sur \`main\`, pas de Release ni publication Play sans nouvel accord explicite de Fab. La compilation CI n'est pas une validation Samsung.
 
+## VMR-009 — Indra OCR expérimental
+- app/src/main/java/fr/visionmaxread/IndraOcrService.java : portage Android du détecteur ONNX et du reconnaisseur CTC latin, modèle et vocab dans assets/indra ; aucune persistance du texte.
+- scripts/prepare_indra_models.py : acquiert les modèles au build uniquement depuis une révision HF fixe et génère le manifeste avec SHA ; scripts/verify_apk.py valide les assets du binaire.
+- MainActivity : bouton Indra OCR, worker distinct, même bitmap, durée et PSS processus, dialogue texte sélectionnable, sans modifier Qwen/Paddle/synthèse.
+- docs/VMR-009-indra-ocr-latin.md : périmètre, écarts au pipeline officiel et protocole de test. Test CI et Samsung à confirmer.
