@@ -1,3 +1,15 @@
+# VMR-012 — Licences des composants réellement présents dans la LAB
+
+**Version expérimentale `0.6.0-liquid-experts-lab`.** Les lignes VMR-007 ci-dessous documentent les anciennes variantes et ne constituent **pas** l'inventaire du paquet VMR-012. **Qwen, LiteRT-LM et PaddleOCR-VL ne sont pas distribués ou exécutés dans VMR-012**.
+
+- **Indra OCR** : source Datalab Apache-2.0 ; poids sous licence OpenRAIL-M modifiée, copie incluse dans `assets/indra/LICENSE`. Les modèles `det.onnx`, `rec.onnx`, `order.onnx` et `lm.npz` sont authentifiés au build.
+- **Liquid AI LFM2.5-230M QAD Q4_0** : poids `LiquidAI/LFM2.5-230M-GGUF`, LFM Open License v1.0 (https://www.liquid.ai/lfm-license). Copie exacte de `LICENSE` distribuée dans `assets/liquid/LICENSE` ; SHA256 des poids vérifié : `e75f83268de11b2a1bcfab5f3b5c5c0c97569ddbbc0990aad88437e45b8ba292`. La licence LFM impose des conditions de redistribution et une limite de revenus pour certains usages commerciaux : vérifier les conditions avant publication générale.
+- **ggml-org/llama.cpp** : code source MIT, compilation statique du commit `36a0e2ffc0b352b774f8d71c43668b75b3061ef5`, copie de sa licence source `assets/liquid/LLAMA_CPP_LICENSE`. Seul le moteur CPU ARM64 est embarqué ; aucun service réseau.
+- **Meta MobileMoE-S-QAT** : **aucun poids ni code incorporés**. Modèle FAIR Non-Commercial Research, architecture non disponible via le runtime mobile employé ici. Les étapes dites « experts » dans VMR-012 sont plusieurs tâches du même modèle Liquid et ne constituent **pas** un MobileMoE indépendant.
+- **PP-OCR, Sherpa-ONNX, Piper Siwis/Jessica, ONNX Runtime/OpenCV, BERT NER** : licences et avis historiques détaillés plus bas, toujours applicables à leurs composants présents.
+
+---
+
 # Components included in VisionMaxRead — VMR-007 LAB
 
 - PaddleOCR Android SDK and PP-OCRv6 Small detection/recognition, Apache-2.0. The adapted SDK remains in `ppocr-sdk/`; exact model revisions and hashes are in `models.lock.json`.
