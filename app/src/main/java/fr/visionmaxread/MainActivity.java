@@ -35,6 +35,7 @@ public final class MainActivity extends Activity {
     private HistoryStore history;private ModelFiles models;private SharedPreferences prefs;
     private boolean changingText,destroyed,reading,cameraMode;private String maskedPreview="";private int textSp=24;
     private volatile OcrTrace lastTrace;
+    private volatile IndraOcrService.Scan lastScan;
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);DebugLog.session(this);prefs=getSharedPreferences("settings",MODE_PRIVATE);history=new HistoryStore(this);textSp=prefs.getInt("textSize",24);
         voice.selectVoice(prefs.getBoolean("voiceHD",true));buildUi();camera=new CameraController(this,preview,new CameraController.Listener(){
@@ -91,7 +92,7 @@ public final class MainActivity extends Activity {
     private long beginOcrProgress(int value){long id=progressGeneration.incrementAndGet();ui(()->{if(ocrProgress!=null&&progressGeneration.get()==id){ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(value);}});return id;}
     private void updateOcrProgress(long id,int value){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(Math.max(0,Math.min(100,value)));});}
     private void finishOcrProgress(long id){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setIndeterminate(false);ocrProgress.setProgress(100);ocrProgress.postDelayed(()->{if(progressGeneration.get()==id)ocrProgress.setVisibility(View.GONE);},900);});}
-    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastTrace=null;compareBitmap=null;ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}return sessions.replaceSource();}
+    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastTrace=null;lastScan=null;compareBitmap=null;ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}return sessions.replaceSource();}
     private void startCamera(){
         newDocument();cameraMode=true;imageArea.setVisibility(View.VISIBLE);preview.setVisibility(View.VISIBLE);frozen.setVisibility(View.GONE);freeze.setVisibility(View.VISIBLE);freeze.setEnabled(true);setText("");status.setText("Vise le texte puis appuie sur Figer l’image.");
         if(checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION);
@@ -134,29 +135,31 @@ public final class MainActivity extends Activity {
                                   scan.detectionMs+scan.recognitionMs,pss,"lines="+scan.lineCount);
                         trace.add(this,"P2_ORDERNET","indra-order.onnx","executed",scan.ordered,
                                   scan.orderMs,pss,"method="+scan.orderMethod+" blocks="+scan.blockCount);
-                        // Explicit non-execution: the official n-gram beam and
-                        // both neural language engines still need Android runtimes.
-                        trace.add(this,"P2B_INDRA_LM","indra-lm.npz","unavailable","",0,pss,
-                                  "ctc-ngram-beam-not-ported");
+                        trace.add(this,"P2A_XYCUT","geometry-xycut","executed",scan.xycutOrdered,
+                                  0,pss,"independent-order-comparison");
+                        trace.add(this,"P2B_INDRA_LM","indra-lm.npz-ctc","executed",scan.lmOrdered,
+                                  scan.lmMs,pss,"uncertain_lines="+scan.lmRuns+" corrections="+scan.lmChanged+" fallback_errors="+scan.lmErrors);
+                        trace.add(this,"P2C_XYCUT_LM","xycut-plus-IndraLM","executed",scan.xycutLm,
+                                  0,pss,"same-CTC-hypotheses-different-line-order");
                         trace.add(this,"P3_LIQUID","LFM2.5-230M","unavailable","",0,pss,
                                   "android-runtime-not-validated");
                         trace.add(this,"P4_MOBILE_MOE","MobileMoE-S-QAT","unavailable","",0,pss,
                                   "mobile-int4-runtime-not-validated");
                         // This is a verifiable no-hallucination fallback, NOT a
                         // neural MoE arbitration pass or a semantic correction.
-                        trace.add(this,"P5_ARBITRAGE","conservative-fallback","executed",scan.ordered,0,
-                                  processPssMb(),"preserve-original-tokens-only");
-                        lastTrace=trace;
+                        trace.add(this,"P5_ARBITRAGE","no-neural-arbiter","executed",scan.lmOrdered,0,
+                                  processPssMb(),"Indra-LM-CTC-evidence-only-no-MoE");
+                        lastScan=scan;lastTrace=trace;
                         finishOcrProgress(progress);
                         ui(()->{
                             if(!sessions.documentCurrent(ticket)||compareBitmap!=image)return;
                             setIndraAvailable(true);
-                            if(ocrChoice.get()==choice)setText(scan.ordered);
-                            status.setText("Indra : "+scan.lineCount+" lignes, "+elapsed+" ms. "+
-                                "Colonnes : "+scan.orderMethod+". Liquid et MobileMoE à porter. Rapport disponible.");
+                            if(ocrChoice.get()==choice)setText(scan.lmOrdered);
+                            status.setText("Indra + LM : "+scan.lineCount+" lignes, "+elapsed+" ms. "+
+                                "Correction de "+scan.lmChanged+" ligne(s) ; OrderNet/XY-cut à comparer dans le rapport.");
                         });
-                        if(!scan.ordered.isBlank()&&prefs.getBoolean("history",true)&&ocrChoice.get()==choice)
-                            maskAndSave(scan.ordered,ticket,privacy,true);
+                        if(!scan.lmOrdered.isBlank()&&prefs.getBoolean("history",true)&&ocrChoice.get()==choice)
+                            maskAndSave(scan.lmOrdered,ticket,privacy,true);
                     }catch(Exception|OutOfMemoryError e){
                         DebugLog.exception(this,"INDRA pipeline",e);
                         trace.add(this,"P1_INDRA_RAW","indra-det-rec","error","",
@@ -201,11 +204,24 @@ public final class MainActivity extends Activity {
     private void compareIndra(){
         final OcrTrace trace=lastTrace;final long ticket=sessions.documentTicket();
         if(trace==null||!sessions.documentCurrent(ticket))return;
-        new AlertDialog.Builder(this).setTitle("Analyse multicouche — VMR-010")
+        new AlertDialog.Builder(this).setTitle("Analyse multicouche — VMR-011")
             .setMessage(trace.summary()+"\nPour l'instant Liquid et MobileMoE ne sont pas exécutés sur Android. "+
                "Les journaux standards ne contiennent aucun texte privé.")
             .setPositiveButton("Voir les passes et textes",(d,w)->showSensitiveReport(trace,ticket))
+            .setNeutralButton("Comparer les ordres",(d,w)->showReadingAlternatives(ticket))
             .setNegativeButton("Fermer",null).show();
+    }
+    private void showReadingAlternatives(long ticket){
+        final IndraOcrService.Scan scan=lastScan;
+        if(scan==null||!sessions.documentCurrent(ticket))return;
+        String[] choices={"OrderNet + correction Indra LM","XY-cut + correction Indra LM",
+                          "OrderNet sans correction","XY-cut sans correction"};
+        new AlertDialog.Builder(this).setTitle("Choisir l'ordre de lecture")
+            .setItems(choices,(d,which)->{
+                String chosen=which==0?scan.lmOrdered:which==1?scan.xycutLm:
+                              which==2?scan.ordered:scan.xycutOrdered;
+                showComparisonText(choices[which],chosen,ticket);
+            }).setNegativeButton("Fermer",null).show();
     }
     private void showSensitiveReport(OcrTrace trace,long ticket){
         if(!sessions.documentCurrent(ticket))return;
