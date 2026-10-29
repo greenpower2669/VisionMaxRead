@@ -17,6 +17,9 @@ fi
 git -C "$src" fetch --depth 1 origin "$LLAMA_SHA"
 git -C "$src" checkout --detach "$LLAMA_SHA"
 test "$(git -C "$src" rev-parse HEAD)" = "$LLAMA_SHA"
+# Statically linked llama.cpp is MIT licensed. Bundle its exact pinned license.
+cp "$src/LICENSE" app/src/main/assets/liquid/LLAMA_CPP_LICENSE
+test -s app/src/main/assets/liquid/LLAMA_CPP_LICENSE
 cmake -S native/liquid -B "$RUNNER_TEMP/vmr-llama/build" \
   -DCMAKE_TOOLCHAIN_FILE="$ndk/build/cmake/android.toolchain.cmake" \
   -DANDROID_ABI=arm64-v8a \
