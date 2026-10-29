@@ -88,6 +88,12 @@ jobs:
         run: python3 scripts/prepare_indra_models.py
       - name: Verify Indra models
         run: python3 scripts/prepare_indra_models.py --verify
+      - name: Prepare pinned Liquid LFM2.5-230M QAD GGUF (build only)
+        run: python3 scripts/prepare_liquid.py
+      - name: Verify Liquid QAD weight checksum
+        run: python3 scripts/prepare_liquid.py --verify
+      - name: Build real LFM2.5 native Android CPU runtime
+        run: bash scripts/build_liquid_android.sh
       - name: Tests, lint, APK and AAB
         run: ./gradlew :core:check :app:lintDebug :app:assembleDebug :app:bundleRelease --no-daemon
       - name: Lossless archive contract
@@ -103,15 +109,15 @@ jobs:
           badging="$("$build_tools/aapt" dump badging "$apk" | head -n1)"
           echo "$badging"
           echo "$badging" | grep -F "name='fr.visionmaxread.labdebug'"
-          echo "$badging" | grep -F "versionCode='12'"
+          echo "$badging" | grep -F "versionCode='13'"
           cert="$("$build_tools/apksigner" verify --print-certs "$apk" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print tolower($2); exit}')"
           echo "APK_CERT_SHA256=$cert"
           test "$cert" = "$VMR_LAB_CERT_SHA256"
       - name: Name artifacts and record sizes
         run: |
           mkdir artifacts
-          apk="artifacts/VisionMaxRead-0.5.1-INDRA-LM-COLUMNS-LAB.apk"
-          aab="artifacts/VisionMaxRead-0.5.1-INDRA-LM-COLUMNS-LAB-unsigned.aab"
+          apk="artifacts/VisionMaxRead-0.6.0-LIQUID-EXPERTS-LAB.apk"
+          aab="artifacts/VisionMaxRead-0.6.0-LIQUID-EXPERTS-LAB-unsigned.aab"
           cp app/build/outputs/apk/debug/app-debug.apk "$apk"
           cp app/build/outputs/bundle/release/app-release.aab "$aab"
           cp app/build/reports/lint-results-debug.html artifacts/
@@ -122,7 +128,7 @@ jobs:
             echo "APK_BYTES=$(stat -c%s "$apk")"
             echo "APK_SHA256=$(sha256sum "$apk" | awk '{print $1}')"
             echo "APK_PACKAGE=fr.visionmaxread.labdebug"
-            echo "APK_VERSION_CODE=12"
+            echo "APK_VERSION_CODE=13"
             echo "APK_CERT_SHA256=$VMR_LAB_CERT_SHA256"
             echo "AAB_NAME=$(basename "$aab")"
             echo "AAB_BYTES=$(stat -c%s "$aab")"
@@ -131,7 +137,7 @@ jobs:
       - name: Upload compact build metadata
         uses: actions/upload-artifact@v4
         with:
-          name: VisionMaxRead-0.5.1-INDRA-LM-COLUMNS-LAB-metadata
+          name: VisionMaxRead-0.6.0-LIQUID-EXPERTS-LAB-metadata
           path: artifacts/build-manifest.txt
           retention-days: 14
       # GitHub Actions upload-artifact v7 supports *direct* single-file
@@ -140,7 +146,7 @@ jobs:
       - name: Upload signed LAB APK directly (no ZIP)
         uses: actions/upload-artifact@v7
         with:
-          path: artifacts/VisionMaxRead-0.5.1-INDRA-LM-COLUMNS-LAB.apk
+          path: artifacts/VisionMaxRead-0.6.0-LIQUID-EXPERTS-LAB.apk
           archive: false
           if-no-files-found: error
           retention-days: 14
@@ -148,7 +154,7 @@ jobs:
       - name: Upload unsigned AAB separately
         uses: actions/upload-artifact@v7
         with:
-          path: artifacts/VisionMaxRead-0.5.1-INDRA-LM-COLUMNS-LAB-unsigned.aab
+          path: artifacts/VisionMaxRead-0.6.0-LIQUID-EXPERTS-LAB-unsigned.aab
           archive: false
           if-no-files-found: error
           retention-days: 14
