@@ -17,10 +17,10 @@ final class IndraOcrService {
     Box(float a,float b,float c,float d){x0=a;y0=b;x1=c;y1=d;}
   }
   static final class Scan {
-    final String raw,ordered,lmOrdered,xycutOrdered,xycutLm,orderMethod;final int lineCount,blockCount,lmRuns,lmChanged,lmErrors;
+    final String raw,ordered,lmOrdered,xycutOrdered,xycutLm,orderMethod,layoutEvidence;final int lineCount,blockCount,lmRuns,lmChanged,lmErrors,orderDisagreements;
     final long detectionMs,recognitionMs,orderMs,lmMs;
-    Scan(String raw,String ordered,String corrected,String xycut,String xycutCorrected,String method,int lines,int blocks,long detMs,long recMs,long ordMs,long lmMs,int lmRuns,int lmChanged,int lmErrors){
-      this.raw=raw;this.ordered=ordered;this.lmOrdered=corrected;this.xycutOrdered=xycut;this.xycutLm=xycutCorrected;this.orderMethod=method;this.lineCount=lines;this.blockCount=blocks;
+    Scan(String raw,String ordered,String corrected,String xycut,String xycutCorrected,String method,String geometry,int disagreements,int lines,int blocks,long detMs,long recMs,long ordMs,long lmMs,int lmRuns,int lmChanged,int lmErrors){
+      this.raw=raw;this.ordered=ordered;this.lmOrdered=corrected;this.xycutOrdered=xycut;this.xycutLm=xycutCorrected;this.orderMethod=method;this.layoutEvidence=geometry;this.orderDisagreements=disagreements;this.lineCount=lines;this.blockCount=blocks;
       this.detectionMs=detMs;this.recognitionMs=recMs;this.orderMs=ordMs;this.lmMs=lmMs;
       this.lmRuns=lmRuns;this.lmChanged=lmChanged;this.lmErrors=lmErrors;
     }
@@ -83,8 +83,23 @@ final class IndraOcrService {
       int[] baseline=IndraReadingOrder.xycut(locations);
       List<String> geom=new ArrayList<>(),geomLm=new ArrayList<>();
       for(int idx:baseline){geom.add(lines.get(idx));geomLm.add(withLm.get(idx));}
+      int disagreements=0;
+      for(int i=0;i<baseline.length;i++)if(baseline[i]!=layout.indexes[i])disagreements++;
+      StringBuilder geometry=new StringBuilder();
+      geometry.append("model_order=").append(java.util.Arrays.toString(layout.indexes))
+          .append("\nxycut_order=").append(java.util.Arrays.toString(baseline))
+          .append("\nline_boxes_normalized_0_1000:\n");
+      for(int i=0;i<locations.size();i++){
+        IndraReadingOrder.Box b=locations.get(i);
+        geometry.append(i).append(": ")
+          .append(Math.round(b.x0*1000/w)).append(",")
+          .append(Math.round(b.y0*1000/h)).append(",")
+          .append(Math.round(b.x1*1000/w)).append(",")
+          .append(Math.round(b.y1*1000/h)).append("\n");
+      }
       long ordMs=android.os.SystemClock.elapsedRealtime()-orderStart;
-      return new Scan(raw,String.join("\n",ordered),String.join("\n",corrected),String.join("\n",geom),String.join("\n",geomLm),layout.method,lines.size(),layout.blocks,detMs,recMs,ordMs,lmElapsed,lmRuns,lmChanged,lmErrors);
+      return new Scan(raw,String.join("\n",ordered),String.join("\n",corrected),String.join("\n",geom),String.join("\n",geomLm),
+          layout.method,geometry.toString(),disagreements,lines.size(),layout.blocks,detMs,recMs,ordMs,lmElapsed,lmRuns,lmChanged,lmErrors);
     }finally{opts.close();}
   }
   private static List<Box> detect(OrtEnvironment env,OrtSession net,byte[] gray,int sw,int sh,int side)throws Exception{
