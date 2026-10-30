@@ -21,10 +21,10 @@ assert "new String(tokens,StandardCharsets.UTF_8)" in native
 assert "if(cancelling.get())throw new IllegalStateException" in native
 assert '"<|user|>\\n"' in review and '"\\n<|assistant|>\\n"' in review
 assert "USER: Tu es" not in review and "ASSISTANT:" not in review
-assert "Math.min(260,original.length())" in review
-assert 'HobbyMoeNative.generate(context,prompt,110,(delta,count)->' in review
-assert "streamed.append(delta)" in review
-assert '" generated_tokens="+tokens[0]' in review
+assert "indexes.size()<3" in review and "source.length()>150" in review
+assert 'session.generate(buildPrompt(source,language),72,(delta,count)->' in review
+assert "partial.append(delta)" in review
+assert '" generated_tokens="+tokenCount[0]' in review
 assert 'stream.finish("Terminé' in ui
 assert "stream.token(delta,count)" in ui
 assert "activeMoeStream.cancelAndClose()" in ui
@@ -32,6 +32,7 @@ assert "new MoeStreamDialog(this)" in ui
 assert 'approved?()->showComparisonText(' in ui, "Rejected proposals must not show Use text"
 assert "showComparisonText(\"HobbyLM MoE — proposition\"" not in ui
 assert 'streamText.append(delta)' in dialog
+assert "void segment(int index,int total,String language)" in dialog
 assert 'scroller.fullScroll(View.FOCUS_DOWN)' in dialog
 assert 'setNeutralButton("Arrêter"' in dialog
 assert 'setPositiveButton("Copier flux"' in dialog
