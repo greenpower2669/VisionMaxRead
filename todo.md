@@ -477,3 +477,8 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [ ] **BLOQUANT** Attendre CI Rust/Java+lint/APK complète et vérification directe SHA/signature/code16 avant partage de la 0.6.3 ; ne pas considérer un build intermédiaire comme livraison.
 - [ ] **BLOQUANT** Réessayer sur le Samsung la même lettre et noter premier jeton, vitesse, interruption, copies des passes, qualité et conservation des chiffres. Comparer à VMR-014, ne pas déduire un gain sans mesurer.
 - [ ] Ne pas merge main ni publier Release sans validation.
+
+### VMR-015 — livraison signée contrôlée le 30/10/2026
+- [x] GitHub Actions **run `41038502413` SUCCESS**, source code HEAD `2cd829b0445ab922037d91dc716f5146295392a8`. Test CPU réel HobbyLM sur prompt au format corrigé, Rust ARM64 JNI per-token, contrats de streaming, confidentialité, Gradle, lint, signature et vérification modèles/offline : tous verts.
+- [x] APK direct sans ZIP `VisionMaxRead-0.6.3-MOE-LIVE-LAB.apk`, artifact `12969740814`, **1 252 670 765 octets**, SHA256 `800f3460b53de7c62957718fcbef5921f308fee4bdb96ab672458b6c2d6851ca`, LAB versionCode 16, certificat SHA256 `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`. Pas de permission INTERNET ; Indra+Liquid+HobbyLM présents. `main` et Release non modifiés.
+- [ ] **À valider sur Samsung** : diffusion réelle de chaque jeton sur la fenêtre, stop pendant copie du modèle/génération, bouton Copier flux, qualité comparée sur la même lettre 1942, chiffres, PSS, temps premier jeton. La réussite CI ne prouve pas la précision de HobbyLM en français.
