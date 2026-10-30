@@ -467,3 +467,13 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [x] **Run GitHub Actions `40977108326` vert**, source SHA `d88c5002b0321d5c622c5975155fdc3bf7a3b559` : vrai test d'inférence HobbyLM-1B sur CPU GitHub, compilation native Rust ARM64, tests/lint Gradle, APK signé, SHA modèles, licence et zéro permission INTERNET.
 - [x] APK direct (sans ZIP) `VisionMaxRead-0.6.2-REAL-MOE-LAB.apk`, artifact `12942629751`, **1252630529 octets**, SHA256 `4cb627a8c7065f3f45e643d196faf4a5b4091b2566ac471e824e25bc8f2e31e9`, code15, certificat LAB `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`. Modèle HobbyLM quantifié 729156672 octets.
 - [ ] **Essai Samsung requis** : vraie inférence ARM64, délai/chauffe/mémoire/espace nécessaire, qualité de correction manuscrit français, logs copiables même après crash ; éviter d'annoncer validé sur téléphone avant preuve.
+
+## VMR-015 — HobbyLM chat template + jetons diffusés en direct
+- [x] Corriger prompt HobbyLM pour `<|user|>...<|assistant|>` conforme au tokenizer du modèle, sans hypothèse Liquid et sur 260 caractères ; préserver chiffres/noms.
+- [x] Coder retour de vrais jetons Rust via JNI et interface Java, événement par jeton, UTF-8 et journal de nombre de tokens sans contenu sensible.
+- [x] Fenêtre UI à contraste élevé affichant le flux généré en direct, compteur jetons/temps, bouton Arrêter, Copier flux volontaire, fermeture sur changement de document ; pas de faux canal de raisonnement.
+- [x] Gérer annulation avant début d'inférence, afficher sortie interrompue en `OcrTrace`, préserver l'original et bloquer « Utiliser ce texte » sur les propositions rejetées.
+- [x] Ajouter `scripts/test_vmr015_stream_contract.py`, actualiser contrats de confidentialité VMR-010/013 et test CPU HobbyLM avec vrais marqueurs.
+- [ ] **BLOQUANT** Attendre CI Rust/Java+lint/APK complète et vérification directe SHA/signature/code16 avant partage de la 0.6.3 ; ne pas considérer un build intermédiaire comme livraison.
+- [ ] **BLOQUANT** Réessayer sur le Samsung la même lettre et noter premier jeton, vitesse, interruption, copies des passes, qualité et conservation des chiffres. Comparer à VMR-014, ne pas déduire un gain sans mesurer.
+- [ ] Ne pas merge main ni publier Release sans validation.
