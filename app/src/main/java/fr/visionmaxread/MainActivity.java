@@ -80,7 +80,7 @@ public final class MainActivity extends Activity {
         copyLogs=button("Copier logs techniques",INK,this::copyTechnicalLogs);
         copyResults=button("Copier résultats · toutes les passes",TEAL,this::confirmCopyAllPasses);
         row(content,copyLogs,copyResults);
-        copyLogs.setEnabled(false);copyResults.setEnabled(false);
+        copyLogs.setEnabled(true);copyResults.setEnabled(false);
         liquid=button("Tester Liquid + experts (hors ligne)",INK,this::startLiquidReview);
         liquid.setVisibility(View.GONE);liquid.setEnabled(false);content.addView(liquid);
         moe=button("Tester vrai MoE · HobbyLM (hors ligne)",INK,this::startHobbyMoeReview);
@@ -103,7 +103,7 @@ public final class MainActivity extends Activity {
     private long beginOcrProgress(int value){long id=progressGeneration.incrementAndGet();ui(()->{if(ocrProgress!=null&&progressGeneration.get()==id){ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(value);}});return id;}
     private void updateOcrProgress(long id,int value){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(Math.max(0,Math.min(100,value)));});}
     private void finishOcrProgress(long id){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setIndeterminate(false);ocrProgress.setProgress(100);ocrProgress.postDelayed(()->{if(progressGeneration.get()==id)ocrProgress.setVisibility(View.GONE);},900);});}
-    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastTrace=null;lastScan=null;lastReview=null;lastMoeReview=null;compareBitmap=null;if(HobbyMoeNative.available())HobbyMoeNative.stop();if(copyLogs!=null)copyLogs.setEnabled(false);if(copyResults!=null)copyResults.setEnabled(false);if(LiquidNative.available())LiquidNative.stop();ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}if(liquid!=null){liquid.setEnabled(false);liquid.setVisibility(View.GONE);}if(moe!=null){moe.setEnabled(false);moe.setVisibility(View.GONE);}return sessions.replaceSource();}
+    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastTrace=null;lastScan=null;lastReview=null;lastMoeReview=null;compareBitmap=null;if(HobbyMoeNative.available())HobbyMoeNative.stop();if(copyLogs!=null)copyLogs.setEnabled(true);if(copyResults!=null)copyResults.setEnabled(false);if(LiquidNative.available())LiquidNative.stop();ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}if(liquid!=null){liquid.setEnabled(false);liquid.setVisibility(View.GONE);}if(moe!=null){moe.setEnabled(false);moe.setVisibility(View.GONE);}return sessions.replaceSource();}
     private void startCamera(){
         newDocument();cameraMode=true;imageArea.setVisibility(View.VISIBLE);preview.setVisibility(View.VISIBLE);frozen.setVisibility(View.GONE);freeze.setVisibility(View.VISIBLE);freeze.setEnabled(true);setText("");status.setText("Vise le texte puis appuie sur Figer l’image.");
         if(checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION);
@@ -293,6 +293,7 @@ public final class MainActivity extends Activity {
                     long start=SystemClock.elapsedRealtime();
                     try{
                         String liquidHypothesis=lastReview==null?null:lastReview.proposal;
+                        DebugLog.append(this,"HOBBY_MOE begin engine=routed-hobbylm-1b inputChars="+scan.lmOrdered.length()+" pssMb="+formatMb(processPssMb()));
                         HobbyMoeReview.Result r=HobbyMoeReview.run(
                             this,scan.lmOrdered,liquidHypothesis,trace);
                         if(!sessions.documentCurrent(ticket)||destroyed)return;
@@ -338,8 +339,9 @@ public final class MainActivity extends Activity {
     /** One tap: anonymized technical diagnostics (never the OCR text). */
     private void copyTechnicalLogs(){
         final OcrTrace trace=lastTrace;final long ticket=sessions.documentTicket();
-        if(trace==null||!sessions.documentCurrent(ticket)){status.setText("Aucun rapport à copier.");return;}
-        String message=trace.metricsReport()+"\n=== JOURNAL DEBUG ===\n"+DebugLog.read(this);
+        String metrics=(trace!=null&&sessions.documentCurrent(ticket))?trace.metricsReport():
+            "VISIONMAXREAD — JOURNAL TECHNIQUE APRÈS RELANCE\nAucun rapport OCR actif.\n";
+        String message=metrics+"\n=== JOURNAL DEBUG PERSISTANT ===\n"+DebugLog.read(this);
         copyToClipboard("VisionMaxRead diagnostics sans texte",message,ticket,false);
     }
     /** Text exports require explicit user confirmation. No screenshots needed. */
@@ -374,7 +376,7 @@ public final class MainActivity extends Activity {
             .setNegativeButton("Annuler",null).show();
     }
     private void copyToClipboard(String title,String value,long ticket,boolean sensitive){
-        if(!sessions.documentCurrent(ticket))return;
+        if(sensitive&&!sessions.documentCurrent(ticket))return;
         ((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE))
             .setPrimaryClip(ClipData.newPlainText(title,value));
         status.setText(sensitive?"Résultats copiés. Pense à anonymiser avant partage.":
