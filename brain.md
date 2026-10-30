@@ -293,3 +293,7 @@ Sur `feature/vmr017-adaptive-document-context`, HobbyLM passe des seules trois l
 
 ## VMR-018 (30/10/2026)
 Pivot vers Surya OCR 2, LightOnOCR-3 0.8B et Nemotron 3.5 Parse. Les anciens correcteurs textuels Liquid/Qwen/HobbyLM ne sont plus actifs ; Indra et PP-OCR demeurent. Le catalogue ne prouve pas une inférence Android. Lire docs/VMR-018-three-specialist-ocr.md.
+
+
+## VMR-019 — 30/10/2026
+Deux premières cibles OCR image : Surya 2 et LightOnOCR-3 0.8B, GGUF plus mmproj importés offline via SAF et SHA-256 figés. Runtime pinned llama.cpp multimodal, exécutable compilé par GitHub Actions, ProcessBuilder local, cache effacé. Indra/PP-OCR et Piper restent. Nemotron reste séparé (C-RADIO/mBART). Voir docs/VMR-019-native-ocr.md ; CI et Samsung encore à attester, aucun merge main ni Release.

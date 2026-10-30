@@ -343,3 +343,7 @@ Point d'entrée du correctif : `docs/VMR-017-continuity-correction.md`. `MoeProm
 
 ## Tiroir VMR-018
 `docs/VMR-018-three-specialist-ocr.md` : nouveau catalogue OCR spécialisé, anciennes dépendances LLM retirées du build, portages image ARM64 encore à faire.
+
+
+## VMR-019 — OCR image ARM64 (30/10)
+Point d'entrée : docs/VMR-019-native-ocr.md. Code : SpecialistOcrModels.java (SAF + SHA), SpecialistOcrProcess.java (processus mtmd), scripts/build_specialist_ocr_android.sh, MainActivity. Cibles Surya/LightOn, Nemotron non porté ; voir todo.md.

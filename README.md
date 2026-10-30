@@ -1,3 +1,5 @@
+> **VMR-019 — 30/10/2026, expérimental** : le parcours Android peut importer une paire GGUF + projecteur SHA-256 authentifiée pour **Surya 2** ou **LightOnOCR-3 0.8B**, puis lancer un véritable processus multimodal image hors ligne via un exécutable ARM64 llama.cpp compilé à une révision figée. **Le code et l'APK nécessitent une CI réussie et un essai réel sur téléphone avant de déclarer l'un de ces OCR opérationnel.** Nemotron 3.5 Parse exige un portage distinct. Voir docs/VMR-019-native-ocr.md.
+
 > **VMR-018 (30/10/2026)** : retrait des correcteurs génératifs Liquid, Qwen textuel, HobbyLM du parcours actif et du build. Indra + PP-OCR restent opérationnels. Surya OCR 2, LightOnOCR-3 0.8B et Nemotron 3.5 Parse sont seulement catalogués (portage ARM64 non achevé) : détails dans `docs/VMR-018-three-specialist-ocr.md`. Aucun APK/release annoncé avant CI.
 
 # VisionMaxRead LAB 0.6.3 — HobbyLM en direct

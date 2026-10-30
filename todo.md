@@ -559,3 +559,18 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [ ] Verrouiller licences, poids, hash, runtime Android image, tokenizer et traitement des sorties.
 - [ ] Tests CI/APK signé v0.6.8 code 21, mesures Samsung manuscrits FR, CER/WER, PSS et chauffe.
 - [ ] Ne pas fusionner main ou publier de Release sans feu vert ; pas de suppression automatique des GGUF privés déjà importés.
+
+
+## VMR-019 — portage natif multimodal des OCR spécialisés (30/10/2026)
+- [x] Reprise depuis VMR-018 sans fusion de main.
+- [x] Surya 2 et LightOnOCR-3 : fichiers GGUF modèle + mmproj avec empreintes SHA-256 amont figées (4 valeurs).
+- [x] Import SAF atomique sur stockage privé, rejet GGUF invalides et contrôle SHA avant chaque inférence.
+- [x] Boutons Android pour télécharger avec navigateur externe, importer chaque pièce, lancer OCR réel sur les pixels ; aucune substitution silencieuse.
+- [x] Implémentation de processus natif CLI llama-mtmd, isolé, entrée JPEG éphémère, sortie éphémère, annulation et délai maximum ; pas de permission INTERNET.
+- [x] Script Android NDK de compilation llama.cpp SHA figé, workflow de CI et vérification ELF dans APK.
+- [ ] Obtenir CI verte de la compilation et de l'APK 0.6.9 code 22 ; corriger toute erreur constatée.
+- [ ] Faire l'essai Samsung, notamment l'exécution réelle et la récupération de la sortie des modèles, PSS et chauffe ; le succès de la CI ne prouve PAS l'inférence.
+- [ ] Vérifier sortie Surya (prompt HTML/boîtes) et sortie LightOn à prompt minimal, adapter les présélections puis mesurer CER/WER manuscrit de 1942.
+- [ ] Optimiser les imports lourds et les restrictions énergétiques ; vérifier installation à côté de la précédente APK LAB.
+- [ ] Porter Nemotron 3.5 Parse (C-RADIOv4 + mBART causal) avec pipeline image/ONNX et authentification des fichiers, mesure mémoire et tests, sans prétendre qu'il tourne dans mtmd.
+- [ ] Aucune fusion de main ni GitHub Release sans accord explicite.

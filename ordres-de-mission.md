@@ -310,3 +310,7 @@ Correction du comportement HobbyLM après le retour Samsung : retrait des trois 
 
 ## VMR-018 — ordre de mission du 30 octobre 2026
 Utiliser à terme Surya OCR 2, LightOnOCR-3 0.8B et Nemotron 3.5 Parse sans LLM génératifs textuels ; ne pas perdre Indra/PP-OCR tant que les trois portages ARM64 ne sont pas réels. Ne pas merger main ni publier de Release sans validation de Fab.
+
+
+## Mission VMR-019 — adaptation des trois moteurs OCR
+Faire évoluer le travail de VMR-018 vers deux vrais chemins d'inférence image Android hors ligne sur les GGUF officiels Surya 2 et LightOnOCR-3, avec mmproj, poids vérifiés SHA, binaire C++ natif, capture JPEG cache et gestion d'erreur/cancellation. Les résultats restent candidats à relire, Indra n'est pas écrasé. Nemotron 3.5 Parse requiert une architecture distincte et reste au todo. Tests CI puis Samsung avant affirmation de réussite ; préserver confidentialité et stabilité. Aucun merge main ni Release sans autorisation.

@@ -345,3 +345,7 @@ Après réparation du prompt HobbyLM, audit supplémentaire : code limité à tr
 
 ## VMR-018 (30/10/2026)
 Anciens GGUF Liquid/HobbyLM et JNI exclus du workflow. Vérification de l'APK renforcée ; CI et tests Samsung encore non vérifiés à cette étape. Aucun des trois nouveaux OCR n'est déclaré opérationnel.
+
+
+## VMR-019 — 30/10/2026 (initial)
+Hypothèse vérifiable : CLI multimodal officiel llama.cpp peut exploiter GGUF+mmproj Surya/LightOn sous Android arm64. Préparation : exécutable statique PIE dans libvmr_mtmd_cli.so du répertoire natif, SHA llama.cpp épinglé et poids GGUF hors APK. À vérifier : compatibilité du binaire, lancement dans Android, stdout propre, performance manuscrite et RAM. N'interpréter ni le catalogue ni un build vert comme une preuve de qualité OCR.

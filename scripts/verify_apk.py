@@ -27,7 +27,13 @@ with zipfile.ZipFile(apk) as z:
   meta=indra_manifest[name]
   assert len(raw)==meta['size'] and hashlib.sha256(raw).hexdigest()==meta['sha256'], 'Indra '+name
  assert not any(p.startswith(('assets/liquid/','assets/moe/','assets/qwen/')) for p in z.namelist()), 'Generative LLM weights still bundled'
- assert not any(p.endswith(('libvmr_liquid.so','libvmr_moe.so')) for p in z.namelist()), 'Generative LLM native backend still bundled'
+ assert not any(p.endswith(('libvmr_liquid.so','libvmr_moe.so')) for p in z.namelist()), 'Legacy generative LLM backend bundled'
+ executable='lib/arm64-v8a/libvmr_mtmd_cli.so'
+ assert executable in z.namelist(), 'Missing actual ARM64 image OCR runtime'
+ runtime=z.getinfo(executable)
+ assert runtime.file_size>1024*1024, 'Native executable unexpectedly tiny'
+ with z.open(executable) as elf:
+  assert elf.read(4)==bytes([0x7f,0x45,0x4c,0x46]), 'Not a native ELF binary'
  libs=[p for p in z.namelist() if p.startswith('lib/') and p.endswith('.so')]
  assert libs and all(p.startswith('lib/arm64-v8a/') for p in libs)
 print('APK verified: signed, ARM64, all model hashes match (including Indra), no INTERNET permission')
