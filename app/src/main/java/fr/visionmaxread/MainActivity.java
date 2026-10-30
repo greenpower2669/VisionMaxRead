@@ -278,14 +278,17 @@ public final class MainActivity extends Activity {
             return;
         }
         if(!moe.isEnabled())return;
-        new AlertDialog.Builder(this).setTitle("Vrai MoE indépendant — diffusion des jetons")
+        final int[] language={0};
+        new AlertDialog.Builder(this).setTitle("Vrai MoE indépendant — mémoire et phrases")
+            .setSingleChoiceItems(new String[]{"Français","English"},0,(d,w)->language[0]=w)
             .setMessage("HobbyLM-1B est un vrai réseau à experts routés (64 experts, 8 actifs par jeton), "+
                 "différent de Liquid. Le format de conversation officiel est rétabli. "+
                 "La suite du texte généré apparaîtra au fil des jetons, avec Arrêter et Copier flux. "+
                 "Son poids quantifié fait environ 729 Mo et sera copié dans "+
                 "le stockage privé au premier essai. La génération sur CPU peut être lente et "+
                 "consommer beaucoup de mémoire. Pour ce premier test, seule la première zone "+
-                "de 460 caractères est examinée. Le reste de la page restera inchangé. "+
+                "de trois lignes de 150 caractères maximum sont examinées dans une seule session. "+
+                "La session sera déchargée après le lot. Choisis français ou anglais. "+
                 "La qualité en français est inconnue ; vérifie tout résultat avant utilisation.")
             .setPositiveButton("Lancer le MoE",(d,w)->{
                 moe.setEnabled(false);
@@ -297,12 +300,12 @@ public final class MainActivity extends Activity {
                     if(destroyed||!sessions.documentCurrent(ticket)){finishOcrProgress(progress);return;}
                     long start=SystemClock.elapsedRealtime();
                     try{
-                        DebugLog.append(this,"HOBBY_MOE begin engine=routed-hobbylm-1b inputChars="+scan.lmOrdered.length()+" chat_template=hobbylm-v1 streamed=true pssMb="+formatMb(processPssMb()));
+                        DebugLog.append(this,"HOBBY_MOE begin engine=routed-hobbylm-1b inputChars="+scan.lmOrdered.length()+" mode=three_lines session=reused chat_template=hobbylm-v1 streamed=true pssMb="+formatMb(processPssMb()));
                         HobbyMoeReview.Result r=HobbyMoeReview.run(
-                            this,scan.lmOrdered,trace,(delta,count)->{
+                            this,scan.lmOrdered,trace,language[0]==0?"fr":"en",(delta,count)->{
                                 if(!destroyed&&sessions.documentCurrent(ticket))stream.token(delta,count);
                                 else HobbyMoeNative.stop();
-                            });
+                            },(index,total,lang)->stream.segment(index,total,lang));
                         if(!sessions.documentCurrent(ticket)||destroyed)return;
                         lastMoeReview=r;finishOcrProgress(progress);
                         ui(()->{
