@@ -1,3 +1,11 @@
+# VisionMaxRead LAB 0.6.3 — HobbyLM en direct
+
+**VMR-015 expérimental** : HobbyLM-1B est interrogé avec son chat template officiel `<|user|>` / `<|assistant|>`, sans hypothèse Liquid ajoutée. La génération **réellement produite jeton par jeton par le moteur Rust** apparaît dans une fenêtre accessible avec compteur, bouton **Arrêter** et **Copier flux** après consentement. Une réponse rejetée pour incohérence de nombres ne peut plus être sélectionnée comme texte final ; Indra reste intact. Le flux n'est pas un canal caché de raisonnement. Voir [protocole et limites VMR-015](docs/VMR-015-moe-live-token-stream.md).
+
+**Aucune amélioration de qualité encore démontrée sur Samsung** : il faut tester l'APK sur le même manuscrit. Le laboratoire reste **sans Qwen, entièrement hors ligne**, avec Indra, OrderNet, LM, Liquid en option, vrai sparse MoE HobbyLM, Siwis/Jessica et tous les boutons de copie des passes. Aucune fusion main, aucune Release sans validation.
+
+---
+
 # VisionMaxRead VMR-014 — premier vrai MoE sur Android (EXPÉRIMENTAL)
 
 **À ne pas confondre avec la LAB 0.6.1, plus stable, qui ajoute déjà tous les boutons de copie.** VMR-014 `feature/vmr014-hobbylm-moe-android` tente un **véritable réseau MoE HobbyLM-1B**, indépendant de Liquid, avec 64 experts routés et 8 activés par jeton. C'est une *alternative* au Meta MobileMoE-S-QAT (gated 401, licences de recherche non commerciale), pas une version Meta.
