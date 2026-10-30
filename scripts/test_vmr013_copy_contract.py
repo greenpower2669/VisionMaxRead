@@ -23,6 +23,7 @@ assert "passReport(int index)" in trace
 technical=trace.split('synchronized String metricsReport(){')[1].split('private static String render')[0]
 assert "p.text.length()" in technical
 assert ".append(p.text)" not in technical,"technical logs must not contain document text"
-assert "if(p.status.equals(\"executed\"))" in trace
+assert "p.status.equals(\"executed\")" in trace
+assert "p.status.equals(\"interrupted\")" in trace
 assert "MobileMoE" in ui and "not_run" in ui
 print("VMR-013: direct copy buttons, per-pass and full logs, privacy guardrails PASS")
