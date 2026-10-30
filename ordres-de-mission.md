@@ -304,3 +304,6 @@ Fab demande explicitement deux modèles sélectionnables Liquid 1.2B et Qwen3 1.
 
 ## VMR-017 — avenant continuité (30/10/2026)
 Fab demande de corriger le passage entre phrases après essai Samsung. Défaut confirmé : contexte marqué dans les logs mais non inséré par le prompt mal échappé. Correctif : transmission effective du précédent OCR et de l'ouverture incertaine, test du vrai prompt, comparaison non destructive des hypothèses rejetées, LAB incrémentale 0.6.6/code19. Préserver Indra, hors ligne et confidentialité. Rester sur branche VMR-017, sans merge main ni Release. Référence : docs/VMR-017-continuity-correction.md.
+
+## VMR-017 — suite de corrections autorisée (30/10/2026)
+Correction du comportement HobbyLM après le retour Samsung : retrait des trois lignes maximum au profit d'une segmentation conservatrice configurable et d'un filtre distinguant hypothèses de réparation plausibles et propositions admissibles. Conserver original Indra, contexte précédent incertain, confidentialité, mode avion, streaming et signature incrémentale LAB code20. CI et essai Samsung avant validation de précision ; ne pas fusionner main ni publier de Release.

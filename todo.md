@@ -543,3 +543,10 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [ ] Vérifier CI et APK direct du dernier HEAD ; tester sur Samsung même document, les lignes 2/3 avec contexte réel, fidélité et mémoire.
 - [ ] Toujours ouverts : EOS précis, continuation des jetons, plus de trois lignes, comparaison qualité et Q4 natif.
 - [ ] Aucun merge `main` ni Release sans accord.
+
+## VMR-017 — deuxième lot de corrections 0.6.7/code20
+- [x] Supprimer le plafond des trois seules lignes : segmenter par offsets OCR sans perdre les espaces, proposer 3/12/24/40 passages avec 12 par défaut.
+- [x] Identifier les corrections plausibles de mots capitalisés pour relecture humaine, jamais pour validation automatique ; conserver les rejets des hallucinations.
+- [x] Étendre tests JVM des segments, fidélité source et faux positifs, conserver streaming/session/HobbyLM/Indra.
+- [ ] **BLOQUANT** Confirmer la CI du dernier HEAD et l'APK LAB 0.6.7/code20 direct signé ; vérifier sur Samsung les longs documents, correction de « française », consommation PSS/temps, arrêt et original inchangé.
+- [ ] Toujours à faire : EOS Hobby-rs explicite, continuation avec KV, Q4 natif et comparaison CER/WER ; aucun merge main/Release.

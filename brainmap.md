@@ -335,3 +335,8 @@ Instruction de Fab : « Ok on garde qwen et on optimisé le reste, l audio est p
 
 ## VMR-017 — reprise du contexte
 Point d'entrée du correctif : `docs/VMR-017-continuity-correction.md`. `MoePromptBuilder.java` (vrai prompt), `DocumentContextMemory.java` (précédent OCR et début incertain), `HobbyMoeReview.java` (ctx_sent/ctx_chars), `scripts/test_vmr017_context_contract.py` (régression JVM). LAB 0.6.6/code19, source non validée sur Samsung ; pas de merge ni Release.
+
+## VMR-017 — segmentation conservatrice
+- `MoeSegmentPlanner.java` : segments OCR à offsets originaux, limites 150 caractères / 40 segments, délimitation de mots, source inchangée.
+- `HobbyMoeReview.java` : reconstruit propositions par offsets, compte segments et recommandations de relecture ; `OcrProposalGuard.java` : mots capitalisés plausibles marqués révision manuelle.
+- `MainActivity.java` : réglage 3/12/24/40 et information d'accessibilité ; `scripts/test_vmr017_contract.py` : régressions. LAB 0.6.7/code20 ; aucun merge/Release.
