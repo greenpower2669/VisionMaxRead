@@ -13,15 +13,19 @@ final class HobbyMoeNative {
     private static volatile boolean enabled=true;
     static{try{System.loadLibrary("vmr_moe");}catch(UnsatisfiedLinkError e){enabled=false;}}
     private HobbyMoeNative(){}
-    private static native byte[] infer(String model,String prompt,int maxTokens);
+    interface TokenListener {
+        /** Invoked synchronously by Rust on the background inference thread. */
+        void onToken(String delta,int tokenCount);
+    }
+    private static native byte[] infer(String model,String prompt,int maxTokens,TokenListener listener);
     static native void stop();
     static boolean available(){return enabled;}
-    static String generate(Context context,String prompt,int maxTokens)throws Exception{
+    static String generate(Context context,String prompt,int maxTokens,TokenListener listener)throws Exception{
         if(!enabled)throw new IllegalStateException("Rust MoE engine unavailable");
-        if(prompt.isEmpty()||prompt.length()>3500||maxTokens<1||maxTokens>128)
+        if(prompt.isEmpty()||prompt.length()>3500||maxTokens<1||maxTokens>128||listener==null)
             throw new IllegalArgumentException("MoE input invalid");
         File model=verifiedModel(context);
-        byte[] tokens=infer(model.getAbsolutePath(),prompt,maxTokens);
+        byte[] tokens=infer(model.getAbsolutePath(),prompt,maxTokens,listener);
         if(tokens==null)throw new IllegalStateException("MoE produced no output");
         return new String(tokens,StandardCharsets.UTF_8).trim();
     }
