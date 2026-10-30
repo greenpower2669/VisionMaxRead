@@ -19,7 +19,7 @@ assert "loadMs=nativeOpen" in native
 assert "pssAfterLoad=" in native
 assert "try(HobbyMoeNative.Session session=new HobbyMoeNative.Session(context))" in review
 assert "indexes.size()<3" in review and "source.length()>150" in review
-assert "session.generate(buildPrompt(source,language,useContext?memory.previousSummary():""),budget" in review
+assert 'session.generate(buildPrompt(source,language,useContext?memory.previousSummary():""),budget' in review
 assert "trace.add(context,\"P4_MOE_SESSION\"" in review
 assert '"P4_MOE_SEG_"+(n+1)' in review
 assert "Conserve exactement les nombres" in review
