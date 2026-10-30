@@ -25,12 +25,18 @@ final class GuardSmoke {
        throw new AssertionError("hypothesis must remain hypothesis");
    m.reset();
    if(!m.previousSummary().isEmpty()||m.position()!=0)throw new AssertionError("reset");
+   String doc="Mme. Dupont habite Paris. 22 janvier 1942. Le Dr. Robert écrit.";
+   StringBuilder back=new StringBuilder();
+   for(DocumentSentenceChunks.Segment seg:DocumentSentenceChunks.split(doc))back.append(seg.raw);
+   if(!doc.equals(back.toString()))throw new AssertionError("sentence lossless");
+   if(DocumentSentenceChunks.split("Le 22.01.1942 est une date. Une autre phrase.").size()!=2)
+       throw new AssertionError("numeric date split");
    System.out.println("VMR017 regression PASS");
  }
 }
 """)
     subprocess.run(["javac","-encoding","UTF-8","-d",tmp,str(base/"AdaptiveTokenBudget.java"),
-                    str(base/"OcrProposalGuard.java"),str(base/"DocumentContextMemory.java"),str(harness)],check=True)
+                    str(base/"OcrProposalGuard.java"),str(base/"DocumentContextMemory.java"),str(base/"DocumentSentenceChunks.java"),str(harness)],check=True)
     subprocess.run(["java","-cp",tmp,"fr.visionmaxread.GuardSmoke"],check=True)
 review=(base/"HobbyMoeReview.java").read_text()
 native=(base/"HobbyMoeNative.java").read_text()

@@ -521,3 +521,10 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [ ] **D** Corpus A/B indépendants, mémoire générale confirmée ≤300 caractères, tableau entités+incertitudes, gestion confidentialité/reprise, CER/WER FR/EN et images historiques.
 - [ ] **E** Q4 natif mmap sans conversion Q8 et cache experts borné si possible; mesurer PSS/chargement/résidence/tokens et pressions Android, annulation, long cours sur Samsung.
 - [ ] Construire l'APK LAB signé direct **sans ZIP** après tests et CI ; **aucun merge main, aucune Release sans validation Fab**.
+
+### VMR-017 — intégration Q4 optionnelle (30/10/2026)
+- [x] GGUF Liquid 1.2B QAD-Q4_0 (SHA256 `bb741ebb...`) et Qwen3 1.7B Q4_K_M ggml-org (SHA256 `d2387ca2...`) : empreintes vérifiées depuis les pages primaires Hugging Face, aucune dépendance réseau Android. Import SAF copié en privé et contrôlé taille/SHA.
+- [x] Réutilisation de `libvmr_liquid.so` llama.cpp existante via constructeur `LiquidNative(File)`; chargement d'un modèle vérifié, session à plusieurs phrases, déchargement sur close, C++ enrichi pour exposer raison EOS / jetons / plafond. **Ce sont des chemins de code, leur compatibilité réelle Android ARM64 avec ces deux GGUF reste à tester.**
+- [x] Sélecteur Réglages aucun correcteur/Liquid1.2/Qwen1.7, boutons d'import, action correcteur après Indra, FR/EN avec/sans contexte. Traitement expérimental ≤40 segments, refus de proposition sans EOS ou hors source, origine toujours préservée.
+- [ ] **À vérifier en CI** : code Java+JNI, tests de régression et signes ; test réel Android en mode avion avec les deux GGUF Q4 authentiques, TTFT, PSS/thermique, stabilité et qualité. Streaming natif token par token pour Liquid/Qwen non encore intégré (flux HobbyLM existant conservé).
+- [ ] Ne pas surestimer l'intégration : aucun modèle 1.2/1.7B embarqué dans l'APK, import externe nécessaire ; tokenizer du modèle chargé via GGUF/llama.cpp, template ChatML utilisé en C++ à comparer au tokenizer livré.

@@ -63,10 +63,13 @@ final class TextualDocumentReview {
                 boolean valid=natural&&guard.accepted;
                 done++;
                 if(valid)ok++;else no++;
-                String suffix=span.raw.substring(span.raw.indexOf(source)+source.length());
+                int at=span.raw.indexOf(source);
+                String prefix=span.raw.substring(0,at);
+                String suffix=span.raw.substring(at+source.length());
+                // Preserve leading and trailing whitespace, line breaks and punctuation.
                 // OCR remains the authority: proposals are never automatically applied.
-                proposal.append(candidate).append(suffix);
-                acceptedText.append(valid?candidate:source).append(suffix);
+                proposal.append(prefix).append(candidate).append(suffix);
+                acceptedText.append(prefix).append(valid?candidate:source).append(suffix);
                 trace.add(context,"VMR017_TEXT_SEG_"+(index+1),spec.name,
                     "executed",candidate,ms,pss(),
                     "language="+language+" context="+useContext+" tokens="+produced+

@@ -10,7 +10,9 @@ trace=(app/"OcrTrace.java").read_text()
 gradle=(root/"app/build.gradle").read_text()
 workflow=(root/".github/workflows/android.yml").read_text()
 prepare=(root/"scripts/prepare_indra_models.py").read_text()
-assert "Qwen" not in main and "qwen" not in main
+# VMR-010 forbids the retired Qwen visual OCR runtime. VMR-017 intentionally
+# adds Qwen3 text after Indra, without recreating the removed OCR service.
+assert 'OfflineCorrectionModels.QWEN_1700' in main
 assert "qwen" not in workflow.lower() and "qwen" not in gradle.lower().replace('// qwen and its litert-lm model/runtime deliberately removed from vmr-010.','')
 assert not (app/"QwenOcrService.kt").exists()
 assert not (app/"SpecializedOcrService.kt").exists()
@@ -23,4 +25,4 @@ assert 'p.status.equals("executed")' in trace
 assert 'p.status.equals("interrupted")' in trace, 'partial output must be explicitly labeled'
 assert "p.text" not in trace.split("DebugLog.append(context")[1].split(";")[0], "text leaked to debug log"
 assert "sans réseau" not in main or "INTERNET" not in (root/"app/src/main/AndroidManifest.xml").read_text()
-print("VMR-010 contract: no Qwen, offline Indra+OrderNet, honest semantic statuses, private logs")
+print("VMR-010+017 contract: no retired Qwen visual OCR, offline Indra+OrderNet, private logs")
