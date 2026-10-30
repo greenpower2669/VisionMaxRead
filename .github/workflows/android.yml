@@ -109,10 +109,12 @@ jobs:
           cargo build --manifest-path native/moe/vendor/hobbylm/hobby-rs/Cargo.toml --release --bin hobby-rs
           timeout 240s native/moe/vendor/hobbylm/hobby-rs/target/release/hobby-rs \
             --model app/src/main/assets/moe/hobbylm-1b-sft-3450-Q4_K_M.gguf \
-            --prompt 'USER: Corrige OCR: Madame la Presidente. ASSISTANT:' \
+            --prompt '<|user|>\nCorrige: Madame la Presidente.\n<|assistant|>\n' \
             --n 12 --temp 0 --threads 2 > /tmp/vmr014-moe-smoke.txt
           test -s /tmp/vmr014-moe-smoke.txt
           echo 'Genuine routed HobbyLM MoE CPU inference smoke verified (not Android)' 
+      - name: VMR-015 live token and chat-template contract
+        run: python3 scripts/test_vmr015_stream_contract.py
       - name: Tests, lint and signed APK only (VMR-014 experimental)
         run: ./gradlew :core:check :app:lintDebug :app:assembleDebug --no-daemon
       - name: Lossless archive contract
@@ -128,14 +130,14 @@ jobs:
           badging="$("$build_tools/aapt" dump badging "$apk" | head -n1)"
           echo "$badging"
           echo "$badging" | grep -F "name='fr.visionmaxread.labdebug'"
-          echo "$badging" | grep -F "versionCode='15'"
+          echo "$badging" | grep -F "versionCode='16'"
           cert="$("$build_tools/apksigner" verify --print-certs "$apk" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print tolower($2); exit}')"
           echo "APK_CERT_SHA256=$cert"
           test "$cert" = "$VMR_LAB_CERT_SHA256"
       - name: Name artifacts and record sizes
         run: |
           mkdir artifacts
-          apk="artifacts/VisionMaxRead-0.6.2-REAL-MOE-LAB.apk"
+          apk="artifacts/VisionMaxRead-0.6.3-MOE-LIVE-LAB.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "$apk"
           cp app/build/reports/lint-results-debug.html artifacts/
           {
@@ -145,13 +147,13 @@ jobs:
             echo "APK_BYTES=$(stat -c%s "$apk")"
             echo "APK_SHA256=$(sha256sum "$apk" | awk '{print $1}')"
             echo "APK_PACKAGE=fr.visionmaxread.labdebug"
-            echo "APK_VERSION_CODE=15"
+            echo "APK_VERSION_CODE=16"
             echo "APK_CERT_SHA256=$VMR_LAB_CERT_SHA256"
           } | tee artifacts/build-manifest.txt
       - name: Upload compact build metadata
         uses: actions/upload-artifact@v4
         with:
-          name: VisionMaxRead-0.6.2-REAL-MOE-LAB-metadata
+          name: VisionMaxRead-0.6.3-MOE-LIVE-LAB-metadata
           path: artifacts/build-manifest.txt
           retention-days: 14
       # GitHub Actions upload-artifact v7 supports *direct* single-file
@@ -160,7 +162,7 @@ jobs:
       - name: Upload signed LAB APK directly (no ZIP)
         uses: actions/upload-artifact@v7
         with:
-          path: artifacts/VisionMaxRead-0.6.2-REAL-MOE-LAB.apk
+          path: artifacts/VisionMaxRead-0.6.3-MOE-LIVE-LAB.apk
           archive: false
           if-no-files-found: error
           retention-days: 14
