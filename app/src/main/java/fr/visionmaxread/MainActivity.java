@@ -18,7 +18,7 @@ import fr.visionmaxread.core.SessionGate;
 import fr.visionmaxread.core.ReaderSessions;
 
 public final class MainActivity extends Activity {
-    private static final int CAMERA_PERMISSION=10,PHOTO=20;
+    private static final int CAMERA_PERMISSION=10,PHOTO=20,IMPORT_LIQUID=31,IMPORT_QWEN=32;
     private static final int INK=Color.rgb(16,44,60),PAPER=Color.rgb(255,249,238),TEAL=Color.rgb(0,105,92),RED=Color.rgb(179,38,32),DISABLED=Color.rgb(145,145,145);
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private final ExecutorService paddleWorker=Executors.newSingleThreadExecutor();
@@ -32,7 +32,7 @@ public final class MainActivity extends Activity {
     private TextureView preview;private ImageView frozen;private FrameLayout imageArea;private ProgressBar ocrProgress;
     // Only an in-memory reference to the displayed photo, never copied to persistent storage.
     private Bitmap compareBitmap;
-    private EditText text;private TextView status;private Button freeze,play,compare,indra,liquid,moe,copyLogs,copyResults;private CameraController camera;
+    private EditText text;private TextView status;private Button freeze,play,compare,indra,liquid,moe,correction,copyLogs,copyResults;private CameraController camera;
     private HistoryStore history;private ModelFiles models;private SharedPreferences prefs;
     private boolean changingText,destroyed,reading,cameraMode;private String maskedPreview="";private int textSp=24;
     private volatile OcrTrace lastTrace;
@@ -86,6 +86,8 @@ public final class MainActivity extends Activity {
         liquid.setVisibility(View.GONE);liquid.setEnabled(false);content.addView(liquid);
         moe=button("Tester vrai MoE · HobbyLM (hors ligne)",INK,this::startHobbyMoeReview);
         moe.setVisibility(View.GONE);moe.setEnabled(false);content.addView(moe);
+        correction=button("Correcteur OCR : Aucun (OCR seul)",TEAL,this::startTextCorrection);
+        correction.setVisibility(View.GONE);correction.setEnabled(false);content.addView(correction);
         ocrProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);ocrProgress.setMax(100);ocrProgress.setVisibility(View.GONE);ocrProgress.setContentDescription("Progression de la reconnaissance de texte");content.addView(ocrProgress,new LinearLayout.LayoutParams(-1,dp(10)));
         status=label("Choisis Caméra, Photo ou colle un texte.",18);status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);status.setPadding(0,dp(8),0,dp(8));content.addView(status);
         text=new EditText(this);text.setHint("Le texte apparaît ici. Tu peux le corriger ou coller un texte.");text.setTextSize(textSp);text.setTextColor(INK);text.setHintTextColor(Color.rgb(74,86,95));text.setGravity(Gravity.TOP);text.setMinLines(5);text.setSingleLine(false);text.setSelectAllOnFocus(false);text.setBackgroundTintList(android.content.res.ColorStateList.valueOf(TEAL));
@@ -104,7 +106,7 @@ public final class MainActivity extends Activity {
     private long beginOcrProgress(int value){long id=progressGeneration.incrementAndGet();ui(()->{if(ocrProgress!=null&&progressGeneration.get()==id){ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(value);}});return id;}
     private void updateOcrProgress(long id,int value){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(Math.max(0,Math.min(100,value)));});}
     private void finishOcrProgress(long id){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setIndeterminate(false);ocrProgress.setProgress(100);ocrProgress.postDelayed(()->{if(progressGeneration.get()==id)ocrProgress.setVisibility(View.GONE);},900);});}
-    private long newDocument(){if(activeMoeStream!=null){activeMoeStream.cancelAndClose();activeMoeStream=null;}stopReading();camera.stop();cameraMode=false;maskedPreview="";lastTrace=null;lastScan=null;lastReview=null;lastMoeReview=null;compareBitmap=null;if(HobbyMoeNative.available())HobbyMoeNative.stop();if(copyLogs!=null)copyLogs.setEnabled(true);if(copyResults!=null)copyResults.setEnabled(false);if(LiquidNative.available())LiquidNative.stop();ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}if(liquid!=null){liquid.setEnabled(false);liquid.setVisibility(View.GONE);}if(moe!=null){moe.setEnabled(false);moe.setVisibility(View.GONE);}return sessions.replaceSource();}
+    private long newDocument(){if(activeMoeStream!=null){activeMoeStream.cancelAndClose();activeMoeStream=null;}stopReading();camera.stop();cameraMode=false;maskedPreview="";lastTrace=null;lastScan=null;lastReview=null;lastMoeReview=null;compareBitmap=null;if(HobbyMoeNative.available())HobbyMoeNative.stop();if(copyLogs!=null)copyLogs.setEnabled(true);if(copyResults!=null)copyResults.setEnabled(false);if(LiquidNative.available())LiquidNative.stop();ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}if(liquid!=null){liquid.setEnabled(false);liquid.setVisibility(View.GONE);}if(moe!=null){moe.setEnabled(false);moe.setVisibility(View.GONE);}if(correction!=null){correction.setEnabled(false);correction.setVisibility(View.GONE);}return sessions.replaceSource();}
     private void startCamera(){
         newDocument();cameraMode=true;imageArea.setVisibility(View.VISIBLE);preview.setVisibility(View.VISIBLE);frozen.setVisibility(View.GONE);freeze.setVisibility(View.VISIBLE);freeze.setEnabled(true);setText("");status.setText("Vise le texte puis appuie sur Figer l’image.");
         if(checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION);
@@ -112,7 +114,9 @@ public final class MainActivity extends Activity {
     private void choosePhoto(){newDocument();Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE);try{startActivityForResult(pick,PHOTO);}catch(ActivityNotFoundException e){status.setText("Aucun sélecteur de photos disponible.");}}
     private void manualText(){newDocument();imageArea.setVisibility(View.GONE);freeze.setVisibility(View.GONE);status.setText("Colle ou écris ton texte, puis appuie sur Lire.");text.requestFocus();}
     @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results){super.onRequestPermissionsResult(request,permissions,results);if(request==CAMERA_PERMISSION&&cameraMode){if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else{freeze.setEnabled(false);status.setText("Caméra refusée. Photo et Texte restent disponibles.");}}}
-    @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(result==RESULT_OK&&data!=null&&data.getData()!=null){Uri uri=data.getData();if(request==PHOTO)processImage(()->ImageLoader.fromUri(this,uri));}}
+    @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(result==RESULT_OK&&data!=null&&data.getData()!=null){Uri uri=data.getData();if(request==PHOTO)processImage(()->ImageLoader.fromUri(this,uri));
+        else if(request==IMPORT_LIQUID||request==IMPORT_QWEN)storeModelImport(request==IMPORT_LIQUID?
+            OfflineCorrectionModels.LIQUID_1200:OfflineCorrectionModels.QWEN_1700,uri);}}
     interface LoadImage{Bitmap get()throws Exception;}
     private void processImage(LoadImage source){
         long ticket=newDocument(),privacy=sessions.historyTicket(),choice=ocrChoice.get();
@@ -165,7 +169,7 @@ public final class MainActivity extends Activity {
                         finishOcrProgress(progress);
                         ui(()->{
                             if(!sessions.documentCurrent(ticket)||compareBitmap!=image)return;
-                            setIndraAvailable(true);copyLogs.setEnabled(true);copyResults.setEnabled(true);liquid.setVisibility(View.VISIBLE);liquid.setEnabled(LiquidNative.available());moe.setVisibility(View.VISIBLE);moe.setEnabled(HobbyMoeNative.available());
+                            setIndraAvailable(true);copyLogs.setEnabled(true);copyResults.setEnabled(true);liquid.setVisibility(View.VISIBLE);liquid.setEnabled(LiquidNative.available());moe.setVisibility(View.VISIBLE);moe.setEnabled(HobbyMoeNative.available());updateCorrectionButton();
                             if(ocrChoice.get()==choice)setText(scan.lmOrdered);
                             status.setText("Indra + LM : "+scan.lineCount+" lignes, "+elapsed+" ms. "+
                                 "Correction de "+scan.lmChanged+" ligne(s) ; OrderNet/XY-cut à comparer dans le rapport.");
@@ -213,6 +217,114 @@ public final class MainActivity extends Activity {
             });
         });
     }
+    /** Explicit user import of a previously downloaded, pinned Q4 model through Android SAF. */
+    private void chooseModelImport(int selected){
+        Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*")
+            .addCategory(Intent.CATEGORY_OPENABLE);
+        try{startActivityForResult(pick,selected==OfflineCorrectionModels.LIQUID_1200?
+            IMPORT_LIQUID:IMPORT_QWEN);}
+        catch(ActivityNotFoundException e){status.setText("Aucun explorateur de documents disponible.");}
+    }
+    private void storeModelImport(int id,Uri uri){
+        String name=OfflineCorrectionModels.spec(id).name;
+        status.setText("Vérification SHA-256 et copie privée du modèle "+name+"…");
+        semanticWorker.execute(()->{
+            try{
+                OfflineCorrectionModels.importFromDocument(this,id,uri);
+                DebugLog.append(this,"TEXT_MODEL_IMPORT successful id="+id+
+                    " quant="+OfflineCorrectionModels.spec(id).quant);
+                ui(()->{if(!destroyed){status.setText(name+
+                    " importé et authentifié. Aucun téléchargement effectué par l'application.");
+                    updateCorrectionButton();}});
+            }catch(Exception e){
+                DebugLog.append(this,"TEXT_MODEL_IMPORT failed id="+id+
+                    " reason="+e.getClass().getSimpleName());
+                ui(()->{if(!destroyed){status.setText("Import "+name+
+                    " refusé : fichier incomplet, empreinte non conforme ou stockage insuffisant.");}});
+            }
+        });
+    }
+    private void updateCorrectionButton(){
+        if(correction==null)return;
+        int choice=prefs.getInt("textModel",OfflineCorrectionModels.OCR_ONLY);
+        if(choice<0||choice>2)choice=OfflineCorrectionModels.OCR_ONLY;
+        correction.setText("Correcteur : "+OfflineCorrectionModels.label(choice));
+        correction.setVisibility(lastScan==null?View.GONE:View.VISIBLE);
+        correction.setEnabled(lastScan!=null && choice!=OfflineCorrectionModels.OCR_ONLY &&
+            OfflineCorrectionModels.installed(this,choice) && LiquidNative.available());
+    }
+    /** Uses the same existing native llama.cpp library, but separate verified text weights. */
+    private void startTextCorrection(){
+        final IndraOcrService.Scan scan=lastScan;final OcrTrace trace=lastTrace;
+        final long ticket=sessions.documentTicket();
+        if(scan==null||trace==null||!sessions.documentCurrent(ticket))return;
+        int selected=prefs.getInt("textModel",OfflineCorrectionModels.OCR_ONLY);
+        if(selected==OfflineCorrectionModels.OCR_ONLY){
+            status.setText("Mode OCR uniquement : aucune IA de correction chargée.");return;
+        }
+        if(selected!=OfflineCorrectionModels.LIQUID_1200 && selected!=OfflineCorrectionModels.QWEN_1700)return;
+        if(!OfflineCorrectionModels.installed(this,selected)){
+            status.setText("Importe d'abord le GGUF Q4 authentifié depuis Réglages.");return;
+        }
+        final int model=selected;
+        final int[] mode={0};
+        new AlertDialog.Builder(this)
+            .setTitle("Correcteur textuel · "+OfflineCorrectionModels.label(model))
+            .setSingleChoiceItems(new String[]{"Français + contexte","Français sans contexte",
+                 "English + context","English without context"},0,(d,w)->mode[0]=w)
+            .setMessage("Analyse séquentielle de 40 phrases au maximum. Chaque phrase reçoit son "+
+                "contexte indépendant ; seules les propositions lexicalement compatibles "+
+                "terminées naturellement peuvent devenir candidates. Texte OCR toujours préservé. "+
+                "Modèle Q4 importé, exécution CPU expérimentale : RAM et durée à mesurer.")
+            .setPositiveButton("Lancer l'essai",(d,w)->{
+                correction.setEnabled(false);
+                status.setText("Vérification et chargement du correcteur "+OfflineCorrectionModels.label(model)+"…");
+                final long loading=beginOcrProgress(-1);
+                final int chosen=mode[0];
+                semanticWorker.execute(()->{
+                    try{
+                        TextualDocumentReview.Result result=TextualDocumentReview.run(
+                            this,scan.lmOrdered,trace,model,chosen<2?"fr":"en",chosen%2==0,
+                            (index,total,name)->ui(()->{
+                                if(!destroyed&&sessions.documentCurrent(ticket))
+                                    status.setText(name+" : phrase "+index+"/"+total+
+                                        " · correction en cours (OCR original conservé)");
+                            }));
+                        finishOcrProgress(loading);
+                        ui(()->{
+                            if(destroyed||!sessions.documentCurrent(ticket))return;
+                            updateCorrectionButton();
+                            status.setText(result.engine+" : "+result.accepted+
+                                " proposition(s) admissible(s), "+result.rejected+
+                                " rejet(s), "+result.elapsedMs+" ms. Vérifie avec l'image.");
+                            new AlertDialog.Builder(this).setTitle("Proposition à vérifier")
+                                .setMessage("Original Indra inchangé ; les propositions rejetées "+
+                                    "ne remplacent jamais sa lecture. Tout usage nécessite "+
+                                    "une comparaison visuelle et une confirmation.")
+                                .setPositiveButton("Voir corrections admissibles",(a,b)->
+                                    showComparisonText(result.engine+" — corrections candidates",
+                                        result.verifiedCandidates,ticket))
+                                .setNeutralButton("Voir sorties brutes (sensibles)",(a,b)->
+                                    showComparisonText(result.engine+" — sorties brutes",
+                                        result.proposal,ticket))
+                                .setNegativeButton("Fermer",null).show();
+                        });
+                    }catch(Exception|OutOfMemoryError e){
+                        finishOcrProgress(loading);
+                        if(!(e instanceof IllegalStateException && "Cancelled".equals(e.getMessage())))
+                            DebugLog.exception(this,"TEXT_CORRECTION",e);
+                        trace.add(this,"VMR017_TEXT_ERROR",OfflineCorrectionModels.label(model),
+                            "error","",0,processPssMb(),e.getClass().getSimpleName());
+                        ui(()->{if(!destroyed&&sessions.documentCurrent(ticket)){
+                            updateCorrectionButton();
+                            status.setText("Correcteur indisponible ou arrêté. OCR Indra conservé ; "+
+                                "consulte les logs techniques.");
+                        }});
+                    }
+                });
+            }).setNegativeButton("Annuler",null).show();
+    }
+
     private void startLiquidReview(){
         final IndraOcrService.Scan scan=lastScan;
         final OcrTrace trace=lastTrace;
@@ -505,6 +617,23 @@ public final class MainActivity extends Activity {
         CheckBox keep=new CheckBox(this);keep.setText("Conserver les textes après masquage local");keep.setTextSize(18);keep.setChecked(prefs.getBoolean("history",true));panel.addView(keep);
         CheckBox hdVoice=new CheckBox(this);hdVoice.setText("Voix Siwis HD (français, articulation précise)");hdVoice.setTextSize(18);hdVoice.setChecked(prefs.getBoolean("voiceHD",true));panel.addView(hdVoice);
         panel.addView(label("Siwis HD ou Jessica (voix originale), moteur Sherpa-ONNX/Piper hors ligne ; une seule voix chargée.",16));
+        panel.addView(label("Correcteur documentaire (poids GGUF Q4 importés hors ligne)",18));
+        Spinner textEngine=new Spinner(this);
+        ArrayAdapter<String> engineAdapter=new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_item,new String[]{
+                "Aucun correcteur — OCR uniquement","Liquid LFM2.5-1.2B · QAD Q4",
+                "Qwen3 1.7B · Q4_K_M"});
+        engineAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        textEngine.setAdapter(engineAdapter);
+        textEngine.setSelection(Math.max(0,Math.min(2,prefs.getInt("textModel",0))));
+        textEngine.setContentDescription("Choix du modèle de correction après OCR");
+        panel.addView(textEngine);
+        panel.addView(button("Importer Liquid 1.2B GGUF depuis le stockage",INK,
+            ()->chooseModelImport(OfflineCorrectionModels.LIQUID_1200)));
+        panel.addView(button("Importer Qwen3 1.7B GGUF depuis le stockage",INK,
+            ()->chooseModelImport(OfflineCorrectionModels.QWEN_1700)));
+        panel.addView(label("Modèles téléchargés séparément, contrôle SHA-256 obligatoire. "+
+            "HobbyLM reste expérimental et indépendant. Un seul gros modèle chargé à la fois.",16));
         panel.addView(label("Plafond de sécurité HobbyLM par phrase (jetons ; génération adaptative)",18));
         Spinner moeCap=new Spinner(this);
         String[] capLabels={"128 jetons","256 jetons","512 jetons"};
@@ -523,7 +652,7 @@ public final class MainActivity extends Activity {
         panel.addView(button("Journal debug",INK,this::showDebugLog));
         panel.addView(button("Effacer l’historique",RED,this::confirmClear));
         ScrollView settingsScroll=new ScrollView(this);settingsScroll.addView(panel);
-        new AlertDialog.Builder(this).setTitle("Réglages").setView(settingsScroll).setPositiveButton("Enregistrer",(d,w)->{stopReading();boolean hiFi=hdVoice.isChecked();prefs.edit().putBoolean("history",keep.isChecked()).putBoolean("voiceHD",hiFi).putFloat("speed",0.75f+speed.getProgress()/100f).putInt("moeTokenCap",new int[]{128,256,512}[moeCap.getSelectedItemPosition()]).apply();worker.execute(()->voice.selectVoice(hiFi));if(!keep.isChecked())sessions.clearHistory();}).setNegativeButton("Annuler",null).show();
+        new AlertDialog.Builder(this).setTitle("Réglages").setView(settingsScroll).setPositiveButton("Enregistrer",(d,w)->{stopReading();boolean hiFi=hdVoice.isChecked();prefs.edit().putBoolean("history",keep.isChecked()).putBoolean("voiceHD",hiFi).putFloat("speed",0.75f+speed.getProgress()/100f).putInt("moeTokenCap",new int[]{128,256,512}[moeCap.getSelectedItemPosition()]).putInt("textModel",textEngine.getSelectedItemPosition()).apply();updateCorrectionButton();worker.execute(()->voice.selectVoice(hiFi));if(!keep.isChecked())sessions.clearHistory();}).setNegativeButton("Annuler",null).show();
     }
     private void showDebugLog(){
         String value=DebugLog.read(this);
