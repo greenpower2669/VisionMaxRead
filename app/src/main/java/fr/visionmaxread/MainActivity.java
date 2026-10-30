@@ -448,7 +448,8 @@ public final class MainActivity extends Activity {
                                     " correction(s) lexicalement plausibles à relire.":"")+
                                 (r.cappedSegments>0?" "+r.cappedSegments+
                                     " phrase(s) au plafond, fin incertaine.":""),
-                                approved?()->showComparisonText("MoE — candidat à vérifier",r.preview,ticket):
+                                r.reviewOnlySegments>0?()->inspectUnvalidatedMoe(r,ticket):
+                                    approved?()->showComparisonText("MoE — candidat à vérifier",r.preview,ticket):
                                     ()->inspectUnvalidatedMoe(r,ticket));
                         });
                     }catch(Exception|OutOfMemoryError e){
