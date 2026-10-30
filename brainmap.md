@@ -313,3 +313,10 @@ Instruction de Fab : « Ok on garde qwen et on optimisé le reste, l audio est p
 - `MoeStreamDialog.java` : affichage progressif auto-scroll, temps et nombre de jetons, Arrêter, Copier flux sensible après accord, Fermer.
 - `MainActivity.java` : bouton MoE ouvre immédiatement fenêtre, envoie callback, sauvegarde diagnostic, n'autorise comparaison/usage que si garde-fou validé, ferme/arrête à la prochaine image.
 - `scripts/test_vmr015_stream_contract.py`, CI Rust/Java, `docs/VMR-015-moe-live-token-stream.md`. LAB code16, branche VMR-015. Ancienne VMR-014 reste sans modification.
+
+## VMR-016 — index de la session MoE réutilisée
+- `native/moe/src/lib.rs`: ajout session globale Rust `OnceLock<Mutex<Option<Loaded>>>` avec `nativeOpen`, `nativeGenerateLoaded`, `nativeWeightBytes`, `nativeClose` ; chargement poids une fois par lot, contexte neuf à chaque phrase et libération à la fin.
+- `HobbyMoeNative.java`: `Session AutoCloseable`, SHA modèle une seule fois à l'ouverture, métriques load_ms/PS S et poids Q8.
+- `HobbyMoeReview.java`: sélection fr/en, trois lignes max ≤150 chars, prompts distincts, arbitrage strict chiffres, traces P4 par ligne + P5.
+- `MoeStreamDialog.java`/`MainActivity.java`: marqueurs de ligne dans le flux, sélecteur Français/English et boutons stop/copie conservés.
+- `scripts/test_vmr016_memory_contract.py`, `docs/VMR-016-moe-memory-fr-en.md`. VMR-016 LAB 0.6.4/code17 visée ; CI et test Samsung nécessaires.
