@@ -499,3 +499,12 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [x] APK `VisionMaxRead-0.6.4-MOE-SESSION-FR-EN-LAB.apk`, artefact direct sans ZIP `12976964615` : **1 252 679 509 octets**, SHA256 `5fadf95c071f7048096de11cf76ecfed063a791fb69c7971f157021502cfc1d6`, code17, certificat LAB `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
 - [ ] **Essai réel Samsung** indispensable : succès des trois sous-passes, latence de chargement unique, comparaison PSS RAM, temps/token, qualité français/anglais, arrêt et sortie partielle, validité des chiffres. Ne pas confondre build vert avec gain mémoire ou qualité linguistique.
 - [ ] Phase suivante **Q4 natif**: tester patch officiel HobbyLM dans llama.cpp sous Android ARM64 (mmap/quantisation sans Q8 global), comparer pics RSS/PSS, qualité; cache d'experts selon mesures.
+
+## Mesures VMR-016 Samsung 30 octobre
+- [x] Trois lignes traitées dans une seule session MoE Q8 ; chargement 4,157 s ; génération 6,445 + 5,135 + 9,702 s.
+- [x] Mémoire : PSS après chargement 1607,2 Mio ; pic 1623,7 Mio ; après fermeture 276,9 Mio. Aucun gain de pic confirmé.
+- [x] Trois sorties françaises hors sujet ; filtre de chiffres et longueur a accepté à tort la deuxième ligne.
+- [ ] Prioritaire : refuser les faux positifs de correction et ajouter des tests de fidélité OCR ligne par ligne.
+- [ ] Comparer moteur Rust et runtime officiel patché HobbyLM Q4 sur corpus FR/EN, relever EOS, latence premier jeton et répétitions.
+- [ ] Évaluer Q4 natif/mmap et cache des experts pour abaisser réellement le pic mémoire.
+- [ ] Ne pas fusionner dans main ni publier une Release avant validation.
