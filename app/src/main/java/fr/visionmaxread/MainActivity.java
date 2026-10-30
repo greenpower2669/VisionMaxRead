@@ -505,6 +505,16 @@ public final class MainActivity extends Activity {
         CheckBox keep=new CheckBox(this);keep.setText("Conserver les textes après masquage local");keep.setTextSize(18);keep.setChecked(prefs.getBoolean("history",true));panel.addView(keep);
         CheckBox hdVoice=new CheckBox(this);hdVoice.setText("Voix Siwis HD (français, articulation précise)");hdVoice.setTextSize(18);hdVoice.setChecked(prefs.getBoolean("voiceHD",true));panel.addView(hdVoice);
         panel.addView(label("Siwis HD ou Jessica (voix originale), moteur Sherpa-ONNX/Piper hors ligne ; une seule voix chargée.",16));
+        panel.addView(label("Plafond de sécurité HobbyLM par phrase (jetons ; génération adaptative)",18));
+        Spinner moeCap=new Spinner(this);
+        String[] capLabels={"128 jetons","256 jetons","512 jetons"};
+        ArrayAdapter<String> capAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,capLabels);
+        capAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        moeCap.setAdapter(capAdapter);
+        int previousCap=prefs.getInt("moeTokenCap",512);
+        moeCap.setSelection(previousCap==128?0:previousCap==256?1:2);
+        moeCap.setContentDescription("Plafond de sécurité de la génération HobbyLM");
+        panel.addView(moeCap);
         TextView speedLabel=label("Vitesse de lecture",18);panel.addView(speedLabel);SeekBar speed=new SeekBar(this);speed.setMax(100);speed.setProgress(Math.round((prefs.getFloat("speed",1.0f)-0.75f)*100));panel.addView(speed);speed.setContentDescription("Vitesse de lecture de 0,75 à 1,75");
         panel.addView(button("Diagnostic 1re phrase",INK,()->worker.execute(()->{
             try{String diag=voice.diagnoseFirstPass(this);DebugLog.append(this,"PIPER diagnostic "+diag);ui(()->status.setText("Diagnostic Piper : "+diag));}
@@ -513,7 +523,7 @@ public final class MainActivity extends Activity {
         panel.addView(button("Journal debug",INK,this::showDebugLog));
         panel.addView(button("Effacer l’historique",RED,this::confirmClear));
         ScrollView settingsScroll=new ScrollView(this);settingsScroll.addView(panel);
-        new AlertDialog.Builder(this).setTitle("Réglages").setView(settingsScroll).setPositiveButton("Enregistrer",(d,w)->{stopReading();boolean hiFi=hdVoice.isChecked();prefs.edit().putBoolean("history",keep.isChecked()).putBoolean("voiceHD",hiFi).putFloat("speed",0.75f+speed.getProgress()/100f).apply();worker.execute(()->voice.selectVoice(hiFi));if(!keep.isChecked())sessions.clearHistory();}).setNegativeButton("Annuler",null).show();
+        new AlertDialog.Builder(this).setTitle("Réglages").setView(settingsScroll).setPositiveButton("Enregistrer",(d,w)->{stopReading();boolean hiFi=hdVoice.isChecked();prefs.edit().putBoolean("history",keep.isChecked()).putBoolean("voiceHD",hiFi).putFloat("speed",0.75f+speed.getProgress()/100f).putInt("moeTokenCap",new int[]{128,256,512}[moeCap.getSelectedItemPosition()]).apply();worker.execute(()->voice.selectVoice(hiFi));if(!keep.isChecked())sessions.clearHistory();}).setNegativeButton("Annuler",null).show();
     }
     private void showDebugLog(){
         String value=DebugLog.read(this);
@@ -538,6 +548,10 @@ public final class MainActivity extends Activity {
     private void ui(Runnable action){runOnUiThread(()->{if(!destroyed)action.run();});}
     @Override protected void onPause(){super.onPause();if(camera!=null)camera.stop();if(freeze!=null)freeze.setEnabled(false);stopReading();}
     @Override protected void onResume(){super.onResume();if(cameraMode&&camera!=null&&checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED){camera.start(sessions.sourceTicket());freeze.setEnabled(true);}}
-    @Override public void onTrimMemory(int level){super.onTrimMemory(level);if(level>=android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW)DebugLog.append(this,"MEMORY trim level="+level+" pssMb="+formatMb(processPssMb()));}
+    @Override public void onTrimMemory(int level){super.onTrimMemory(level);if(level>=android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW)DebugLog.append(this,"MEMORY trim level="+level+" pssMb="+formatMb(processPssMb()));
+        if(level>=android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL){
+            if(HobbyMoeNative.available())HobbyMoeNative.stop();
+            if(LiquidNative.available())LiquidNative.stop();
+        }}
     @Override protected void onDestroy(){destroyed=true;DebugLog.append(this,"SESSION destroy");sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();if(camera!=null)camera.destroy();if(LiquidNative.available())LiquidNative.stop();if(HobbyMoeNative.available())HobbyMoeNative.stop();if(activeMoeStream!=null)activeMoeStream.cancelAndClose();semanticWorker.shutdownNow();worker.shutdownNow();paddleWorker.shutdownNow();indraWorker.shutdownNow();super.onDestroy();}
 }

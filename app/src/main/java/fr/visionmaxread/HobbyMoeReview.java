@@ -36,6 +36,9 @@ final class HobbyMoeReview {
         String[] suggestions=lines.clone();
         String[] candidates=lines.clone();
         DocumentContextMemory memory=new DocumentContextMemory();
+        int configuredCap=context.getSharedPreferences("settings",Context.MODE_PRIVATE)
+            .getInt("moeTokenCap",AdaptiveTokenBudget.DEFAULT_SAFETY_CAP);
+        if(configuredCap<128||configuredCap>512)configuredCap=AdaptiveTokenBudget.DEFAULT_SAFETY_CAP;
         int good=0,bad=0;
         long totalTokens=0;
         boolean allDigits=true;
@@ -55,7 +58,7 @@ final class HobbyMoeReview {
                         "reason=long_line length="+source.length());
                     continue;
                 }
-                final int budget=AdaptiveTokenBudget.forOcrCorrection(source,AdaptiveTokenBudget.DEFAULT_SAFETY_CAP);
+                final int budget=AdaptiveTokenBudget.forOcrCorrection(source,configuredCap);
                 progress.onSegment(n+1,indexes.size(),language,budget);
                 final int[] tokenCount={0};
                 StringBuilder partial=new StringBuilder();

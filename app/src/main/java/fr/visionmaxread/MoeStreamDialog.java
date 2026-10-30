@@ -24,6 +24,7 @@ final class MoeStreamDialog {
     private boolean open,finished;
     private int currentSegment=0,totalSegments=1;
     private int currentBudget=AdaptiveTokenBudget.DEFAULT_SAFETY_CAP;
+    private long segmentStartMs,firstTokenUiDelayMs=-1;
     private Runnable compareAction;
     MoeStreamDialog(Activity activity){this.activity=activity;}
 
@@ -86,6 +87,7 @@ final class MoeStreamDialog {
         activity.runOnUiThread(()->{
             if(!open||activity.isFinishing())return;
             currentSegment=index;totalSegments=total;currentBudget=requestedBudget;
+            segmentStartMs=SystemClock.elapsedRealtime();firstTokenUiDelayMs=-1;
             if(index==1)streamText.setText("");
             else streamText.append("\n");
             streamText.append("〔"+(language.equals("en")?"English":"Français")+
@@ -102,8 +104,13 @@ final class MoeStreamDialog {
             if(!open||activity.isFinishing())return;
             // Do not erase previous segments when the per-line token count resets.
             if(!delta.isEmpty())streamText.append(delta);
-            long seconds=(SystemClock.elapsedRealtime()-started)/1000;
-            tokensLabel.setText("Phrase "+currentSegment+"/"+totalSegments+" · jetons : "+count+" / "+currentBudget+" · "+seconds+" s. "+
+            long now=SystemClock.elapsedRealtime();
+            if(firstTokenUiDelayMs<0)firstTokenUiDelayMs=Math.max(0,now-segmentStartMs);
+            long seconds=(now-started)/1000;
+            long duration=Math.max(1,now-segmentStartMs);
+            float rate=count*1000f/duration;
+            tokensLabel.setText("Phrase "+currentSegment+"/"+totalSegments+" · jetons : "+count+" / "+currentBudget+" · "+seconds+" s · 1er jeton UI ~"+
+                firstTokenUiDelayMs+" ms · débit ~"+Math.round(rate)+" jetons/s. "+
                 "Flux réel, pas une chaîne de raisonnement cachée.");
             scroller.post(()->{if(open)scroller.fullScroll(View.FOCUS_DOWN);});
         });
