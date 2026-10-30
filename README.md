@@ -1,3 +1,5 @@
+> **VMR-018 (30/10/2026)** : retrait des correcteurs génératifs Liquid, Qwen textuel, HobbyLM du parcours actif et du build. Indra + PP-OCR restent opérationnels. Surya OCR 2, LightOnOCR-3 0.8B et Nemotron 3.5 Parse sont seulement catalogués (portage ARM64 non achevé) : détails dans `docs/VMR-018-three-specialist-ocr.md`. Aucun APK/release annoncé avant CI.
+
 # VisionMaxRead LAB 0.6.3 — HobbyLM en direct
 
 **VMR-015 expérimental** : HobbyLM-1B est interrogé avec son chat template officiel `<|user|>` / `<|assistant|>`, sans hypothèse Liquid ajoutée. La génération **réellement produite jeton par jeton par le moteur Rust** apparaît dans une fenêtre accessible avec compteur, bouton **Arrêter** et **Copier flux** après consentement. Une réponse rejetée pour incohérence de nombres ne peut plus être sélectionnée comme texte final ; Indra reste intact. Le flux n'est pas un canal caché de raisonnement. Voir [protocole et limites VMR-015](docs/VMR-015-moe-live-token-stream.md).

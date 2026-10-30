@@ -290,3 +290,6 @@ Le test Samsung 0.6.5 a mis en évidence un séparateur de prompt mal échappé 
 
 ## VMR-017 — ajustements de segmentation et fidélité (30/10/2026)
 Sur `feature/vmr017-adaptive-document-context`, HobbyLM passe des seules trois lignes à un maximum configurable de 3/12/24/40 segments OCR de 150 caractères, en préservant les offsets, les espaces et le texte non examiné. `OcrProposalGuard` classe les corrections plausibles des mots capitalisés dans une catégorie à relire, sans les accepter automatiquement. LAB expérimentale 0.6.7/code20 ; CI et Samsung à vérifier. Voir `todo.md` et `docs/VMR-017-continuity-correction.md`.
+
+## VMR-018 (30/10/2026)
+Pivot vers Surya OCR 2, LightOnOCR-3 0.8B et Nemotron 3.5 Parse. Les anciens correcteurs textuels Liquid/Qwen/HobbyLM ne sont plus actifs ; Indra et PP-OCR demeurent. Le catalogue ne prouve pas une inférence Android. Lire docs/VMR-018-three-specialist-ocr.md.

@@ -550,3 +550,12 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [x] Étendre tests JVM des segments, fidélité source et faux positifs, conserver streaming/session/HobbyLM/Indra.
 - [ ] **BLOQUANT** Confirmer la CI du dernier HEAD et l'APK LAB 0.6.7/code20 direct signé ; vérifier sur Samsung les longs documents, correction de « française », consommation PSS/temps, arrêt et original inchangé.
 - [ ] Toujours à faire : EOS Hobby-rs explicite, continuation avec KV, Q4 natif et comparaison CER/WER ; aucun merge main/Release.
+
+## VMR-018 — OCR spécialisés / retrait LLM textuels
+- [x] Branche de travail dérivée de VMR-017.
+- [x] Retrait du parcours actif et de la CI de Liquid, Qwen textuel et HobbyLM, ainsi que des poids et JNI.
+- [x] Catalogue transparent des trois candidats OCR ; Indra et PP-OCR préservés.
+- [ ] Porter et **exécuter réellement** Surya OCR 2, LightOnOCR-3 0.8B et Nemotron 3.5 Parse, un seul à la fois, hors ligne.
+- [ ] Verrouiller licences, poids, hash, runtime Android image, tokenizer et traitement des sorties.
+- [ ] Tests CI/APK signé v0.6.8 code 21, mesures Samsung manuscrits FR, CER/WER, PSS et chauffe.
+- [ ] Ne pas fusionner main ou publier de Release sans feu vert ; pas de suppression automatique des GGUF privés déjà importés.

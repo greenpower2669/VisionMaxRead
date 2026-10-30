@@ -26,29 +26,8 @@ with zipfile.ZipFile(apk) as z:
   raw=z.read('assets/indra/'+name)
   meta=indra_manifest[name]
   assert len(raw)==meta['size'] and hashlib.sha256(raw).hexdigest()==meta['sha256'], 'Indra '+name
- liquid=json.loads(z.read('assets/liquid/manifest.json'))
- lm=z.read('assets/liquid/LFM2.5-230M-QAD-Q4_0.gguf')
- assert len(lm)==liquid['size'] and hashlib.sha256(lm).hexdigest()==liquid['sha256'], 'Liquid weight SHA mismatch'
- license=z.read('assets/liquid/LICENSE')
- assert len(license)==liquid['license_size'] and hashlib.sha256(license).hexdigest()==liquid['license_sha256'], 'LFM license missing or corrupt'
- assert len(z.read('assets/liquid/LLAMA_CPP_LICENSE'))>400, 'llama.cpp static library license missing'
- assert 'lib/arm64-v8a/libvmr_liquid.so' in z.namelist(), 'Missing native llama.cpp JNI'
- moe_manifest=json.loads(z.read('assets/moe/manifest.json'))
- assert 'lib/arm64-v8a/libvmr_moe.so' in z.namelist(), 'Missing true MoE Rust ARM64 library'
- model_hash=hashlib.sha256()
- model_size=0
- with z.open('assets/moe/hobbylm-1b-sft-3450-Q4_K_M.gguf') as reader:
-  while True:
-   block=reader.read(1024*1024)
-   if not block:break
-   model_hash.update(block);model_size+=len(block)
- assert model_size==moe_manifest['size'] and model_hash.hexdigest()==moe_manifest['sha256'], 'HobbyLM MoE GGUF mismatch'
- for license_file in ('LICENSE','NOTICE'):
-  entry='assets/moe/'+license_file
-  assert hashlib.sha256(z.read(entry)).hexdigest()==moe_manifest['files'][license_file]['sha256'], 'Missing model legal notices'
- assert b'Apache-2.0' in z.read('assets/moe/HOBBYLM_SOURCE_README.txt'), 'Missing source license grant'
-
- assert not any(p.startswith('assets/qwen/') for p in z.namelist()), 'Qwen assets must be absent'
+ assert not any(p.startswith(('assets/liquid/','assets/moe/','assets/qwen/')) for p in z.namelist()), 'Generative LLM weights still bundled'
+ assert not any(p.endswith(('libvmr_liquid.so','libvmr_moe.so')) for p in z.namelist()), 'Generative LLM native backend still bundled'
  libs=[p for p in z.namelist() if p.startswith('lib/') and p.endswith('.so')]
  assert libs and all(p.startswith('lib/arm64-v8a/') for p in libs)
 print('APK verified: signed, ARM64, all model hashes match (including Indra), no INTERNET permission')

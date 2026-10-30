@@ -307,3 +307,6 @@ Fab demande de corriger le passage entre phrases après essai Samsung. Défaut c
 
 ## VMR-017 — suite de corrections autorisée (30/10/2026)
 Correction du comportement HobbyLM après le retour Samsung : retrait des trois lignes maximum au profit d'une segmentation conservatrice configurable et d'un filtre distinguant hypothèses de réparation plausibles et propositions admissibles. Conserver original Indra, contexte précédent incertain, confidentialité, mode avion, streaming et signature incrémentale LAB code20. CI et essai Samsung avant validation de précision ; ne pas fusionner main ni publier de Release.
+
+## VMR-018 — ordre de mission du 30 octobre 2026
+Utiliser à terme Surya OCR 2, LightOnOCR-3 0.8B et Nemotron 3.5 Parse sans LLM génératifs textuels ; ne pas perdre Indra/PP-OCR tant que les trois portages ARM64 ne sont pas réels. Ne pas merger main ni publier de Release sans validation de Fab.

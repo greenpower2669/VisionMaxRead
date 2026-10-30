@@ -342,3 +342,6 @@ Essai LAB 0.6.5/code18 : HobbyLM Q8 chargé une fois (4802 ms ; PSS 1683 Mio), t
 
 ## VMR-017 — segmentation / mots capitalisés (30/10/2026)
 Après réparation du prompt HobbyLM, audit supplémentaire : code limité à trois lignes, toute ligne OCR au-delà de 150 caractères ignorée ; filtre exigeant l'identité exacte des mots capitalisés, ce qui pouvait masquer une proposition telle que Prangaise → Française. Correctifs : plan de segments jusqu'à 40 sans perte de texte et statut `reviewRecommended` pour une modification lexicalement voisine, sans acceptation automatique. Les noms inventés et modifications numériques restent interdits. Mesures Samsung de cette version non disponibles.
+
+## VMR-018 (30/10/2026)
+Anciens GGUF Liquid/HobbyLM et JNI exclus du workflow. Vérification de l'APK renforcée ; CI et tests Samsung encore non vérifiés à cette étape. Aucun des trois nouveaux OCR n'est déclaré opérationnel.

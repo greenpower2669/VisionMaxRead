@@ -340,3 +340,6 @@ Point d'entrée du correctif : `docs/VMR-017-continuity-correction.md`. `MoeProm
 - `MoeSegmentPlanner.java` : segments OCR à offsets originaux, limites 150 caractères / 40 segments, délimitation de mots, source inchangée.
 - `HobbyMoeReview.java` : reconstruit propositions par offsets, compte segments et recommandations de relecture ; `OcrProposalGuard.java` : mots capitalisés plausibles marqués révision manuelle.
 - `MainActivity.java` : réglage 3/12/24/40 et information d'accessibilité ; `scripts/test_vmr017_contract.py` : régressions. LAB 0.6.7/code20 ; aucun merge/Release.
+
+## Tiroir VMR-018
+`docs/VMR-018-three-specialist-ocr.md` : nouveau catalogue OCR spécialisé, anciennes dépendances LLM retirées du build, portages image ARM64 encore à faire.
