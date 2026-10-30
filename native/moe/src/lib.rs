@@ -17,11 +17,12 @@ fn inference(env:&mut JNIEnv,model_path:JString,text:JString,limit:jint,listener
     }
     // Avoid running an excessive number of Rust workers on Android.
     let _=rayon::ThreadPoolBuilder::new().num_threads(2).build_global();
-    STOP.store(false,Ordering::Release);
+    if STOP.load(Ordering::Acquire){return Err("Cancelled".to_string());}
     let engine=Engine::load(Path::new(&path),true).map_err(|e|format!("MoE weights: {e}"))?;
     if engine.cfg.n_experts<2 || engine.cfg.top_k<1 {
         return Err("Not a real routed MoE model".to_string());
     }
+    if STOP.load(Ordering::Acquire){return Err("Cancelled".to_string());}
     let opts=GenOpts{
         max_new:limit as usize,
         temp:0.0,top_p:0.95,
@@ -88,6 +89,11 @@ pub extern "system" fn Java_fr_visionmaxread_HobbyMoeNative_infer(
 }
 
 #[no_mangle]
-pub extern "system" fn Java_fr_visionmaxread_HobbyMoeNative_stop(_env:JNIEnv,_class:JClass){
+pub extern "system" fn Java_fr_visionmaxread_HobbyMoeNative_nativeStop(_env:JNIEnv,_class:JClass){
     STOP.store(true,Ordering::Release);
+}
+
+#[no_mangle]
+pub extern "system" fn Java_fr_visionmaxread_HobbyMoeNative_reset(_env:JNIEnv,_class:JClass){
+    STOP.store(false,Ordering::Release);
 }
