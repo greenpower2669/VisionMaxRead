@@ -24,7 +24,7 @@ assert "USER: Tu es" not in review and "ASSISTANT:" not in review
 assert "Math.min(260,original.length())" in review
 assert 'HobbyMoeNative.generate(context,prompt,110,(delta,count)->' in review
 assert "streamed.append(delta)" in review
-assert '"generated_tokens="+tokens[0]' in review
+assert '" generated_tokens="+tokens[0]' in review
 assert 'stream.finish("Terminé' in ui
 assert "stream.token(delta,count)" in ui
 assert "activeMoeStream.cancelAndClose()" in ui
