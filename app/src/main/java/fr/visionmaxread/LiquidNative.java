@@ -48,6 +48,15 @@ final class LiquidNative implements AutoCloseable {
         loaded=load(destination.getAbsolutePath());
         if(!loaded)throw new IllegalStateException("LFM model load failed");
     }
+    /** VMR-017: reuse the same pinned llama.cpp runtime for an authenticated Q4 GGUF.
+     * No embedded-model path, download or second simultaneous native session. */
+    LiquidNative(File authenticatedGguf)throws Exception{
+        if(!enabled)throw new IllegalStateException("llama.cpp JNI unavailable");
+        if(authenticatedGguf==null||!authenticatedGguf.isFile())
+            throw new FileNotFoundException("GGUF not imported");
+        loaded=load(authenticatedGguf.getAbsolutePath());
+        if(!loaded)throw new IllegalStateException("Text GGUF load failed");
+    }
     String generate(String prompt,int maxTokens){
         if(!loaded)throw new IllegalStateException("Model closed");
         if(maxTokens<1||maxTokens>320||prompt.length()>9000)throw new IllegalArgumentException("Prompt oversized");
