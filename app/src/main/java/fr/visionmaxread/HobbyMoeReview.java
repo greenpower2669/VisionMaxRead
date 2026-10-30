@@ -11,9 +11,10 @@ final class HobbyMoeReview {
         final String raw,proposed,preview,status;
         final boolean numbersKept;
         final long ms;
-        Result(String raw,String proposed,String preview,boolean numbersKept,String status,long ms){
+        final int cappedSegments;
+        Result(String raw,String proposed,String preview,boolean numbersKept,String status,long ms,int cappedSegments){
             this.raw=raw;this.proposed=proposed;this.preview=preview;
-            this.numbersKept=numbersKept;this.status=status;this.ms=ms;
+            this.numbersKept=numbersKept;this.status=status;this.ms=ms;this.cappedSegments=cappedSegments;
         }
     }
     interface SegmentListener {void onSegment(int index,int total,String language,int budget);}
@@ -39,7 +40,7 @@ final class HobbyMoeReview {
         int configuredCap=context.getSharedPreferences("settings",Context.MODE_PRIVATE)
             .getInt("moeTokenCap",AdaptiveTokenBudget.DEFAULT_SAFETY_CAP);
         if(configuredCap<128||configuredCap>512)configuredCap=AdaptiveTokenBudget.DEFAULT_SAFETY_CAP;
-        int good=0,bad=0;
+        int good=0,bad=0,capped=0;
         long totalTokens=0;
         boolean allDigits=true;
         StringBuilder stream=new StringBuilder();
@@ -58,6 +59,12 @@ final class HobbyMoeReview {
                         "reason=long_line length="+source.length());
                     continue;
                 }
+                final String previous=useContext?memory.previousSummary():"";
+                final String opening=useContext?memory.openingExcerpt():"";
+                final boolean contextAttached=!previous.isBlank()||
+                    (!opening.isBlank()&&!opening.equals(previous));
+                final int contextChars=previous.length()+
+                    (!opening.equals(previous)?opening.length():0);
                 final int budget=AdaptiveTokenBudget.forOcrCorrection(source,configuredCap);
                 progress.onSegment(n+1,indexes.size(),language,budget);
                 final int[] tokenCount={0};
@@ -66,7 +73,7 @@ final class HobbyMoeReview {
                 final long[] firstTokenMs={-1};
                 String output;
                 try{
-                    output=session.generate(buildPrompt(source,language,useContext?memory.previousSummary():""),budget,(delta,count)->{
+                    output=session.generate(buildPrompt(source,language,previous,opening),budget,(delta,count)->{
                         if(firstTokenMs[0]<0)firstTokenMs[0]=SystemClock.elapsedRealtime()-tic;
                         partial.append(delta);
                         tokenCount[0]=count;
@@ -90,53 +97,40 @@ final class HobbyMoeReview {
                 // A full token allowance is ambiguous without the upstream EOS reason:
                 // preserve the source, do not silently approve potentially truncated text.
                 boolean mayBeCapped=AdaptiveTokenBudget.outputMayBeCapped(tokenCount[0],budget);
+                if(mayBeCapped)capped++;
                 boolean valid=digits&&fidelity.accepted&&!mayBeCapped;
                 if(!digits)allDigits=false;
                 if(valid){good++;candidates[row]=output;}else bad++;
                 trace.add(context,"P4_MOE_SEG_"+(n+1),"HobbyLM-1B-Instruct-Q8",
                     "executed",output,ms,pss(),
-                    "language="+language+" generated_tokens="+tokenCount[0]+
-                    " token_budget="+budget+" context_mode="+(useContext?"previous_raw_unverified":"none")+
-                    " finish_reason="+AdaptiveTokenBudget.endReason(tokenCount[0],budget)+
+                    "language="+language+" ctx_sent="+contextAttached+" ctx_chars="+contextChars+
+                    " budget="+budget+" tokens="+tokenCount[0]+
+                    " finish="+(mayBeCapped?"budget_or_eos_unknown":"upstream_unknown")+
+                    " guard="+fidelity.reason+" candidate="+valid+
                     " first_token_ms="+firstTokenMs[0]+
                     " token_per_second="+(ms>0?Math.round(tokenCount[0]*1000f/ms):0)+
-                    " numbers_preserved="+digits+" lexical_guard="+fidelity.reason+
-                    " accepted_candidate="+valid);
+                    " numbers_preserved="+digits);
             }
         } // critical: release all owned expert weights after last short line
         String proposal=String.join("\n",suggestions);
         String accepted=String.join("\n",candidates);
         boolean any=good>0;
-        trace.add(context,"P5_MOE_GUARD","per-line-number-and-length-check",
+        trace.add(context,"P5_MOE_GUARD","lexical-and-numeric-safety-check",
             "executed",accepted,0,pss(),
             "language="+language+" accepted_lines="+good+" rejected_lines="+bad+
             " source_preserved_on_reject=true");
         return new Result(original,proposal,accepted,allDigits,
-            any?"candidate":"raw-fallback",SystemClock.elapsedRealtime()-started);
+            any?"candidate":"raw-fallback",SystemClock.elapsedRealtime()-started,capped);
     }
     static String buildPrompt(String line,String language){
-        if("en".equals(language))
-            return "<|user|>\nFix obvious OCR spelling errors in this English line. "+
-                "Keep numbers, names and dates unchanged. Output ONLY the corrected line.\n"+
-                line+"\n<|assistant|>\n";
-        return "<|user|>\nCorrige les fautes OCR évidentes dans cette seule ligne française. "+
-            "Conserve exactement les nombres, noms propres et dates. Réponds uniquement par la ligne.\n"+
-            line+"\n<|assistant|>\n";
+        return MoePromptBuilder.build(line,language,"");
     }
     static String buildPrompt(String line,String language,String previousRawOcr){
-        String base=buildPrompt(line,language);
-        if(previousRawOcr==null||previousRawOcr.isBlank())return base;
-        // Preceding *raw* OCR is untrusted and never a factual assertion.
-        String metadata="en".equals(language)?
-            "Previous OCR excerpt (unverified, do not copy): ":
-            "Extrait OCR précédent (incertain, ne pas recopier) : ";
-        int marker=base.lastIndexOf("\\n<|assistant|>");
-        if(marker<0)return base;
-        return base.substring(0,marker)+"\\n"+metadata+
-            previousRawOcr.replace("\\n"," ").replace("\\r"," ").substring(0,Math.min(150,previousRawOcr.length()))+
-            base.substring(marker);
+        return MoePromptBuilder.build(line,language,previousRawOcr);
     }
-    // Legacy one-language builder is retained for old contract callers/test.
+    static String buildPrompt(String line,String language,String previousRawOcr,String openingRawOcr){
+        return MoePromptBuilder.build(line,language,previousRawOcr,openingRawOcr);
+    }
     static String buildPrompt(String text){return buildPrompt(text,"fr");}
     private static float pss(){
         Debug.MemoryInfo m=new Debug.MemoryInfo();Debug.getMemoryInfo(m);
