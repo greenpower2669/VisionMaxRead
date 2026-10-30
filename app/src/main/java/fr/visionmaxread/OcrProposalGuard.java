@@ -14,7 +14,7 @@ final class OcrProposalGuard {
     private static final Pattern WORDS=Pattern.compile("[\\p{L}]{2,}");
     private static final Pattern NUMBERS=Pattern.compile("\\d+(?:[.,/\\-]\\d+)*");
     private static final Pattern SUSPICIOUS=Pattern.compile(
-        "(?i)(cite this article as|references?:|bibliography|as an ai|\\bsource:\\b|\\[\\d+\\]|<\\|[^>]+\\|>|^\\s*#|\\bI cannot\\b)");
+        "(?i)(cite this article as|references?:|bibliography|as an ai|\\bsource:\\b|\\[\\d+\\]|<\\s*/?think\\s*>|<\\|[^>]+\\|>|^\\s*#|\\bI cannot\\b)");
     private OcrProposalGuard(){}
     static Verdict verify(String original,String suggestion){
         if(original==null||original.isBlank()||suggestion==null||suggestion.isBlank())

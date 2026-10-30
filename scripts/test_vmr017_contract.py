@@ -13,6 +13,7 @@ final class GuardSmoke {
    if(AdaptiveTokenBudget.forOcrCorrection("abc",128)>128)throw new AssertionError("safety cap");
    if(!AdaptiveTokenBudget.outputMayBeCapped(128,128))throw new AssertionError("end unknown");
    if(OcrProposalGuard.verify("Ma lettre de Paris","Cite this article as").accepted)throw new AssertionError("citation hallucinated");
+   if(OcrProposalGuard.verify("La lettre de Paris est intacte.","<think>La lettre de Paris est intacte.</think>").accepted)throw new AssertionError("Qwen thinking leak");
    if(OcrProposalGuard.verify("Madame la Presidente","This article has no relevance").accepted)throw new AssertionError("off-topic");
    if(OcrProposalGuard.verify("Paris 1942, reference 123","Paris 1943, reference 123").accepted)throw new AssertionError("numbers");
    if(OcrProposalGuard.verify("Bonjour Paris, je pars demain.","Bonjour Lyon, je pars demain.").accepted)throw new AssertionError("proper name");
