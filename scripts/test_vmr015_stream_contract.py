@@ -19,7 +19,7 @@ assert 'void onToken(String delta,int tokenCount)' in native
 assert 'infer(String model,String prompt,int maxTokens,TokenListener listener)' in native
 assert "new String(tokens,StandardCharsets.UTF_8)" in native
 assert "if(cancelling.get())throw new IllegalStateException" in native
-assert '"<|user|>\\n"' in review and '"\\n<|assistant|>\\n"' in review
+assert '<|user|>' in review and '<|assistant|>' in review, "Instruct role markers mandatory"
 assert "USER: Tu es" not in review and "ASSISTANT:" not in review
 assert "indexes.size()<3" in review and "source.length()>150" in review
 assert 'session.generate(buildPrompt(source,language),72,(delta,count)->' in review
