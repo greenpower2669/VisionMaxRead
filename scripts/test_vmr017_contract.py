@@ -32,12 +32,34 @@ final class GuardSmoke {
    if(!doc.equals(back.toString()))throw new AssertionError("sentence lossless");
    if(DocumentSentenceChunks.split("Le 22.01.1942 est une date. Une autre phrase.").size()!=2)
        throw new AssertionError("numeric date split");
+   OcrProposalGuard.Verdict french=OcrProposalGuard.verify(
+       "Croix rouge Prangaise", "Croix rouge Française");
+   if(french.accepted||!french.reviewRecommended)
+       throw new AssertionError("OCR French adjective must be reviewable, not auto-accepted");
+   if(OcrProposalGuard.verify("Croix rouge Prangaise","Croix rouge UNICEF").reviewRecommended)
+       throw new AssertionError("invented proper name not reviewable");
+   StringBuilder sample=new StringBuilder();
+   for(int i=0;i<9;i++)sample.append("Ligne numero ").append(i).append(" en français.\\n");
+   java.util.List<MoeSegmentPlanner.Segment> segs=MoeSegmentPlanner.plan(sample.toString(),12);
+   if(segs.size()!=9)throw new AssertionError("Must process more than three lines");
+   StringBuilder recreated=new StringBuilder();int cursor=0;
+   for(MoeSegmentPlanner.Segment seg:segs){
+       if(seg.end-seg.start>150||seg.start<cursor)
+           throw new AssertionError("Invalid segment offsets or overlap");
+       recreated.append(sample,cursor,seg.start).append(seg.source(sample.toString()));
+       cursor=seg.end;
+   }
+   recreated.append(sample,cursor,sample.length());
+   if(!sample.toString().equals(recreated.toString()))
+       throw new AssertionError("Source lost during segmented rendering");
+   if(MoeSegmentPlanner.plan(sample.toString(),3).size()!=3)
+       throw new AssertionError("Maximum must be configurable");
    System.out.println("VMR017 regression PASS");
  }
 }
 """)
     subprocess.run(["javac","-encoding","UTF-8","-d",tmp,str(base/"AdaptiveTokenBudget.java"),
-                    str(base/"OcrProposalGuard.java"),str(base/"DocumentContextMemory.java"),str(base/"DocumentSentenceChunks.java"),str(harness)],check=True)
+                    str(base/"OcrProposalGuard.java"),str(base/"DocumentContextMemory.java"),str(base/"DocumentSentenceChunks.java"),str(base/"MoeSegmentPlanner.java"),str(harness)],check=True)
     subprocess.run(["java","-cp",tmp,"fr.visionmaxread.GuardSmoke"],check=True)
 review=(base/"HobbyMoeReview.java").read_text()
 native=(base/"HobbyMoeNative.java").read_text()
@@ -69,3 +91,10 @@ assert "void token(int index,int total,String cumulative,int count)" in dialog_t
 assert "new TextModelStreamDialog" in screen and "OCR uniquement" in screen
 assert "OfflineCorrectionModels.OCR_ONLY" in screen
 print("VMR017 streamed offline Q4 model contract PASS")
+
+planner=(base/"MoeSegmentPlanner.java").read_text()
+assert "DEFAULT_SEGMENTS=12" in planner and "HARD_SEGMENTS=40" in planner
+assert "MoeSegmentPlanner.plan(original,requestedSegments)" in review
+assert "candidates.append(original,cursor,segment.start)" in review
+assert "reviewOnlySegments" in review
+print("VMR017 bounded OCR segments and manual review contract PASS")

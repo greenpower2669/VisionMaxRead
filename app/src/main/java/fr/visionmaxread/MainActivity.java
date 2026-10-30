@@ -408,8 +408,10 @@ public final class MainActivity extends Activity {
                 "La suite du texte généré apparaîtra au fil des jetons, avec Arrêter et Copier flux. "+
                 "Son poids quantifié fait environ 729 Mo et sera copié dans "+
                 "le stockage privé au premier essai. La génération sur CPU peut être lente et "+
-                "consommer beaucoup de mémoire. Pour ce premier test, seule la première zone "+
-                "de trois lignes de 150 caractères maximum sont examinées dans une seule session. "+
+                "consommer beaucoup de mémoire. Les lignes OCR sont découpées sans couper les mots ; "+
+                "le nombre de segments analysés est configurable dans les réglages "+
+                "(3, 12, 24 ou 40, maximum 150 caractères par segment). "+
+                "Les segments non analysés restent intacts. "+
                 "La session sera déchargée après le lot. Choisis langue et mode de contexte. "+
                 "La qualité en français est inconnue ; vérifie tout résultat avant utilisation.")
             .setPositiveButton("Lancer le MoE",(d,w)->{
@@ -422,7 +424,7 @@ public final class MainActivity extends Activity {
                     if(destroyed||!sessions.documentCurrent(ticket)){finishOcrProgress(progress);return;}
                     long start=SystemClock.elapsedRealtime();
                     try{
-                        DebugLog.append(this,"HOBBY_MOE begin engine=routed-hobbylm-1b inputChars="+scan.lmOrdered.length()+" mode=three_lines session=reused chat_template=hobbylm-v1 streamed=true pssMb="+formatMb(processPssMb()));
+                        DebugLog.append(this,"HOBBY_MOE begin engine=routed-hobbylm-1b inputChars="+scan.lmOrdered.length()+" mode=bounded_segments session=reused chat_template=hobbylm-v1 streamed=true pssMb="+formatMb(processPssMb()));
                         HobbyMoeReview.Result r=HobbyMoeReview.run(
                             this,scan.lmOrdered,trace,language[0]<2?"fr":"en",language[0]%2==0,(delta,count)->{
                                 if(!destroyed&&sessions.documentCurrent(ticket))stream.token(delta,count);
@@ -433,14 +435,17 @@ public final class MainActivity extends Activity {
                         ui(()->{
                             if(!sessions.documentCurrent(ticket))return;
                             moe.setEnabled(true);
-                            status.setText("Vrai MoE : "+r.ms+" ms, chiffres préservés="+r.numbersKept+
+                            status.setText("HobbyLM : "+r.processedSegments+" segments, "+r.ms+
+                                " ms ; chiffres préservés="+r.numbersKept+
                                 ". Indra n'a pas été remplacé ; compare les versions.");
                             // A rejected/hallucinated MoE draft remains visible and
                             // copyable in the live window, but cannot be applied.
                             boolean approved="candidate".equals(r.status);
                             stream.finish("Génération finie : "+r.ms+" ms. "+(approved?
                                 "Candidat à comparer à la photo avant usage.":
-                                "Aucune correction validée, sortie consultable.")+
+                                "Aucune correction automatiquement admissible, sortie consultable.")+
+                                (r.reviewOnlySegments>0?" "+r.reviewOnlySegments+
+                                    " correction(s) lexicalement plausibles à relire.":"")+
                                 (r.cappedSegments>0?" "+r.cappedSegments+
                                     " phrase(s) au plafond, fin incertaine.":""),
                                 approved?()->showComparisonText("MoE — candidat à vérifier",r.preview,ticket):
@@ -684,6 +689,23 @@ public final class MainActivity extends Activity {
         moeCap.setSelection(previousCap==128?0:previousCap==256?1:2);
         moeCap.setContentDescription("Plafond de sécurité de la génération HobbyLM");
         panel.addView(moeCap);
+        panel.addView(label("Nombre maximal de segments HobbyLM par essai",18));
+        Spinner moeSegments=new Spinner(this);
+        int[] segmentOptions={3,12,24,40};
+        ArrayAdapter<String> segmentAdapter=new ArrayAdapter<>(this,
+            android.R.layout.simple_spinner_item,new String[]{
+                "3 segments · essai rapide","12 segments · standard",
+                "24 segments · lecture longue","40 segments · essai approfondi"});
+        segmentAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        moeSegments.setAdapter(segmentAdapter);
+        int segmentLimit=prefs.getInt("moeSegmentLimit",12),selectedSegment=1;
+        for(int i=0;i<segmentOptions.length;i++)
+            if(segmentOptions[i]==segmentLimit)selectedSegment=i;
+        moeSegments.setSelection(selectedSegment);
+        moeSegments.setContentDescription("Nombre maximal de segments OCR traités par HobbyLM");
+        panel.addView(moeSegments);
+        panel.addView(label("Les longs essais augmentent la durée et la consommation électrique. "+
+            "Les parties non analysées restent inchangées.",16));
         TextView speedLabel=label("Vitesse de lecture",18);panel.addView(speedLabel);SeekBar speed=new SeekBar(this);speed.setMax(100);speed.setProgress(Math.round((prefs.getFloat("speed",1.0f)-0.75f)*100));panel.addView(speed);speed.setContentDescription("Vitesse de lecture de 0,75 à 1,75");
         panel.addView(button("Diagnostic 1re phrase",INK,()->worker.execute(()->{
             try{String diag=voice.diagnoseFirstPass(this);DebugLog.append(this,"PIPER diagnostic "+diag);ui(()->status.setText("Diagnostic Piper : "+diag));}
@@ -692,7 +714,8 @@ public final class MainActivity extends Activity {
         panel.addView(button("Journal debug",INK,this::showDebugLog));
         panel.addView(button("Effacer l’historique",RED,this::confirmClear));
         ScrollView settingsScroll=new ScrollView(this);settingsScroll.addView(panel);
-        new AlertDialog.Builder(this).setTitle("Réglages").setView(settingsScroll).setPositiveButton("Enregistrer",(d,w)->{stopReading();boolean hiFi=hdVoice.isChecked();prefs.edit().putBoolean("history",keep.isChecked()).putBoolean("voiceHD",hiFi).putFloat("speed",0.75f+speed.getProgress()/100f).putInt("moeTokenCap",new int[]{128,256,512}[moeCap.getSelectedItemPosition()]).putInt("textModel",textEngine.getSelectedItemPosition()).apply();updateCorrectionButton();worker.execute(()->voice.selectVoice(hiFi));if(!keep.isChecked())sessions.clearHistory();}).setNegativeButton("Annuler",null).show();
+        new AlertDialog.Builder(this).setTitle("Réglages").setView(settingsScroll).setPositiveButton("Enregistrer",(d,w)->{stopReading();boolean hiFi=hdVoice.isChecked();prefs.edit().putBoolean("history",keep.isChecked()).putBoolean("voiceHD",hiFi).putFloat("speed",0.75f+speed.getProgress()/100f).putInt("moeTokenCap",new int[]{128,256,512}[moeCap.getSelectedItemPosition()]).putInt("textModel",textEngine.getSelectedItemPosition()).putInt(
+            "moeSegmentLimit",segmentOptions[moeSegments.getSelectedItemPosition()]).apply();updateCorrectionButton();worker.execute(()->voice.selectVoice(hiFi));if(!keep.isChecked())sessions.clearHistory();}).setNegativeButton("Annuler",null).show();
     }
     private void showDebugLog(){
         String value=DebugLog.read(this);

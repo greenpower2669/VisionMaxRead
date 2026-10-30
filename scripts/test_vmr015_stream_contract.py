@@ -22,7 +22,7 @@ assert "if(cancelling.get())throw new IllegalStateException" in native
 prompt=(app/"MoePromptBuilder.java").read_text()
 assert '<|user|>' in prompt and '<|assistant|>' in prompt, "Instruct role markers mandatory"
 assert "USER: Tu es" not in review and "ASSISTANT:" not in review
-assert "indexes.size()<3" in review and "source.length()>150" in review
+assert "MoeSegmentPlanner.plan(original,requestedSegments)" in review
 assert 'session.generate(buildPrompt(source,language,previous,opening),budget,(delta,count)->' in review
 assert "partial.append(delta)" in review
 assert '" budget="+budget+" tokens="+tokenCount[0]' in review

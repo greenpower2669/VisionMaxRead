@@ -18,7 +18,7 @@ assert "loaded.engine.generate(&prompt,&[],&opts" in rust
 assert "loadMs=nativeOpen" in native
 assert "pssAfterLoad=" in native
 assert "try(HobbyMoeNative.Session session=new HobbyMoeNative.Session(context))" in review
-assert "indexes.size()<3" in review and "source.length()>150" in review
+assert "MoeSegmentPlanner.plan(original,requestedSegments)" in review
 assert 'session.generate(buildPrompt(source,language,previous,opening),budget' in review
 assert "trace.add(context,\"P4_MOE_SESSION\"" in review
 assert '"P4_MOE_SEG_"+(n+1)' in review
