@@ -10,6 +10,7 @@ import android.text.*;
 import android.view.*;
 import android.widget.*;
 import org.json.*;
+import java.io.File;
 import java.text.DateFormat;
 import java.util.*;
 import java.util.concurrent.*;
@@ -313,6 +314,7 @@ public final class MainActivity extends Activity {
         status.setText("Installation automatique des moteurs OCR sur Wi-Fi…");
         final long ticket=sessions.documentTicket();
         modelInstallWorker.execute(()->{
+            boolean installed=false;
             try{
                 for(SpecialistOcrModels.Spec spec:targets){
                     SpecialistOcrAutoInstaller.ensure(getApplicationContext(),spec,(name,component,bytes,max)->{
@@ -322,10 +324,7 @@ public final class MainActivity extends Activity {
                         });
                     },()->modelInstallCancel.get()||destroyed);
                 }
-                ui(()->{
-                    status.setText("Modèles authentifiés installés. OCR désormais utilisable hors ligne.");
-                    if(runAfter&&selected!=null&&sessions.documentCurrent(ticket))runSpecialistOcr(selected);
-                });
+                installed=true;
             }catch(java.util.concurrent.CancellationException e){
                 ui(()->status.setText("Téléchargement interrompu. Reprise possible sur Wi-Fi."));
             }catch(Exception e){
@@ -334,7 +333,14 @@ public final class MainActivity extends Activity {
                     ". Vérifie le Wi-Fi et l'espace libre ; Indra reste utilisable."));
             }finally{
                 modelInstallActive.set(false);
-                ui(()->specialistStop.setVisibility(View.GONE));
+                final boolean success=installed;
+                ui(()->{
+                    specialistStop.setVisibility(View.GONE);
+                    if(success){
+                        status.setText("Modèles vérifiés. OCR désormais utilisable hors ligne.");
+                        if(runAfter&&selected!=null&&sessions.documentCurrent(ticket))runSpecialistOcr(selected);
+                    }
+                });
             }
         });
     }
