@@ -14,7 +14,7 @@ fn inference(env:&mut JNIEnv,model_path:JString,text:JString,limit:jint,listener
   ->Result<Vec<u8>,String>{
     let path:String=env.get_string(&model_path).map_err(|e|e.to_string())?.into();
     let prompt:String=env.get_string(&text).map_err(|e|e.to_string())?.into();
-    if path.is_empty()||prompt.is_empty()||prompt.len()>3500||limit<1||limit>128{
+    if path.is_empty()||prompt.is_empty()||prompt.len()>3500||limit<1||limit>512{
         return Err("Invalid MoE path/prompt/token count".to_string());
     }
     // Avoid running an excessive number of Rust workers on Android.
@@ -155,7 +155,7 @@ pub extern "system" fn Java_fr_visionmaxread_HobbyMoeNative_nativeGenerateLoaded
 )->jbyteArray {
  let result=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||{
   let prompt:String=env.get_string(&jprompt).map_err(|e|e.to_string())?.into();
-  if prompt.is_empty()||prompt.len()>3500||limit<1||limit>128{
+  if prompt.is_empty()||prompt.len()>3500||limit<1||limit>512{
    return Err("Invalid segmented prompt".to_string());
   }
   if STOP.load(Ordering::Acquire){return Err("Cancelled".to_string());}

@@ -56,7 +56,10 @@ final class HobbyMoeReview {
                 long tic=SystemClock.elapsedRealtime();
                 String output;
                 try{
-                    output=session.generate(buildPrompt(source,language),72,(delta,count)->{
+                    final int budget=AdaptiveTokenBudget.forOcrCorrection(source,AdaptiveTokenBudget.DEFAULT_SAFETY_CAP);
+                final long[] firstTokenMs={-1};
+                output=session.generate(buildPrompt(source,language),budget,(delta,count)->{
+                        if(firstTokenMs[0]<0)firstTokenMs[0]=SystemClock.elapsedRealtime()-tic;
                         partial.append(delta);
                         tokenCount[0]=count;
                         display.onToken(delta,count);
@@ -74,16 +77,22 @@ final class HobbyMoeReview {
                 if(stream.length()>0)stream.append('\n');
                 stream.append(output);
                 boolean digits=LiquidOcrReview.numbers(source).equals(LiquidOcrReview.numbers(output));
-                boolean valid=digits&&!output.isBlank()&&output.length()>=Math.max(2,source.length()/2)
-                    &&output.length()<=source.length()*2+20
-                    &&!output.toLowerCase(java.util.Locale.ROOT).contains("texte proposé");
+                OcrProposalGuard.Verdict fidelity=OcrProposalGuard.verify(source,output);
+                // A full token allowance is ambiguous without the upstream EOS reason:
+                // preserve the source, do not silently approve potentially truncated text.
+                boolean mayBeCapped=AdaptiveTokenBudget.outputMayBeCapped(tokenCount[0],budget);
+                boolean valid=digits&&fidelity.accepted&&!mayBeCapped;
                 if(!digits)allDigits=false;
                 if(valid){good++;candidates[row]=output;}else bad++;
                 trace.add(context,"P4_MOE_SEG_"+(n+1),"HobbyLM-1B-Instruct-Q8",
                     "executed",output,ms,pss(),
                     "language="+language+" generated_tokens="+tokenCount[0]+
-                    " numbers_preserved="+digits+" accepted_candidate="+valid+
-                    " first_token_delay_not_yet_isolated");
+                    " token_budget="+budget+
+                    " finish_reason="+AdaptiveTokenBudget.endReason(tokenCount[0],budget)+
+                    " first_token_ms="+firstTokenMs[0]+
+                    " token_per_second="+(ms>0?Math.round(tokenCount[0]*1000f/ms):0)+
+                    " numbers_preserved="+digits+" lexical_guard="+fidelity.reason+
+                    " accepted_candidate="+valid);
             }
         } // critical: release all owned expert weights after last short line
         String proposal=String.join("\n",suggestions);

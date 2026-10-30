@@ -7,8 +7,8 @@ android {
         applicationId 'fr.visionmaxread'
         minSdk 26
         targetSdk 36
-        versionCode 17
-        versionName '0.6.4-moe-session-lab'
+        versionCode 18
+        versionName '0.6.5-vmr017-adaptive-lab'
         ndk { abiFilters 'arm64-v8a' }
     }
     signingConfigs {

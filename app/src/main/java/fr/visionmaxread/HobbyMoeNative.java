@@ -43,7 +43,7 @@ final class HobbyMoeNative {
         }
         String generate(String prompt,int maxTokens,TokenListener listener){
             if(!open||cancelling.get())throw new IllegalStateException("Cancelled");
-            if(prompt==null||prompt.length()>3500||listener==null||maxTokens<1||maxTokens>128)
+            if(prompt==null||prompt.length()>3500||listener==null||maxTokens<1||maxTokens>512)
                 throw new IllegalArgumentException("Bad MoE input");
             byte[] result=nativeGenerateLoaded(prompt,maxTokens,listener);
             if(result==null)throw new IllegalStateException("MoE returned no output");
@@ -62,7 +62,7 @@ final class HobbyMoeNative {
     static boolean available(){return enabled;}
     static String generate(Context context,String prompt,int maxTokens,TokenListener listener)throws Exception{
         if(!enabled)throw new IllegalStateException("Rust MoE engine unavailable");
-        if(prompt.isEmpty()||prompt.length()>3500||maxTokens<1||maxTokens>128||listener==null)
+        if(prompt.isEmpty()||prompt.length()>3500||maxTokens<1||maxTokens>512||listener==null)
             throw new IllegalArgumentException("MoE input invalid");
         cancelling.set(false);
         reset();

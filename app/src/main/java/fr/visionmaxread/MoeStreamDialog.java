@@ -23,6 +23,7 @@ final class MoeStreamDialog {
     private ScrollView scroller;
     private boolean open,finished;
     private int currentSegment=0,totalSegments=1;
+    private int currentBudget=AdaptiveTokenBudget.DEFAULT_SAFETY_CAP;
     private Runnable compareAction;
     MoeStreamDialog(Activity activity){this.activity=activity;}
 
@@ -88,6 +89,9 @@ final class MoeStreamDialog {
             tokensLabel.setText("Phrase "+index+"/"+total+" · modèle chargé une seule fois.");
         });
     }
+    void budget(int requested){
+        activity.runOnUiThread(()->currentBudget=requested);
+    }
     /** Called on the inference worker; marshals incremental updates to the UI. */
     void token(String delta,int count) {
         activity.runOnUiThread(()->{
@@ -95,7 +99,7 @@ final class MoeStreamDialog {
             // Do not erase previous segments when the per-line token count resets.
             if(!delta.isEmpty())streamText.append(delta);
             long seconds=(SystemClock.elapsedRealtime()-started)/1000;
-            tokensLabel.setText("Phrase "+currentSegment+"/"+totalSegments+" · jetons : "+count+" / 72 · "+seconds+" s. "+
+            tokensLabel.setText("Phrase "+currentSegment+"/"+totalSegments+" · jetons : "+count+" / "+currentBudget+" · "+seconds+" s. "+
                 "Flux réel, pas une chaîne de raisonnement cachée.");
             scroller.post(()->{if(open)scroller.fullScroll(View.FOCUS_DOWN);});
         });
