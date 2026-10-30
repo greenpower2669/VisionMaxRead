@@ -22,3 +22,6 @@ Retour Fab : « Il faut le MoE et les boutons pour copier les logs ; Liquid n'y 
 
 ## Limites et état
 Cette branche est un **essai de portage**, pas une promesse d'amélioration de la reconnaissance. Meta reste inaccessible sans autorisation Hugging Face et licence non commerciale ; HobbyLM est une alternative réelle mais différente.
+
+## Sécurité de récupération après plantage
+Dans la LAB VMR-014, « Copier logs techniques » reste actif immédiatement au démarrage même si aucun OCR n'est chargé, en copiant le journal DebugLog persistant sans texte OCR. Début de tentative de chargement MoE inscrit explicitement avec le nombre de caractères et la PSS, avant toute inférence. Cela permet d'investiguer une fermeture brutale du processus Android. La confirmation de copie de tout résultat avec texte reste obligatoire. Le test d'inférence *sur CPU GitHub* de la vraie GGUF HobbyLM-1B est passé dans le run 40976686174 (étape « Real sparse MoE CPU smoke test ») ; ceci ne remplace PAS un test de l'inférence ARM64 sur le Samsung.
