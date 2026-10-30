@@ -427,7 +427,7 @@ public final class MainActivity extends Activity {
                             this,scan.lmOrdered,trace,language[0]<2?"fr":"en",language[0]%2==0,(delta,count)->{
                                 if(!destroyed&&sessions.documentCurrent(ticket))stream.token(delta,count);
                                 else HobbyMoeNative.stop();
-                            },(index,total,lang,budget)->stream.segment(index,total,lang,budget));
+                            },(index,total,lang,budget,contextChars)->stream.segment(index,total,lang,budget,contextChars));
                         if(!sessions.documentCurrent(ticket)||destroyed)return;
                         lastMoeReview=r;finishOcrProgress(progress);
                         ui(()->{
@@ -438,10 +438,13 @@ public final class MainActivity extends Activity {
                             // A rejected/hallucinated MoE draft remains visible and
                             // copyable in the live window, but cannot be applied.
                             boolean approved="candidate".equals(r.status);
-                            stream.finish("Terminé : "+r.ms+" ms. "+(approved?
+                            stream.finish("Génération finie : "+r.ms+" ms. "+(approved?
                                 "Candidat à comparer à la photo avant usage.":
-                                "Proposition rejetée : texte Indra conservé."),
-                                approved?()->showComparisonText("MoE — candidat à vérifier",r.preview,ticket):null);
+                                "Aucune correction validée, sortie consultable.")+
+                                (r.cappedSegments>0?" "+r.cappedSegments+
+                                    " phrase(s) au plafond, fin incertaine.":""),
+                                approved?()->showComparisonText("MoE — candidat à vérifier",r.preview,ticket):
+                                    ()->inspectUnvalidatedMoe(r,ticket));
                         });
                     }catch(Exception|OutOfMemoryError e){
                         boolean interrupted="Cancelled".equals(e.getMessage());
@@ -461,6 +464,33 @@ public final class MainActivity extends Activity {
             }).setNegativeButton("Annuler",null).show();
     }
 
+    /** Rejected drafts remain legible, but no direct Apply action is offered. */
+    private void inspectUnvalidatedMoe(HobbyMoeReview.Result result,long ticket){
+        if(!sessions.documentCurrent(ticket))return;
+        String[] original=result.raw.split("\\n",-1);
+        String[] proposed=result.proposed.split("\\n",-1);
+        StringBuilder view=new StringBuilder(
+            "HobbyLM : hypothèses NON validées. Compare chaque ligne avec la photo. "+
+            "L'OCR Indra reste inchangé.\\n\\n");
+        int changes=0;
+        for(int i=0;i<Math.min(original.length,proposed.length);i++){
+            if(original[i].equals(proposed[i]))continue;
+            changes++;
+            view.append("Ligne ").append(i+1).append("\\nOCR : ")
+                .append(original[i]).append("\\nProposition : ")
+                .append(proposed[i]).append("\\n\\n");
+        }
+        if(changes==0)view.append("Aucune proposition différente de l'OCR.");
+        String report=view.toString();
+        ScrollView scroll=new ScrollView(this);
+        TextView textReport=label(report,19);
+        textReport.setTextIsSelectable(true);textReport.setPadding(dp(12),dp(8),dp(12),dp(8));
+        scroll.addView(textReport);
+        new AlertDialog.Builder(this).setTitle("Examiner les hypothèses HobbyLM")
+            .setView(scroll).setPositiveButton("Copier après confirmation",(dialog,which)->
+                confirmSensitiveCopy("HobbyLM — hypothèses non vérifiées",report,ticket))
+            .setNegativeButton("Fermer",null).show();
+    }
     private void compareIndra(){
         final OcrTrace trace=lastTrace;final long ticket=sessions.documentTicket();
         if(trace==null||!sessions.documentCurrent(ticket))return;

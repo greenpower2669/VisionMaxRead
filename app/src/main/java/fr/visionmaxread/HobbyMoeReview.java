@@ -17,7 +17,7 @@ final class HobbyMoeReview {
             this.numbersKept=numbersKept;this.status=status;this.ms=ms;this.cappedSegments=cappedSegments;
         }
     }
-    interface SegmentListener {void onSegment(int index,int total,String language,int budget);}
+    interface SegmentListener {void onSegment(int index,int total,String language,int budget,int contextChars);}
     private HobbyMoeReview(){}
     static Result run(Context context,String original,OcrTrace trace,String language,
                       HobbyMoeNative.TokenListener display,SegmentListener progress)throws Exception {
@@ -66,7 +66,7 @@ final class HobbyMoeReview {
                 final int contextChars=previous.length()+
                     (!opening.equals(previous)?opening.length():0);
                 final int budget=AdaptiveTokenBudget.forOcrCorrection(source,configuredCap);
-                progress.onSegment(n+1,indexes.size(),language,budget);
+                progress.onSegment(n+1,indexes.size(),language,budget,contextChars);
                 final int[] tokenCount={0};
                 StringBuilder partial=new StringBuilder();
                 long tic=SystemClock.elapsedRealtime();

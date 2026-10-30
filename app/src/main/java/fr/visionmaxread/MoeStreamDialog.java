@@ -84,6 +84,9 @@ final class MoeStreamDialog {
     }
     /** Display the actual per-line generation budget. */
     void segment(int index,int total,String language,int requestedBudget){
+        segment(index,total,language,requestedBudget,-1);
+    }
+    void segment(int index,int total,String language,int requestedBudget,int contextChars){
         activity.runOnUiThread(()->{
             if(!open||activity.isFinishing())return;
             currentSegment=index;totalSegments=total;currentBudget=requestedBudget;
@@ -92,7 +95,10 @@ final class MoeStreamDialog {
             else streamText.append("\n");
             streamText.append("〔"+(language.equals("en")?"English":"Français")+
                 " · ligne "+index+"/"+total+"〕\n");
-            tokensLabel.setText("Phrase "+index+"/"+total+" · modèle chargé une seule fois.");
+            tokensLabel.setText("Phrase "+index+"/"+total+" · "+
+                (contextChars>0?"contexte OCR transmis : "+contextChars+" caractères":
+                    contextChars==0?"sans contexte précédent":"contexte non mesuré")+
+                " · modèle chargé une seule fois.");
         });
     }
     void budget(int requested){
@@ -122,7 +128,7 @@ final class MoeStreamDialog {
             tokensLabel.setText(message);
             compareAction=validComparison;
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
-                .setText(validComparison==null?"Terminé":"Comparer");
+                .setText(validComparison==null?"Terminé":"Examiner");
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
                 .setEnabled(validComparison!=null);
         });
