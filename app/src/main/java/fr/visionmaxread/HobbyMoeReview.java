@@ -20,6 +20,10 @@ final class HobbyMoeReview {
     private HobbyMoeReview(){}
     static Result run(Context context,String original,OcrTrace trace,String language,
                       HobbyMoeNative.TokenListener display,SegmentListener progress)throws Exception {
+        return run(context,original,trace,language,true,display,progress);
+    }
+    static Result run(Context context,String original,OcrTrace trace,String language,boolean useContext,
+                      HobbyMoeNative.TokenListener display,SegmentListener progress)throws Exception {
         if(original==null||original.isBlank())throw new IllegalArgumentException("No OCR content");
         if(!language.equals("fr")&&!language.equals("en"))throw new IllegalArgumentException("Language must be fr or en");
         final long started=SystemClock.elapsedRealtime();
@@ -31,6 +35,7 @@ final class HobbyMoeReview {
         }
         String[] suggestions=lines.clone();
         String[] candidates=lines.clone();
+        DocumentContextMemory memory=new DocumentContextMemory();
         int good=0,bad=0;
         long totalTokens=0;
         boolean allDigits=true;
@@ -58,7 +63,7 @@ final class HobbyMoeReview {
                 String output;
                 try{
                     final long[] firstTokenMs={-1};
-                output=session.generate(buildPrompt(source,language),budget,(delta,count)->{
+                output=session.generate(buildPrompt(source,language,useContext?memory.previousSummary():""),budget,(delta,count)->{
                         if(firstTokenMs[0]<0)firstTokenMs[0]=SystemClock.elapsedRealtime()-tic;
                         partial.append(delta);
                         tokenCount[0]=count;
@@ -73,6 +78,7 @@ final class HobbyMoeReview {
                 }
                 long ms=SystemClock.elapsedRealtime()-tic;
                 totalTokens+=tokenCount[0];
+                memory.observeOriginal(source);
                 suggestions[row]=output;
                 if(stream.length()>0)stream.append('\n');
                 stream.append(output);
@@ -87,7 +93,7 @@ final class HobbyMoeReview {
                 trace.add(context,"P4_MOE_SEG_"+(n+1),"HobbyLM-1B-Instruct-Q8",
                     "executed",output,ms,pss(),
                     "language="+language+" generated_tokens="+tokenCount[0]+
-                    " token_budget="+budget+
+                    " token_budget="+budget+" context_mode="+(useContext?"previous_raw_unverified":"none")+
                     " finish_reason="+AdaptiveTokenBudget.endReason(tokenCount[0],budget)+
                     " first_token_ms="+firstTokenMs[0]+
                     " token_per_second="+(ms>0?Math.round(tokenCount[0]*1000f/ms):0)+
@@ -113,6 +119,19 @@ final class HobbyMoeReview {
         return "<|user|>\nCorrige les fautes OCR évidentes dans cette seule ligne française. "+
             "Conserve exactement les nombres, noms propres et dates. Réponds uniquement par la ligne.\n"+
             line+"\n<|assistant|>\n";
+    }
+    static String buildPrompt(String line,String language,String previousRawOcr){
+        String base=buildPrompt(line,language);
+        if(previousRawOcr==null||previousRawOcr.isBlank())return base;
+        // Preceding *raw* OCR is untrusted and never a factual assertion.
+        String metadata="en".equals(language)?
+            "Previous OCR excerpt (unverified, do not copy): ":
+            "Extrait OCR précédent (incertain, ne pas recopier) : ";
+        int marker=base.lastIndexOf("\\n<|assistant|>");
+        if(marker<0)return base;
+        return base.substring(0,marker)+"\\n"+metadata+
+            previousRawOcr.replace("\\n"," ").replace("\\r"," ").substring(0,Math.min(150,previousRawOcr.length()))+
+            base.substring(marker);
     }
     // Legacy one-language builder is retained for old contract callers/test.
     static String buildPrompt(String text){return buildPrompt(text,"fr");}

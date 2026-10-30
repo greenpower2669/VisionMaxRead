@@ -25,7 +25,7 @@ assert '"P4_MOE_SEG_"+(n+1)' in review
 assert "Conserve exactement les nombres" in review
 assert "Keep numbers, names and dates unchanged." in review
 assert "language.equals(\"fr\")" in review
-assert 'setSingleChoiceItems(new String[]{"Français","English"}' in ui
+assert 'setSingleChoiceItems(new String[]{"Français · contexte OCR","Français · sans contexte"' in ui
 assert "void segment(int index,int total,String language)" in dialog
 assert 'streamText.append(delta)' in dialog
 assert "stream.token(delta,count)" in ui

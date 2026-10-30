@@ -17,12 +17,20 @@ final class GuardSmoke {
    if(OcrProposalGuard.verify("Paris 1942, reference 123","Paris 1943, reference 123").accepted)throw new AssertionError("numbers");
    if(OcrProposalGuard.verify("Bonjour Paris, je pars demain.","Bonjour Lyon, je pars demain.").accepted)throw new AssertionError("proper name");
    if(!OcrProposalGuard.verify("Ths is a simpie document.","This is a simple document.").accepted)throw new AssertionError("conservative OCR correction");
+   DocumentContextMemory m=new DocumentContextMemory();
+   m.observeOriginal("Paris, 22 janvier 1942. Document privé.");
+   if(m.previousSummary().length()>150||m.confirmedOverview().length()!=0)throw new AssertionError("unverified not fact");
+   m.proposeObservation("date","22 janvier 1942");
+   if(m.observations().get("date").kind!=DocumentContextMemory.EvidenceKind.MODEL_HYPOTHESIS)
+       throw new AssertionError("hypothesis must remain hypothesis");
+   m.reset();
+   if(!m.previousSummary().isEmpty()||m.position()!=0)throw new AssertionError("reset");
    System.out.println("VMR017 regression PASS");
  }
 }
 """)
     subprocess.run(["javac","-encoding","UTF-8","-d",tmp,str(base/"AdaptiveTokenBudget.java"),
-                    str(base/"OcrProposalGuard.java"),str(harness)],check=True)
+                    str(base/"OcrProposalGuard.java"),str(base/"DocumentContextMemory.java"),str(harness)],check=True)
     subprocess.run(["java","-cp",tmp,"fr.visionmaxread.GuardSmoke"],check=True)
 review=(base/"HobbyMoeReview.java").read_text()
 native=(base/"HobbyMoeNative.java").read_text()

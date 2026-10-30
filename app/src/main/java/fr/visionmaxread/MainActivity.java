@@ -280,7 +280,7 @@ public final class MainActivity extends Activity {
         if(!moe.isEnabled())return;
         final int[] language={0};
         new AlertDialog.Builder(this).setTitle("Vrai MoE indépendant — mémoire et phrases")
-            .setSingleChoiceItems(new String[]{"Français","English"},0,(d,w)->language[0]=w)
+            .setSingleChoiceItems(new String[]{"Français · contexte OCR","Français · sans contexte","English · contexte OCR","English · sans contexte"},0,(d,w)->language[0]=w)
             .setMessage("HobbyLM-1B est un vrai réseau à experts routés (64 experts, 8 actifs par jeton), "+
                 "différent de Liquid. Le format de conversation officiel est rétabli. "+
                 "La suite du texte généré apparaîtra au fil des jetons, avec Arrêter et Copier flux. "+
@@ -288,7 +288,7 @@ public final class MainActivity extends Activity {
                 "le stockage privé au premier essai. La génération sur CPU peut être lente et "+
                 "consommer beaucoup de mémoire. Pour ce premier test, seule la première zone "+
                 "de trois lignes de 150 caractères maximum sont examinées dans une seule session. "+
-                "La session sera déchargée après le lot. Choisis français ou anglais. "+
+                "La session sera déchargée après le lot. Choisis langue et mode de contexte. "+
                 "La qualité en français est inconnue ; vérifie tout résultat avant utilisation.")
             .setPositiveButton("Lancer le MoE",(d,w)->{
                 moe.setEnabled(false);
@@ -302,7 +302,7 @@ public final class MainActivity extends Activity {
                     try{
                         DebugLog.append(this,"HOBBY_MOE begin engine=routed-hobbylm-1b inputChars="+scan.lmOrdered.length()+" mode=three_lines session=reused chat_template=hobbylm-v1 streamed=true pssMb="+formatMb(processPssMb()));
                         HobbyMoeReview.Result r=HobbyMoeReview.run(
-                            this,scan.lmOrdered,trace,language[0]==0?"fr":"en",(delta,count)->{
+                            this,scan.lmOrdered,trace,language[0]<2?"fr":"en",language[0]%2==0,(delta,count)->{
                                 if(!destroyed&&sessions.documentCurrent(ticket))stream.token(delta,count);
                                 else HobbyMoeNative.stop();
                             },(index,total,lang,budget)->stream.segment(index,total,lang,budget));
