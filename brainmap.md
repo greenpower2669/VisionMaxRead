@@ -326,3 +326,9 @@ Instruction de Fab : « Ok on garde qwen et on optimisé le reste, l audio est p
 - `AdaptiveTokenBudget.java`, `OcrProposalGuard.java` : estimation prudentielle jetons et rejets hors sujet ; `DocumentContextMemory.java` : état document volatile avec observations/hypothèses/confirmations distinctes.
 - `HobbyMoeReview.java`/`HobbyMoeNative.java`/`native/moe/src/lib.rs` : sortie jusqu'à 512 jetons avec motif de fin honnêtement inconnu et A/B précédent OCR ; `MoeStreamDialog.java`/`MainActivity.java` : budget affiché et modes FR/EN × mémoire.
 - Tests `scripts/test_vmr017_contract.py` ; audit, limites et ordre de mission dans `docs/VMR-017-adaptive-model-audit.md` et `todo.md`. Ne pas annoncer Liquid/Qwen intégrés ; pas de merge/Release.
+
+### Index VMR-017 — modèles textuels facultatifs
+- `OfflineCorrectionModels.java` : deux références GGUF SHA256 fixes, import SAF sans réseau, copie locale avec contrôle taille/digest et revalidation au chargement ; OCR seul par défaut.
+- `LiquidNative.java` + `native/liquid/vmr_liquid.cpp` : charge les poids authentifiés dans un runtime llama.cpp commun, cause EOS/limite observable, streaming JNI cumulatif en UTF-8, un seul modèle séquentiellement.
+- `DocumentSentenceChunks.java` : découpage conservateur à intervalles lossless ; `TextualDocumentReview.java` : comparaison bilingue ≤40 phrases/lot, contexte précédent OCR étiqueté incertain, filtre non-hallucination ; `TextModelStreamDialog.java` : flux, arrêt, copie sensible volontaire.
+- `MainActivity.java` : réglage « OCR seul/Liquid 1.2/Qwen3 1.7 », import GGUF et bouton de comparaison après Indra. Pas de preuve de qualité/compatibilité Samsung ni d'optimisation mémoire : voir `todo.md`.

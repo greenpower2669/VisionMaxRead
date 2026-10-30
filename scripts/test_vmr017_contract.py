@@ -49,3 +49,22 @@ assert "first_token_ms=" in review and "finish_reason=" in review
 assert "maxTokens>512" in native and "limit>512" in rust
 assert "/ 72" not in dialog
 print("VMR017 structural checks PASS")
+
+model=(base/"OfflineCorrectionModels.java").read_text()
+liq=(base/"LiquidNative.java").read_text()
+cpp=(root/"native/liquid/vmr_liquid.cpp").read_text()
+review_text=(base/"TextualDocumentReview.java").read_text()
+dialog_text=(base/"TextModelStreamDialog.java").read_text()
+screen=(base/"MainActivity.java").read_text()
+assert "bb741ebb106d543e9de114b843a3d3d73d51c74b5801e69da2abde821a0cb3e1" in model
+assert "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5" in model
+assert "MessageDigest.getInstance" in model and "importFromDocument" in model
+assert "inferStreaming" in liq and "Java_fr_visionmaxread_LiquidNative_inferStreaming" in cpp
+assert "output.append(buf,n);g_lastTokens++" in cpp
+assert "CallVoidMethod(listener,method" in cpp
+assert '"eos"' in cpp and '"token_limit"' in cpp
+assert "progress.onToken(" in review_text and "first_token_ms=" in review_text
+assert "void token(int index,int total,String cumulative,int count)" in dialog_text
+assert "new TextModelStreamDialog" in screen and "OCR uniquement" in screen
+assert "OfflineCorrectionModels.OCR_ONLY" in screen
+print("VMR017 streamed offline Q4 model contract PASS")

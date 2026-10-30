@@ -528,3 +528,10 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [x] Sélecteur Réglages aucun correcteur/Liquid1.2/Qwen1.7, boutons d'import, action correcteur après Indra, FR/EN avec/sans contexte. Traitement expérimental ≤40 segments, refus de proposition sans EOS ou hors source, origine toujours préservée.
 - [ ] **À vérifier en CI** : code Java+JNI, tests de régression et signes ; test réel Android en mode avion avec les deux GGUF Q4 authentiques, TTFT, PSS/thermique, stabilité et qualité. Streaming natif token par token pour Liquid/Qwen non encore intégré (flux HobbyLM existant conservé).
 - [ ] Ne pas surestimer l'intégration : aucun modèle 1.2/1.7B embarqué dans l'APK, import externe nécessaire ; tokenizer du modèle chargé via GGUF/llama.cpp, template ChatML utilisé en C++ à comparer au tokenizer livré.
+
+### VMR-017 — jalon streaming Liquid/Qwen supplémentaire
+- [x] Ajouter streaming C++ JNI des jetons réellement produits via octets UTF-8 cumulatifs, compteur, interruption, délai premier jeton, vitesse, cause EOS/limite exposée.
+- [x] Créer fenêtre `TextModelStreamDialog` contrastée avec copie volontaire après confirmation, Stop, remontée du modèle/phrase et comparaison de candidats ; conserver HobbyLM intact.
+- [ ] **BLOQUANT** Vérifier compilation CI HEAD après intégration Q4 : modèles réels absents de CI, validité du JNI streaming Android ARM64 et stabilité de l'interface non prouvées sur matériel.
+- [ ] Contrôler empreinte de modèle à chaque import/chargement et sécuriser l'indication utilisateur en cas de sortie incomplète ; faire tests Samsung et corpus FR/EN avant toute affirmation de fiabilité.
+- [ ] Finir continuation adaptative (étendre si nécessaire en conservant KV), segmentation plus profonde, mémoire entités/contradictions confirmées, benchmark CER/WER, optimisation Q4/mmap/pression mémoire.
