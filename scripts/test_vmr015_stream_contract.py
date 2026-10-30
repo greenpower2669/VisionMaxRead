@@ -19,12 +19,13 @@ assert 'void onToken(String delta,int tokenCount)' in native
 assert 'infer(String model,String prompt,int maxTokens,TokenListener listener)' in native
 assert "new String(tokens,StandardCharsets.UTF_8)" in native
 assert "if(cancelling.get())throw new IllegalStateException" in native
-assert '<|user|>' in review and '<|assistant|>' in review, "Instruct role markers mandatory"
+prompt=(app/"MoePromptBuilder.java").read_text()
+assert '<|user|>' in prompt and '<|assistant|>' in prompt, "Instruct role markers mandatory"
 assert "USER: Tu es" not in review and "ASSISTANT:" not in review
 assert "indexes.size()<3" in review and "source.length()>150" in review
-assert 'session.generate(buildPrompt(source,language,useContext?memory.previousSummary():""),budget,(delta,count)->' in review
+assert 'session.generate(buildPrompt(source,language,previous,opening),budget,(delta,count)->' in review
 assert "partial.append(delta)" in review
-assert '" generated_tokens="+tokenCount[0]' in review
+assert '" budget="+budget+" tokens="+tokenCount[0]' in review
 assert 'stream.finish("Terminé' in ui
 assert "stream.token(delta,count)" in ui
 assert "activeMoeStream.cancelAndClose()" in ui

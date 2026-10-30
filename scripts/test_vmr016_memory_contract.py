@@ -19,12 +19,13 @@ assert "loadMs=nativeOpen" in native
 assert "pssAfterLoad=" in native
 assert "try(HobbyMoeNative.Session session=new HobbyMoeNative.Session(context))" in review
 assert "indexes.size()<3" in review and "source.length()>150" in review
-assert 'session.generate(buildPrompt(source,language,useContext?memory.previousSummary():""),budget' in review
+assert 'session.generate(buildPrompt(source,language,previous,opening),budget' in review
 assert "trace.add(context,\"P4_MOE_SESSION\"" in review
 assert '"P4_MOE_SEG_"+(n+1)' in review
-assert "Conserve exactement les nombres" in review
-assert "Keep numbers, names and dates unchanged." in review
-assert "language.equals(\"fr\")" in review
+prompt=(root/"app/src/main/java/fr/visionmaxread/MoePromptBuilder.java").read_text()
+assert "Conserve exactement les nombres" in prompt
+assert "Keep numbers, names and dates unchanged." in prompt
+assert '"fr".equals(language)' in prompt
 assert 'setSingleChoiceItems(new String[]{"Français · contexte OCR","Français · sans contexte"' in ui
 assert "void segment(int index,int total,String language)" in dialog
 assert 'streamText.append(delta)' in dialog

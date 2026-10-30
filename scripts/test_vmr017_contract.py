@@ -46,7 +46,7 @@ dialog=(base/"MoeStreamDialog.java").read_text()
 assert "72,(delta,count)" not in review
 assert "AdaptiveTokenBudget.forOcrCorrection" in review
 assert "OcrProposalGuard.verify" in review
-assert "first_token_ms=" in review and "finish_reason=" in review
+assert "first_token_ms=" in review and " ctx_sent=" in review and " finish=" in review
 assert "maxTokens>512" in native and "limit>512" in rust
 assert "/ 72" not in dialog
 print("VMR017 structural checks PASS")
