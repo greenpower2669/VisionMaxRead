@@ -18,12 +18,15 @@ import fr.visionmaxread.core.SessionGate;
 import fr.visionmaxread.core.ReaderSessions;
 
 public final class MainActivity extends Activity {
-    private static final int CAMERA_PERMISSION=10,PHOTO=20,IMPORT_SURYA_MODEL=51,IMPORT_SURYA_PROJECTOR=52,IMPORT_LIGHTON_MODEL=53,IMPORT_LIGHTON_PROJECTOR=54;
+    private static final int CAMERA_PERMISSION=10,PHOTO=20;
     private static final int INK=Color.rgb(16,44,60),PAPER=Color.rgb(255,249,238),TEAL=Color.rgb(0,105,92),RED=Color.rgb(179,38,32),DISABLED=Color.rgb(145,145,145);
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private final ExecutorService paddleWorker=Executors.newSingleThreadExecutor();
     private final ExecutorService indraWorker=Executors.newSingleThreadExecutor();
     private final ExecutorService specialistWorker=Executors.newSingleThreadExecutor();
+    private final ExecutorService modelInstallWorker=Executors.newSingleThreadExecutor();
+    private final java.util.concurrent.atomic.AtomicBoolean modelInstallActive=new java.util.concurrent.atomic.AtomicBoolean(false);
+    private final java.util.concurrent.atomic.AtomicBoolean modelInstallCancel=new java.util.concurrent.atomic.AtomicBoolean(false);
     private final SpecialistOcrProcess specialistOcr=new SpecialistOcrProcess();
     private final AtomicLong ocrChoice=new AtomicLong(),progressGeneration=new AtomicLong();
     private final ReaderSessions sessions=new ReaderSessions();
@@ -68,7 +71,7 @@ public final class MainActivity extends Activity {
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);outer.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);scroll.addView(content);
         TextView title=label("VisionMaxRead",28);title.setTypeface(null,Typeface.BOLD);if(Build.VERSION.SDK_INT>=28)title.setAccessibilityHeading(true);content.addView(title);
-        content.addView(label("Voir le texte. L’écouter. Hors ligne.",16));
+        content.addView(label("OCR et lecture hors ligne après installation automatique des modèles.",16));
         row(content,button("Caméra",INK,this::startCamera),button("Photo",INK,this::choosePhoto),button("Texte",INK,this::manualText));
         imageArea=new FrameLayout(this);imageArea.setBackgroundColor(Color.BLACK);content.addView(imageArea,new LinearLayout.LayoutParams(-1,dp(270)));
         preview=new TextureView(this);preview.setContentDescription("Aperçu caméra pour viser uniquement");imageArea.addView(preview,new FrameLayout.LayoutParams(-1,-1));
@@ -80,9 +83,13 @@ public final class MainActivity extends Activity {
         copyResults=button("Copier résultats · toutes les passes",TEAL,this::confirmCopyAllPasses);
         row(content,copyLogs,copyResults);
         copyLogs.setEnabled(true);copyResults.setEnabled(false);
-        content.addView(button("OCR spécialisés · Surya / LightOn / Nemotron",TEAL,this::showOcrEngines));
+        content.addView(button("OCR spécialisés · choisir un moteur",TEAL,this::showOcrEngines));
+        content.addView(button("Préparer mes OCR automatiquement · Wi-Fi",TEAL,
+            ()->requestAutoInstall(new SpecialistOcrModels.Spec[]{
+                SpecialistOcrModels.LIGHTON,SpecialistOcrModels.SURYA},false,null)));
         specialistStop=button("■ Arrêter l’OCR spécialisé",RED,()->{
-            specialistOcr.stop();status.setText("Arrêt demandé. Le texte Indra reste inchangé.");
+            modelInstallCancel.set(true);specialistOcr.stop();
+            status.setText("Arrêt demandé. La copie partielle reste disponible pour une reprise ultérieure.");
         });
         specialistStop.setVisibility(View.GONE);content.addView(specialistStop);
         ocrProgress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);ocrProgress.setMax(100);ocrProgress.setVisibility(View.GONE);ocrProgress.setContentDescription("Progression de la reconnaissance de texte");content.addView(ocrProgress,new LinearLayout.LayoutParams(-1,dp(10)));
@@ -125,25 +132,9 @@ public final class MainActivity extends Activity {
     @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results){super.onRequestPermissionsResult(request,permissions,results);if(request==CAMERA_PERMISSION&&cameraMode){if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else{freeze.setEnabled(false);status.setText("Caméra refusée. Photo et Texte restent disponibles.");}}}
     @Override protected void onActivityResult(int request,int result,Intent data){
         super.onActivityResult(request,result,data);
-        if(result!=RESULT_OK||data==null||data.getData()==null)return;
-        Uri uri=data.getData();
-        if(request==PHOTO){processImage(()->ImageLoader.fromUri(this,uri));return;}
-        if(request>=IMPORT_SURYA_MODEL&&request<=IMPORT_LIGHTON_PROJECTOR){
-            SpecialistOcrModels.Spec spec=(request<=IMPORT_SURYA_PROJECTOR)?SpecialistOcrModels.SURYA:SpecialistOcrModels.LIGHTON;
-            SpecialistOcrModels.Part part=(request==IMPORT_SURYA_MODEL||request==IMPORT_LIGHTON_MODEL)?
-                SpecialistOcrModels.Part.MODEL:SpecialistOcrModels.Part.PROJECTOR;
-            status.setText("Copie privée et vérification SHA-256 de "+spec.title+"…");
-            specialistWorker.execute(()->{
-                try{
-                    SpecialistOcrModels.importFile(this,spec,part,uri);
-                    ui(()->status.setText(spec.title+" : "+
-                        (part==SpecialistOcrModels.Part.MODEL?"poids GGUF":"projecteur image")+
-                        " vérifiés et installés hors ligne."));
-                }catch(Exception e){
-                    DebugLog.append(this,"VMR019_IMPORT failed engine="+spec.engine+" reason="+e.getClass().getSimpleName());
-                    ui(()->status.setText("Import refusé : fichier non authentifié ou inaccessible ("+e.getClass().getSimpleName()+")."));
-                }
-            });
+        if(request==PHOTO && result==RESULT_OK && data!=null&&data.getData()!=null){
+            Uri photo=data.getData();
+            processImage(()->ImageLoader.fromUri(this,photo));
         }
     }
     interface LoadImage{Bitmap get()throws Exception;}
@@ -262,41 +253,90 @@ public final class MainActivity extends Activity {
             }).setNegativeButton("Fermer",null).show();
     }
     private String ocrAvailability(SpecialistOcrModels.Spec spec){
-        if(!specialistOcr.available(this))return "moteur natif absent";
-        return SpecialistOcrModels.ready(this,spec)?"fichiers présents · prêts à vérifier":"fichiers à importer";
+        if(!specialistOcr.available(this))return "moteur natif non inclus";
+        return SpecialistOcrModels.ready(this,spec)?"installé · lancement hors ligne":"installation automatique Wi-Fi";
     }
     private void showSpecialistActions(SpecialistOcrModels.Spec spec){
-        String description=spec.title+" (test Android CPU hors ligne). "+
-            "Deux fichiers GGUF sont nécessaires : poids du modèle et projecteur vision. "+
-            "Aucune image ne quitte le téléphone. L'import vérifie leur SHA-256 officiel ; "+
-            "le premier essai peut être lent et consommer beaucoup de RAM. "+
-            "Texte Indra conservé jusqu'à ta sélection explicite.";
         new AlertDialog.Builder(this).setTitle(spec.title)
-            .setMessage(description)
+            .setMessage("L'application installe automatiquement les fichiers GGUF vérifiés sur Wi-Fi. "+
+                "Aucune manipulation de fichiers n'est nécessaire. Environ "+
+                (spec.engine==SpecialistOcrModels.Engine.SURYA2?"1,5 Go":"750 Mo")+
+                " de stockage ; un seul moteur chargé en RAM à la fois. "+
+                "Aucune photo ni transcription n'est envoyée. Tu peux lire avec Indra sans installer ce moteur.")
             .setItems(new String[]{
-                "Télécharger le fichier modèle officiel (navigateur)",
-                "Télécharger le projecteur image (navigateur)",
-                "Importer le modèle GGUF depuis mon téléphone",
-                "Importer le projecteur GGUF depuis mon téléphone",
-                "Lancer un véritable OCR sur cette photo"
-            },(d,which)->{
-                if(which==0||which==1){
-                    SpecialistOcrModels.Part part=which==0?SpecialistOcrModels.Part.MODEL:SpecialistOcrModels.Part.PROJECTOR;
-                    try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(spec.url(part))));}
-                    catch(Exception e){status.setText("Impossible d'ouvrir le navigateur pour ce fichier.");}
-                }else if(which==2||which==3){
-                    chooseSpecialistFile(spec,which==2?SpecialistOcrModels.Part.MODEL:SpecialistOcrModels.Part.PROJECTOR);
-                }else runSpecialistOcr(spec);
+                "Reconnaître la photo (installer automatiquement si nécessaire)",
+                "Installer maintenant sur Wi-Fi pour utilisation hors ligne",
+                "Libérer le stockage occupé par ce moteur"
+            },(d,index)->{
+                if(index==0)runSpecialistOcr(spec);
+                else if(index==1)requestAutoInstall(new SpecialistOcrModels.Spec[]{spec},false,null);
+                else confirmDeleteModel(spec);
             }).setNegativeButton("Fermer",null).show();
     }
-    private void chooseSpecialistFile(SpecialistOcrModels.Spec spec,SpecialistOcrModels.Part part){
-        Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*")
-            .addCategory(Intent.CATEGORY_OPENABLE);
-        int request=spec.engine==SpecialistOcrModels.Engine.SURYA2?
-            (part==SpecialistOcrModels.Part.MODEL?IMPORT_SURYA_MODEL:IMPORT_SURYA_PROJECTOR):
-            (part==SpecialistOcrModels.Part.MODEL?IMPORT_LIGHTON_MODEL:IMPORT_LIGHTON_PROJECTOR);
-        try{startActivityForResult(pick,request);}
-        catch(Exception e){status.setText("Explorateur de fichiers indisponible.");}
+    private void confirmDeleteModel(SpecialistOcrModels.Spec spec){
+        new AlertDialog.Builder(this).setTitle("Supprimer les poids locaux de "+spec.title+" ?")
+            .setMessage("La reconnaissance Indra reste utilisable. Le modèle pourra être réinstallé automatiquement sur Wi-Fi.")
+            .setPositiveButton("Libérer le stockage",(d,w)->{
+                if(modelInstallActive.get()){status.setText("Arrête d'abord l'installation en cours.");return;}
+                specialistOcr.stop();
+                long removed=0;
+                for(SpecialistOcrModels.Part part:SpecialistOcrModels.Part.values()){
+                    File f=SpecialistOcrModels.path(this,spec,part);
+                    if(f.isFile()&&f.delete())removed++;
+                    File partial=new File(f.getParentFile(),f.getName()+".part");
+                    if(partial.isFile())partial.delete();
+                }
+                status.setText("Stockage libéré pour "+spec.title+" ("+removed+" fichier(s)).");
+            }).setNegativeButton("Annuler",null).show();
+    }
+    private void requestAutoInstall(SpecialistOcrModels.Spec[] targets,boolean runAfter,
+                                    SpecialistOcrModels.Spec selected){
+        if(modelInstallActive.get()){
+            status.setText("Installation déjà en cours : les fichiers sont gérés par l'application.");return;
+        }
+        String message=(targets.length==2?"Installer automatiquement LightOnOCR-3 et Surya OCR 2 (environ 2,2 Go) ?":
+            "Installer automatiquement "+targets[0].title+" ?")+
+            "\n\nConnexion Wi-Fi non facturée et espace libre nécessaires. "+
+            "Une seule installation initiale ; les prochaines lectures fonctionnent sans réseau. "+
+            "Aucun document n'est transféré. Les fichiers sont vérifiés par SHA-256. "+
+            "Ne quitte pas l'application pendant le transfert expérimental.";
+        new AlertDialog.Builder(this).setTitle("Préparer les modèles OCR")
+            .setMessage(message)
+            .setPositiveButton("Installer automatiquement",(d,w)->beginAutoInstall(targets,runAfter,selected))
+            .setNegativeButton("Plus tard",null).show();
+    }
+    private void beginAutoInstall(SpecialistOcrModels.Spec[] targets,boolean runAfter,
+                                  SpecialistOcrModels.Spec selected){
+        if(!modelInstallActive.compareAndSet(false,true))return;
+        modelInstallCancel.set(false);
+        specialistStop.setVisibility(View.VISIBLE);
+        status.setText("Installation automatique des moteurs OCR sur Wi-Fi…");
+        final long ticket=sessions.documentTicket();
+        modelInstallWorker.execute(()->{
+            try{
+                for(SpecialistOcrModels.Spec spec:targets){
+                    SpecialistOcrAutoInstaller.ensure(getApplicationContext(),spec,(name,component,bytes,max)->{
+                        ui(()->{
+                            if(!modelInstallCancel.get())status.setText(name+" : "+component+
+                                " · "+(bytes/(1024*1024))+" Mo reçus · vérification automatique.");
+                        });
+                    },()->modelInstallCancel.get()||destroyed);
+                }
+                ui(()->{
+                    status.setText("Modèles authentifiés installés. OCR désormais utilisable hors ligne.");
+                    if(runAfter&&selected!=null&&sessions.documentCurrent(ticket))runSpecialistOcr(selected);
+                });
+            }catch(java.util.concurrent.CancellationException e){
+                ui(()->status.setText("Téléchargement interrompu. Reprise possible sur Wi-Fi."));
+            }catch(Exception e){
+                DebugLog.append(this,"VMR020_INSTALL failed type="+e.getClass().getSimpleName());
+                ui(()->status.setText("Installation incomplète : "+e.getMessage()+
+                    ". Vérifie le Wi-Fi et l'espace libre ; Indra reste utilisable."));
+            }finally{
+                modelInstallActive.set(false);
+                ui(()->specialistStop.setVisibility(View.GONE));
+            }
+        });
     }
     private void runSpecialistOcr(SpecialistOcrModels.Spec spec){
         final Bitmap snapshot=compareBitmap;
@@ -305,7 +345,8 @@ public final class MainActivity extends Activity {
             status.setText("Choisis d'abord une photo. Aucun OCR spécialisé lancé.");return;
         }
         if(!specialistOcr.available(this)||!SpecialistOcrModels.ready(this,spec)){
-            status.setText("Moteur ou fichiers GGUF incomplets : importe le modèle et le projecteur.");return;
+            if(!specialistOcr.available(this)){status.setText("Moteur natif Android indisponible.");return;}
+            requestAutoInstall(new SpecialistOcrModels.Spec[]{spec},true,spec);return;
         }
         status.setText(spec.title+" : authentification puis analyse réelle des pixels…");
         specialistStop.setVisibility(View.VISIBLE);
@@ -502,7 +543,7 @@ public final class MainActivity extends Activity {
         CheckBox hdVoice=new CheckBox(this);hdVoice.setText("Voix Siwis HD (français, articulation précise)");hdVoice.setTextSize(18);hdVoice.setChecked(prefs.getBoolean("voiceHD",true));panel.addView(hdVoice);
         panel.addView(label("Siwis HD ou Jessica (voix originale), moteur Sherpa-ONNX/Piper hors ligne ; une seule voix chargée.",16));
         panel.addView(label("Indra OCR actif. PP-OCRv6-Small disponible comme secours.",18));
-        panel.addView(label("Surya 2 et LightOnOCR-3 : import de deux GGUF officiels et OCR image natif CPU à tester. Nemotron exige un portage distinct.",16));
+        panel.addView(label("Surya et LightOn : installation des poids automatiquement sur Wi-Fi, une seule fois. Nemotron : portage Android encore à réaliser.",16));
         panel.addView(button("Voir les trois moteurs OCR",INK,this::showOcrEngines));
         TextView speedLabel=label("Vitesse de lecture",18);panel.addView(speedLabel);SeekBar speed=new SeekBar(this);speed.setMax(100);speed.setProgress(Math.round((prefs.getFloat("speed",1.0f)-0.75f)*100));panel.addView(speed);speed.setContentDescription("Vitesse de lecture de 0,75 à 1,75");
         panel.addView(button("Diagnostic 1re phrase",INK,()->worker.execute(()->{
@@ -526,7 +567,7 @@ public final class MainActivity extends Activity {
     }
     private void help(){
         new AlertDialog.Builder(this).setTitle("VisionMaxRead — OCR hors ligne")
-            .setMessage("1. Caméra ou Photo : capture une image.\\n2. Indra reste automatique.\\n3. PP-OCR est un secours.\\n4. Surya 2 et LightOnOCR-3 utilisent deux GGUF vérifiés et un binaire local Android.\\n5. Nemotron attend son portage.\\n6. La voix Piper lit le texte choisi.\\n\\nLes résultats OCR spécialisés sont proposés, jamais appliqués automatiquement.")
+            .setMessage("1. Caméra ou Photo : capture une image.\\n2. Indra reste automatique.\\n3. PP-OCR est un secours.\\n4. Surya et LightOn installent automatiquement leurs modèles sur Wi-Fi (puis hors ligne).\\n5. Nemotron attend son portage.\\n6. La voix Piper lit le texte choisi.\\n\\nLes résultats OCR spécialisés sont proposés, jamais appliqués automatiquement.")
             .setPositiveButton("Fermer",null).show();
     }
     @Override protected void onNewIntent(Intent intent){super.onNewIntent(intent);setIntent(intent);incoming(intent);}
@@ -542,7 +583,8 @@ public final class MainActivity extends Activity {
     @Override protected void onPause(){super.onPause();if(camera!=null)camera.stop();if(freeze!=null)freeze.setEnabled(false);stopReading();}
     @Override protected void onResume(){super.onResume();if(cameraMode&&camera!=null&&checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED){camera.start(sessions.sourceTicket());freeze.setEnabled(true);}}
     @Override public void onTrimMemory(int level){super.onTrimMemory(level);if(level>=android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW)DebugLog.append(this,"MEMORY trim level="+level+" pssMb="+formatMb(processPssMb()));}
-    @Override protected void onDestroy(){destroyed=true;specialistOcr.stop();DebugLog.append(this,"SESSION destroy");
+    @Override protected void onDestroy(){destroyed=true;modelInstallCancel.set(true);specialistOcr.stop();DebugLog.append(this,"SESSION destroy");
         sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();if(camera!=null)camera.destroy();
+        modelInstallCancel.set(true);modelInstallWorker.shutdownNow();
         specialistWorker.shutdownNow();worker.shutdownNow();paddleWorker.shutdownNow();indraWorker.shutdownNow();super.onDestroy();}
 }
