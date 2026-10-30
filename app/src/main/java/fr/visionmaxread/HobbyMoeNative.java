@@ -18,6 +18,39 @@ final class HobbyMoeNative {
         void onToken(String delta,int tokenCount);
     }
     private static native byte[] infer(String model,String prompt,int maxTokens,TokenListener listener);
+    private static native long nativeOpen(String verifiedPath);
+    private static native long nativeWeightBytes();
+    private static native byte[] nativeGenerateLoaded(String prompt,int maxTokens,TokenListener listener);
+    private static native void nativeClose();
+    /** Reuses Q8 expert weights for several short French/English lines, never the KV cache. */
+    static final class Session implements AutoCloseable {
+        private boolean open;
+        final long loadMs,weightBytes;
+        final float pssAfterLoad;
+        Session(Context context)throws Exception{
+            if(!enabled)throw new IllegalStateException("MoE native library missing");
+            cancelling.set(false);
+            reset();
+            File path=verifiedModel(context);
+            if(cancelling.get())throw new IllegalStateException("Cancelled");
+            loadMs=nativeOpen(path.getAbsolutePath());
+            if(loadMs<0)throw new IllegalStateException("Could not load MoE");
+            open=true;
+            weightBytes=nativeWeightBytes();
+            android.os.Debug.MemoryInfo info=new android.os.Debug.MemoryInfo();
+            android.os.Debug.getMemoryInfo(info);
+            pssAfterLoad=info.getTotalPss()/1024f;
+        }
+        String generate(String prompt,int maxTokens,TokenListener listener){
+            if(!open||cancelling.get())throw new IllegalStateException("Cancelled");
+            if(prompt==null||prompt.length()>3500||listener==null||maxTokens<1||maxTokens>128)
+                throw new IllegalArgumentException("Bad MoE input");
+            byte[] result=nativeGenerateLoaded(prompt,maxTokens,listener);
+            if(result==null)throw new IllegalStateException("MoE returned no output");
+            return new String(result,StandardCharsets.UTF_8).trim();
+        }
+        @Override public void close(){if(open){open=false;nativeClose();}}
+    }
     private static final java.util.concurrent.atomic.AtomicBoolean cancelling=
         new java.util.concurrent.atomic.AtomicBoolean(false);
     private static native void reset();
