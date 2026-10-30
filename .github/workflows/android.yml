@@ -115,6 +115,8 @@ jobs:
           echo 'Genuine routed HobbyLM MoE CPU inference smoke verified (not Android)' 
       - name: VMR-015 live token and chat-template contract
         run: python3 scripts/test_vmr015_stream_contract.py
+      - name: VMR-016 native reuse + FR/EN segmented stream contract
+        run: python3 scripts/test_vmr016_memory_contract.py
       - name: Tests, lint and signed APK only (VMR-014 experimental)
         run: ./gradlew :core:check :app:lintDebug :app:assembleDebug --no-daemon
       - name: Lossless archive contract
@@ -130,14 +132,14 @@ jobs:
           badging="$("$build_tools/aapt" dump badging "$apk" | head -n1)"
           echo "$badging"
           echo "$badging" | grep -F "name='fr.visionmaxread.labdebug'"
-          echo "$badging" | grep -F "versionCode='16'"
+          echo "$badging" | grep -F "versionCode='17'"
           cert="$("$build_tools/apksigner" verify --print-certs "$apk" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print tolower($2); exit}')"
           echo "APK_CERT_SHA256=$cert"
           test "$cert" = "$VMR_LAB_CERT_SHA256"
       - name: Name artifacts and record sizes
         run: |
           mkdir artifacts
-          apk="artifacts/VisionMaxRead-0.6.3-MOE-LIVE-LAB.apk"
+          apk="artifacts/VisionMaxRead-0.6.4-MOE-SESSION-FR-EN-LAB.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "$apk"
           cp app/build/reports/lint-results-debug.html artifacts/
           {
@@ -147,13 +149,13 @@ jobs:
             echo "APK_BYTES=$(stat -c%s "$apk")"
             echo "APK_SHA256=$(sha256sum "$apk" | awk '{print $1}')"
             echo "APK_PACKAGE=fr.visionmaxread.labdebug"
-            echo "APK_VERSION_CODE=16"
+            echo "APK_VERSION_CODE=17"
             echo "APK_CERT_SHA256=$VMR_LAB_CERT_SHA256"
           } | tee artifacts/build-manifest.txt
       - name: Upload compact build metadata
         uses: actions/upload-artifact@v4
         with:
-          name: VisionMaxRead-0.6.3-MOE-LIVE-LAB-metadata
+          name: VisionMaxRead-0.6.4-MOE-SESSION-FR-EN-LAB-metadata
           path: artifacts/build-manifest.txt
           retention-days: 14
       # GitHub Actions upload-artifact v7 supports *direct* single-file
@@ -162,7 +164,7 @@ jobs:
       - name: Upload signed LAB APK directly (no ZIP)
         uses: actions/upload-artifact@v7
         with:
-          path: artifacts/VisionMaxRead-0.6.3-MOE-LIVE-LAB.apk
+          path: artifacts/VisionMaxRead-0.6.4-MOE-SESSION-FR-EN-LAB.apk
           archive: false
           if-no-files-found: error
           retention-days: 14
