@@ -305,3 +305,11 @@ Instruction de Fab : « Ok on garde qwen et on optimisé le reste, l audio est p
 - `native/moe/src/lib.rs`, `Cargo.toml`: véritable MoE HobbyLM via Rust Engine::load/GenOpts, JNI annulation, ARM64. `scripts/build_hobby_moe_android.sh`: clone du SHA upstream, compilation cargo aarch64 Android.
 - `scripts/prepare_hobby_moe.py`: GGUF HobbyLM-1B-Instruct Q4_K_M SHA officiel + LICENSE/NOTICE, assets embarqués. `HobbyMoeNative.java`: copie privée vérifiée et JNI. `HobbyMoeReview.java`: 460 caractères Indra LM, Liquid optionnel, P4 MoE et P5 chiffres, résultat à choisir explicitement.
 - `docs/VMR-014-hobbylm-real-moe.md` : conditions, licence, limites, protocole Samsung. VMR-014 version 0.6.2 code15 prévue, ne pas annoncer CI verte avant résultat.
+
+## VMR-015 — lecture en temps réel des jetons HobbyLM
+- `native/moe/src/lib.rs` : `engine.generate` passe chaque delta UTF-8 à `JNIEnv.call_method(listener,"onToken",...)` ; cancellation native conservée via reset explicite.
+- `HobbyMoeNative.java` : interface `TokenListener`, `infer(...listener)`, annulation avant/durant première copie GGUF.
+- `HobbyMoeReview.java` : `buildPrompt` officiel `<|user|>...<|assistant|>`, sans Liquid, sortie 260 caractères, limite 110 tokens, P4 trace tokens et `interrupted`.
+- `MoeStreamDialog.java` : affichage progressif auto-scroll, temps et nombre de jetons, Arrêter, Copier flux sensible après accord, Fermer.
+- `MainActivity.java` : bouton MoE ouvre immédiatement fenêtre, envoie callback, sauvegarde diagnostic, n'autorise comparaison/usage que si garde-fou validé, ferme/arrête à la prochaine image.
+- `scripts/test_vmr015_stream_contract.py`, CI Rust/Java, `docs/VMR-015-moe-live-token-stream.md`. LAB code16, branche VMR-015. Ancienne VMR-014 reste sans modification.
