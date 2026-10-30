@@ -11,16 +11,19 @@ final class DocumentContextMemory {
         Observation(String value,EvidenceKind kind){this.value=value;this.kind=kind;}
     }
     private String previousOcr="";
+    private String openingOcr="";
     private String subject="";
     private final LinkedHashMap<String,Observation> observations=new LinkedHashMap<>();
     private final ArrayList<String> contradictions=new ArrayList<>();
     private int position;
     // Never serialize, persist, log or export raw values without explicit consent.
     String previousSummary(){return clip(previousOcr,150);}
+    String openingExcerpt(){return clip(openingOcr,120);}
     String confirmedOverview(){return clip(subject,300);}
     int position(){return position;}
     void observeOriginal(String source){
         // This is a quoted OCR observation, not a validated assertion.
+        if(position==0)openingOcr=clip(source==null?"":source.strip(),120);
         previousOcr=clip(source==null?"":source.strip(),150);
         position++;
     }
@@ -42,7 +45,7 @@ final class DocumentContextMemory {
         contradictions.add(clip(detail,150));}
     List<String> contradictions(){return Collections.unmodifiableList(new ArrayList<>(contradictions));}
     void reset(){
-        previousOcr="";subject="";observations.clear();contradictions.clear();position=0;
+        previousOcr="";openingOcr="";subject="";observations.clear();contradictions.clear();position=0;
     }
     private static String clip(String raw,int max){
         String oneLine=raw.replaceAll("[\\r\\n\\t]+"," ").trim();
