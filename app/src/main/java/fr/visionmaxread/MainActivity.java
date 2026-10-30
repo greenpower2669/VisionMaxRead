@@ -232,6 +232,7 @@ public final class MainActivity extends Activity {
                 status.setText("Liquid charge son modèle local puis examine les premières lignes…");
                 final long progress=beginOcrProgress(-1);
                 semanticWorker.execute(()->{
+                    if(destroyed||!sessions.documentCurrent(ticket)){finishOcrProgress(progress);return;}
                     try{
                         LiquidOcrReview.Result result=LiquidOcrReview.run(this,scan.lmOrdered,trace);
                         if(!sessions.documentCurrent(ticket)||destroyed)return;
@@ -288,6 +289,7 @@ public final class MainActivity extends Activity {
                 status.setText("HobbyLM charge les poids locaux puis génère une proposition…");
                 long progress=beginOcrProgress(-1);
                 semanticWorker.execute(()->{
+                    if(destroyed||!sessions.documentCurrent(ticket)){finishOcrProgress(progress);return;}
                     long start=SystemClock.elapsedRealtime();
                     try{
                         String liquidHypothesis=lastReview==null?null:lastReview.proposal;
