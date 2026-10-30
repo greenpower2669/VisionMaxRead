@@ -332,3 +332,6 @@ Instruction de Fab : « Ok on garde qwen et on optimisé le reste, l audio est p
 - `LiquidNative.java` + `native/liquid/vmr_liquid.cpp` : charge les poids authentifiés dans un runtime llama.cpp commun, cause EOS/limite observable, streaming JNI cumulatif en UTF-8, un seul modèle séquentiellement.
 - `DocumentSentenceChunks.java` : découpage conservateur à intervalles lossless ; `TextualDocumentReview.java` : comparaison bilingue ≤40 phrases/lot, contexte précédent OCR étiqueté incertain, filtre non-hallucination ; `TextModelStreamDialog.java` : flux, arrêt, copie sensible volontaire.
 - `MainActivity.java` : réglage « OCR seul/Liquid 1.2/Qwen3 1.7 », import GGUF et bouton de comparaison après Indra. Pas de preuve de qualité/compatibilité Samsung ni d'optimisation mémoire : voir `todo.md`.
+
+## VMR-017 — reprise du contexte
+Point d'entrée du correctif : `docs/VMR-017-continuity-correction.md`. `MoePromptBuilder.java` (vrai prompt), `DocumentContextMemory.java` (précédent OCR et début incertain), `HobbyMoeReview.java` (ctx_sent/ctx_chars), `scripts/test_vmr017_context_contract.py` (régression JVM). LAB 0.6.6/code19, source non validée sur Samsung ; pas de merge ni Release.
