@@ -508,3 +508,16 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [ ] Comparer moteur Rust et runtime officiel patché HobbyLM Q4 sur corpus FR/EN, relever EOS, latence premier jeton et répétitions.
 - [ ] Évaluer Q4 natif/mmap et cache des experts pour abaisser réellement le pic mémoire.
 - [ ] Ne pas fusionner dans main ni publier une Release avant validation.
+
+## VMR-017 — suivi actif après première implémentation (30/10/2026)
+- [x] Examiner VMR-012..016, branche VMR-016 récente et divergence documentaire Q4 ; créer branche `feature/vmr017-adaptive-document-context` sans toucher `main`.
+- [x] Corriger dans le source le plafond 72 / 128 (budget Unicode estimatif jusqu'à 512) ; loguer tokens réels, budget, premier jeton, débit, raison upstream non attestée ; toute sortie atteignant son budget est rejetée comme correction complète.
+- [x] Ajouter filtre lexical conservateur avec rejets citations hors source, répétitions/nombres/noms et régression « Cite this article as » ; conserver OCR et copies/stream.
+- [x] Début de mémoire temporaire séparant observations OCR, hypothèses et confirmations ; A/B FR/EN avec/sans rappel OCR précédent, initialement 150 caractères ; aucun texte brut persisté.
+- [ ] **BLOQUANT** Vérifier la CI du dernier HEAD : Rust ARM64, smoke CPU, contrat Java/test régression, lint, APK LAB code18/0.6.5, SHA et certificat constant, aucune permission INTERNET. Pas de signature/Release prétendue sans résultat.
+- [ ] Instrumenter EOS réel et saturation de contexte dans le runtime, continuation de génération à budget étendu **sans réinitialiser le KV** ; répétitions en cours de génération et stop/erreur distingués.
+- [ ] Découpage complet en phrases préservant abréviations/références, plusieurs dizaines de phrases et traitements de longs documents ; améliorer garde sur corrections OCR difficiles (réglage erreurs d'acceptation/rejet).
+- [ ] **C** Intégrer véritable Liquid 1.2B textuel Q4 et Qwen3 1.7B textuel Q4, SHA/revisions/notice, support runtime Android ARM64 vérifié, template propre et non-thinking Qwen ; sélecteur Liquid/Qwen/OCR uniquement, HobbyLM expérimental distinct.
+- [ ] **D** Corpus A/B indépendants, mémoire générale confirmée ≤300 caractères, tableau entités+incertitudes, gestion confidentialité/reprise, CER/WER FR/EN et images historiques.
+- [ ] **E** Q4 natif mmap sans conversion Q8 et cache experts borné si possible; mesurer PSS/chargement/résidence/tokens et pressions Android, annulation, long cours sur Samsung.
+- [ ] Construire l'APK LAB signé direct **sans ZIP** après tests et CI ; **aucun merge main, aucune Release sans validation Fab**.

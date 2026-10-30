@@ -320,3 +320,9 @@ Instruction de Fab : « Ok on garde qwen et on optimisé le reste, l audio est p
 - `HobbyMoeReview.java`: sélection fr/en, trois lignes max ≤150 chars, prompts distincts, arbitrage strict chiffres, traces P4 par ligne + P5.
 - `MoeStreamDialog.java`/`MainActivity.java`: marqueurs de ligne dans le flux, sélecteur Français/English et boutons stop/copie conservés.
 - `scripts/test_vmr016_memory_contract.py`, `docs/VMR-016-moe-memory-fr-en.md`. VMR-016 LAB 0.6.4/code17 visée ; CI et test Samsung nécessaires.
+
+## VMR-017 — index léger de reprise
+- Source de référence VMR-016 `feature/vmr016-moe-memory-fr-en`; travail `feature/vmr017-adaptive-document-context` ; VMR-016 Q4 divergente **documentation seulement** selon comparaison de fichiers.
+- `AdaptiveTokenBudget.java`, `OcrProposalGuard.java` : estimation prudentielle jetons et rejets hors sujet ; `DocumentContextMemory.java` : état document volatile avec observations/hypothèses/confirmations distinctes.
+- `HobbyMoeReview.java`/`HobbyMoeNative.java`/`native/moe/src/lib.rs` : sortie jusqu'à 512 jetons avec motif de fin honnêtement inconnu et A/B précédent OCR ; `MoeStreamDialog.java`/`MainActivity.java` : budget affiché et modes FR/EN × mémoire.
+- Tests `scripts/test_vmr017_contract.py` ; audit, limites et ordre de mission dans `docs/VMR-017-adaptive-model-audit.md` et `todo.md`. Ne pas annoncer Liquid/Qwen intégrés ; pas de merge/Release.
