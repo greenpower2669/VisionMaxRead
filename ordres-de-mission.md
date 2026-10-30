@@ -301,3 +301,6 @@ Base à examiner : `feature/vmr016-moe-memory-fr-en`, regarder VMR-012 à VMR-01
 
 ### Suivi d'exécution VMR-017 — ajout moteurs textuels
 Fab demande explicitement deux modèles sélectionnables Liquid 1.2B et Qwen3 1.7B, sans écraser Indra ni confondre Qwen visuel. Le chemin source choisi est import hors ligne via Android SAF (pas de téléchargement dans l'app), Q4 vérifiés par SHA256, un seul grand modèle à la fois, sélection « Aucun correcteur », comparaison FR/EN et avec/sans contexte. `TextModelStreamDialog` affiche les jetons avec Stop/Copie ; propositions admises uniquement après EOS natif + garde-fou. Tests réels, mémoire PSS, benchmark qualité et certification du nouveau HEAD restent obligatoires avant d'annoncer livraison utilisable. Aucun merge main ni Release.
+
+## VMR-017 — avenant continuité (30/10/2026)
+Fab demande de corriger le passage entre phrases après essai Samsung. Défaut confirmé : contexte marqué dans les logs mais non inséré par le prompt mal échappé. Correctif : transmission effective du précédent OCR et de l'ouverture incertaine, test du vrai prompt, comparaison non destructive des hypothèses rejetées, LAB incrémentale 0.6.6/code19. Préserver Indra, hors ligne et confidentialité. Rester sur branche VMR-017, sans merge main ni Release. Référence : docs/VMR-017-continuity-correction.md.
