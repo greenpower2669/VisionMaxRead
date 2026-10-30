@@ -574,3 +574,5 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [ ] Optimiser les imports lourds et les restrictions énergétiques ; vérifier installation à côté de la précédente APK LAB.
 - [ ] Porter Nemotron 3.5 Parse (C-RADIOv4 + mBART causal) avec pipeline image/ONNX et authentification des fichiers, mesure mémoire et tests, sans prétendre qu'il tourne dans mtmd.
 - [ ] Aucune fusion de main ni GitHub Release sans accord explicite.
+
+- [x] VMR-019 : copier la licence MIT officielle du moteur llama.cpp épinglé dans l'APK et vérifier sa présence ; documenter les licences des modèles importés sans redistribution de leurs poids.

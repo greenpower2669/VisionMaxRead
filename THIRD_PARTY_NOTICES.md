@@ -38,3 +38,10 @@ Source : https://github.com/datalab-to/indra (code Apache-2.0).
 Poids : https://huggingface.co/datalab-to/indra-ocr (licence OpenRAIL-M modifiée, conditions d'utilisation commerciales particulières).
 Révision des modèles : bd02167fdf2005a19962cc15188f8496a2c87d3b.
 L'APK d'essai embarque le texte original de licence dans assets/indra/LICENSE. Portage Android expérimental du détecteur et du reconnaisseur latin, non affilié à Datalab.
+
+## VMR-019 — nouvelle distribution native OCR (30/10/2026)
+- **llama.cpp libmtmd / mtmd-cli** : compilation locale Android ARM64 depuis le commit `792fcf4e7501972b595d3aeeb85153f9926f6aef`, licence MIT conservée dans l'APK sous `assets/licenses/llama.cpp-MIT.txt` ; l'exécutable n'embarque aucun modèle tiers.
+- **Surya OCR 2** : poids `datalab-to/surya-ocr-2-gguf` sous licence OpenRAIL-M modifiée avec restrictions commerciales. Ils ne sont **pas** redistribués dans cet APK : import manuel après lecture des conditions amont.
+- **LightOnOCR-3 0.8B** : modèle et projecteur `staghado/LightOnOCR-3-0.8B-GGUF`, modèle original Apache-2.0. Import manuel, poids non inclus dans l'APK.
+- **Nemotron 3.5 Parse** : pas de poids ni de moteur d'inférence embarqués au stade VMR-019.
+Les notices historiques antérieures sont des archives de versions ; ne pas inférer qu'un poids ancien est encore distribué dans VMR-019.

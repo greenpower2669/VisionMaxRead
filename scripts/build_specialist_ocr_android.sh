@@ -12,6 +12,9 @@ git -C "$work/llama" remote add origin https://github.com/ggml-org/llama.cpp.git
 git -C "$work/llama" fetch --depth 1 origin "$pin"
 git -C "$work/llama" checkout -q --detach "$pin"
 test "$(git -C "$work/llama" rev-parse HEAD)" = "$pin"
+mkdir -p "$root/app/src/main/assets/licenses"
+cp "$work/llama/LICENSE" "$root/app/src/main/assets/licenses/llama.cpp-MIT.txt"
+test -s "$root/app/src/main/assets/licenses/llama.cpp-MIT.txt"
 cmake -S "$work/llama" -B "$work/build" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_TOOLCHAIN_FILE="$ndk/build/cmake/android.toolchain.cmake" \
