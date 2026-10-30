@@ -456,3 +456,9 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [x] [VMR-014/CI] Inférence smoke CPU GitHub de HobbyLM-1B Q4 **réellement exécutée** et réussie dans run `40976686174`. Build Rust ARM64 réalisé. Le même modèle n'a **pas encore** été lancé sur Samsung.
 - [x] [VMR-014/UX] « Copier logs techniques » disponible avant OCR et après relance d'une application tuée, journal persistant et ligne début MoE pour détecter un kill Android ; textes OCR toujours absents des diagnostics standards.
 - [ ] [VMR-014/CI] Réussir le build final du correctif logs après relance, relever SHA et lien APK direct sans ZIP, effectuer essai utilisateur.
+
+### VMR-014 — livraison finale vérifiée le 30/10/2026
+- [x] Run GitHub Actions `40977108326`, code source `d88c5002b0321d5c622c5975155fdc3bf7a3b559` **SUCCESS** : Rust HobbyLM-1B ARM64, véritable génération host CPU MoE, Indra/Liquid hashes, Gradle/lint, signature LAB, permission INTERNET absente.
+- [x] APK unique direct sans ZIP/AAB `VisionMaxRead-0.6.2-REAL-MOE-LAB.apk`, artifact `12942629751` (https://github.com/greenpower2669/VisionMaxRead/actions/runs/40977108326/artifacts/12942629751) : **1 252 630 529 octets**, SHA256 `4cb627a8c7065f3f45e643d196faf4a5b4091b2566ac471e824e25bc8f2e31e9`. Package `fr.visionmaxread.labdebug`, versionCode 15, certificat `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
+- [ ] **Test utilisateur Samsung obligatoire** : faire tourner réellement HobbyLM en mode avion, mesurer mémoire/PSS, temps, qualité, no hallucination, voir P4/P5 et copier les logs en texte. Host smoke et CI ne sont pas test mobile. Gros APK et 729 Mo de poids privés copiés à la première exécution, prévoir espace disque ; annulation/remplacement document. 
+- [ ] Préserver aucun merge main et aucune Release publique avant accord.
