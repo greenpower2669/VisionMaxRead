@@ -16,7 +16,7 @@ final class HobbyMoeReview {
             this.numbersKept=numbersKept;this.status=status;this.ms=ms;
         }
     }
-    interface SegmentListener {void onSegment(int index,int total,String language);}
+    interface SegmentListener {void onSegment(int index,int total,String language,int budget);}
     private HobbyMoeReview(){}
     static Result run(Context context,String original,OcrTrace trace,String language,
                       HobbyMoeNative.TokenListener display,SegmentListener progress)throws Exception {
@@ -50,14 +50,14 @@ final class HobbyMoeReview {
                         "reason=long_line length="+source.length());
                     continue;
                 }
-                progress.onSegment(n+1,indexes.size(),language);
+                final int budget=AdaptiveTokenBudget.forOcrCorrection(source,AdaptiveTokenBudget.DEFAULT_SAFETY_CAP);
+                progress.onSegment(n+1,indexes.size(),language,budget);
                 final int[] tokenCount={0};
                 StringBuilder partial=new StringBuilder();
                 long tic=SystemClock.elapsedRealtime();
                 String output;
                 try{
-                    final int budget=AdaptiveTokenBudget.forOcrCorrection(source,AdaptiveTokenBudget.DEFAULT_SAFETY_CAP);
-                final long[] firstTokenMs={-1};
+                    final long[] firstTokenMs={-1};
                 output=session.generate(buildPrompt(source,language),budget,(delta,count)->{
                         if(firstTokenMs[0]<0)firstTokenMs[0]=SystemClock.elapsedRealtime()-tic;
                         partial.append(delta);

@@ -77,11 +77,15 @@ final class MoeStreamDialog {
             open=false;
         });
     }
-    /** Start of a new short FR/EN line; show segmentation as UI metadata. */
+    /** Old three-argument display remains available to previous contracts. */
     void segment(int index,int total,String language){
+        segment(index,total,language,AdaptiveTokenBudget.DEFAULT_SAFETY_CAP);
+    }
+    /** Display the actual per-line generation budget. */
+    void segment(int index,int total,String language,int requestedBudget){
         activity.runOnUiThread(()->{
             if(!open||activity.isFinishing())return;
-            currentSegment=index;totalSegments=total;
+            currentSegment=index;totalSegments=total;currentBudget=requestedBudget;
             if(index==1)streamText.setText("");
             else streamText.append("\n");
             streamText.append("〔"+(language.equals("en")?"English":"Français")+

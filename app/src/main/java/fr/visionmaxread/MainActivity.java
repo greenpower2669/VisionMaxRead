@@ -305,7 +305,7 @@ public final class MainActivity extends Activity {
                             this,scan.lmOrdered,trace,language[0]==0?"fr":"en",(delta,count)->{
                                 if(!destroyed&&sessions.documentCurrent(ticket))stream.token(delta,count);
                                 else HobbyMoeNative.stop();
-                            },(index,total,lang)->stream.segment(index,total,lang));
+                            },(index,total,lang,budget)->stream.segment(index,total,lang,budget));
                         if(!sessions.documentCurrent(ticket)||destroyed)return;
                         lastMoeReview=r;finishOcrProgress(progress);
                         ui(()->{
