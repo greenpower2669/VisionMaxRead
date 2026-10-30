@@ -482,3 +482,14 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [x] GitHub Actions **run `41038502413` SUCCESS**, source code HEAD `2cd829b0445ab922037d91dc716f5146295392a8`. Test CPU réel HobbyLM sur prompt au format corrigé, Rust ARM64 JNI per-token, contrats de streaming, confidentialité, Gradle, lint, signature et vérification modèles/offline : tous verts.
 - [x] APK direct sans ZIP `VisionMaxRead-0.6.3-MOE-LIVE-LAB.apk`, artifact `12969740814`, **1 252 670 765 octets**, SHA256 `800f3460b53de7c62957718fcbef5921f308fee4bdb96ab672458b6c2d6851ca`, LAB versionCode 16, certificat SHA256 `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`. Pas de permission INTERNET ; Indra+Liquid+HobbyLM présents. `main` et Release non modifiés.
 - [ ] **À valider sur Samsung** : diffusion réelle de chaque jeton sur la fenêtre, stop pendant copie du modèle/génération, bouton Copier flux, qualité comparée sur la même lettre 1942, chiffres, PSS, temps premier jeton. La réussite CI ne prouve pas la précision de HobbyLM en français.
+
+## VMR-016 — session MoE FR/EN, premier jalon
+- [x] Pont de passation à Fab avant coding, analyse source HobbyLM Q4→Q8 et besoins.
+- [x] Branche `feature/vmr016-moe-memory-fr-en` depuis VMR-015, sans `main`.
+- [x] JNI Rust: conserver Engine HobbyLM-1B Q8 durant lot, fonctions nativeOpen/GenerateLoaded/Close, stop et flux réels ; fermer à la fin (pas de cache KV partagé).
+- [x] Interface FR/EN, trois lignes au plus (≤150 caractères), transcription individuelle et garde-fou sur chiffres, logs session/ligne et streaming non écrasé.
+- [x] Tests de régression structurels et source/docs, version 0.6.4 LAB code17.
+- [ ] Vérifier CI Rust/Java/lint/APK signé avec son SHA et permission hors ligne ; livrer APK direct uniquement si SUCCESS.
+- [ ] Mesurer sur Samsung à partir de la même lettre et de lignes anglaises connues : load_ms, PSS après chargement et au pic, 3 latences individuelles, premier jeton, mémoire après fermeture, altération de chiffres et exactitude.
+- [ ] Deuxième expérimentation : Q4 natif mmap avec patch officiel llama.cpp BailingMoe2 QKV, ARM64, contrôler mémoire du modèle et page faults, comparer au Q8 ; en cas de compatibilité prouvée, examiner cache d'experts borné sans modifier routage.
+- [ ] Ne pas confondre réduction des rechargements avec réduction du pic Q8 ; aucune fusion main/Release sans accord.
