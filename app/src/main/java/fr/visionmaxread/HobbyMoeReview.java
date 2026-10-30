@@ -63,10 +63,10 @@ final class HobbyMoeReview {
                 final int[] tokenCount={0};
                 StringBuilder partial=new StringBuilder();
                 long tic=SystemClock.elapsedRealtime();
+                final long[] firstTokenMs={-1};
                 String output;
                 try{
-                    final long[] firstTokenMs={-1};
-                output=session.generate(buildPrompt(source,language,useContext?memory.previousSummary():""),budget,(delta,count)->{
+                    output=session.generate(buildPrompt(source,language,useContext?memory.previousSummary():""),budget,(delta,count)->{
                         if(firstTokenMs[0]<0)firstTokenMs[0]=SystemClock.elapsedRealtime()-tic;
                         partial.append(delta);
                         tokenCount[0]=count;
