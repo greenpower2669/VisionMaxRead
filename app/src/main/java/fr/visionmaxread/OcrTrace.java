@@ -31,13 +31,13 @@ final class OcrTrace {
     synchronized List<Pass> snapshot(){return new ArrayList<>(passes);}
     synchronized String passReport(int index){
         if(index<0||index>=passes.size())throw new IndexOutOfBoundsException("pass");
-        return "VISIONMAXREAD VMR-015 — PASSE SENSIBLE (partage volontaire)\n"+
+        return "VISIONMAXREAD — PASSE SENSIBLE (partage volontaire)\n"+
             "session="+sessionTag+"\n"+
             "Attention : contient des textes OCR potentiellement privés. Anonymiser avant partage.\n\n"+
             render(passes.get(index));
     }
     synchronized String metricsReport(){
-        StringBuilder b=new StringBuilder("VISIONMAXREAD VMR-015 — LOG TECHNIQUE SANS TEXTE\n")
+        StringBuilder b=new StringBuilder("VISIONMAXREAD — LOG TECHNIQUE SANS TEXTE\n")
             .append("session=").append(sessionTag).append("\n")
             .append("Les durées, statuts et noms de moteurs ne sont pas des sorties neuronales.\n\n");
         for(Pass p:passes){
@@ -69,7 +69,7 @@ final class OcrTrace {
         return b.toString();
     }
     synchronized String fullReport(){
-        StringBuilder b=new StringBuilder("VISIONMAXREAD VMR-015 — RAPPORT SENSIBLE (partage volontaire)\n")
+        StringBuilder b=new StringBuilder("VISIONMAXREAD — RAPPORT SENSIBLE (partage volontaire)\n")
             .append("session=").append(sessionTag).append("\n")
             .append("Attention : contient les textes reconnus, relire/anonymiser AVANT tout partage.\n\n");
         for(Pass p:passes)b.append(render(p)).append("\n");
