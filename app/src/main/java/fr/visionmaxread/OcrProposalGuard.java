@@ -7,9 +7,12 @@ import java.util.regex.*;
 /** Conservative, independent OCR proposal filter. Never treats plausible length as proof. */
 final class OcrProposalGuard {
     static final class Verdict{
-        final boolean accepted;
+        final boolean accepted,reviewRecommended;
         final String reason;
-        Verdict(boolean accepted,String reason){this.accepted=accepted;this.reason=reason;}
+        Verdict(boolean accepted,String reason){this(accepted,false,reason);}
+        Verdict(boolean accepted,boolean reviewRecommended,String reason){
+            this.accepted=accepted;this.reviewRecommended=reviewRecommended;this.reason=reason;
+        }
     }
     private static final Pattern WORDS=Pattern.compile("[\\p{L}]{2,}");
     private static final Pattern NUMBERS=Pattern.compile("\\d+(?:[.,/\\-]\\d+)*");
@@ -47,7 +50,19 @@ final class OcrProposalGuard {
         while(names.find()){
             if(names.start()==0)continue;
             String entity=names.group().toLowerCase(Locale.ROOT);
-            if(!b.contains(normalize(entity)))return reject("proper_name_changed");
+            if(!b.contains(normalize(entity))){
+                // A visibly damaged capitalized OCR word may be repairable,
+                // but it must remain a *manual* proposal, never auto-accepted.
+                boolean approximate=false;
+                for(String suggestionWord:b){
+                    if(near(normalize(entity),suggestionWord)){
+                        approximate=true;break;
+                    }
+                }
+                if(approximate)
+                    return new Verdict(false,true,"capitalized_ocr_repair_requires_manual_review");
+                return reject("proper_name_changed");
+            }
         }
         return new Verdict(true,"lexically_supported_candidate_manual_review");
     }
