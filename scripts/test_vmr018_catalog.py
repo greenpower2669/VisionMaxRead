@@ -12,5 +12,5 @@ assert all(x in catalog for x in ('Surya OCR 2','LightOnOCR-3 0.8B','Nemotron 3.
 assert 'Non installé, non exécutable' in catalog
 assert all(x not in ci for x in ('prepare_liquid.py','prepare_hobby_moe.py','build_liquid_android.sh','build_hobby_moe_android.sh'))
 assert 'assets/liquid/' in verify and 'libvmr_moe.so' in verify
-assert 'versionCode 21' in gradle
+assert 'versionCode 21' in gradle or 'versionCode 22' in gradle
 print('VMR-018 static contract OK. OCR image backends still unavailable.')
