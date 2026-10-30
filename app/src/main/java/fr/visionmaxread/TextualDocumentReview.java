@@ -17,7 +17,10 @@ final class TextualDocumentReview {
             rejected=no;elapsedMs=ms;loadMs=loading;
         }
     }
-    interface Progress {void onPhrase(int ordinal,int total,String message);}
+    interface Progress {
+        void onPhrase(int ordinal,int total,String message);
+        default void onToken(int ordinal,int total,String cumulative,int tokenCount){}
+    }
     private TextualDocumentReview(){}
     static Result run(Context context,String ocr,OcrTrace trace,int chosen,String language,
                       boolean useContext,Progress progress)throws Exception{
@@ -54,7 +57,13 @@ final class TextualDocumentReview {
                 int budget=AdaptiveTokenBudget.forOcrCorrection(source,cap);
                 String prompt=buildPrompt(source,language,chosen,useContext?memory.previousSummary():"");
                 long tic=SystemClock.elapsedRealtime();
-                String candidate=session.generate(prompt,budget);
+                final long[] firstToken={-1};
+                final int ordinal=index+1;
+                String candidate=session.generate(prompt,budget,(cumulative,emitted)->{
+                    if(firstToken[0]<0)firstToken[0]=SystemClock.elapsedRealtime()-tic;
+                    progress.onToken(ordinal,Math.min(maxSegments,spans.size()),
+                        new String(cumulative,java.nio.charset.StandardCharsets.UTF_8),emitted);
+                });
                 long ms=SystemClock.elapsedRealtime()-tic;
                 int produced=LiquidNative.lastGeneratedTokens();
                 String finish=LiquidNative.lastFinishReason();
@@ -73,7 +82,8 @@ final class TextualDocumentReview {
                 trace.add(context,"VMR017_TEXT_SEG_"+(index+1),spec.name,
                     "executed",candidate,ms,pss(),
                     "language="+language+" context="+useContext+" tokens="+produced+
-                    " budget="+budget+" finish="+finish+" first_token_ms=unknown"+
+                    " budget="+budget+" finish="+finish+" first_token_ms="+firstToken[0]+
+                    " token_per_second="+(ms>0?Math.round(produced*1000f/ms):0)+
                     " accepted_candidate="+valid+" guard="+guard.reason);
                 memory.observeOriginal(source);
             }

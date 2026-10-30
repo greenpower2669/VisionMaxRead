@@ -16,6 +16,8 @@ final class LiquidNative implements AutoCloseable {
     }
     private static native boolean load(String path);
     private static native byte[] infer(String prompt,int maxTokens);
+    interface TokenListener{void onToken(byte[] cumulativeUtf8,int tokenCount);}
+    private static native byte[] inferStreaming(String prompt,int maxTokens,TokenListener listener);
     static native void stop();
     static native int lastGeneratedTokens();
     static native String lastFinishReason();
@@ -64,6 +66,15 @@ final class LiquidNative implements AutoCloseable {
         if(maxTokens<1||maxTokens>512||prompt.length()>9000)throw new IllegalArgumentException("Prompt oversized");
         byte[] result=infer(prompt,maxTokens);
         if(result==null)throw new IllegalStateException("Empty inference");
+        return new String(result,java.nio.charset.StandardCharsets.UTF_8).trim();
+    }
+    /** One native inference with real per-token cumulative UTF-8 streaming. */
+    String generate(String prompt,int maxTokens,TokenListener listener){
+        if(!loaded||listener==null)throw new IllegalStateException("Model closed or listener missing");
+        if(maxTokens<1||maxTokens>512||prompt==null||prompt.length()>9000)
+            throw new IllegalArgumentException("Prompt oversized");
+        byte[] result=inferStreaming(prompt,maxTokens,listener);
+        if(result==null)throw new IllegalStateException("Empty model streaming result");
         return new String(result,java.nio.charset.StandardCharsets.UTF_8).trim();
     }
     @Override public void close(){

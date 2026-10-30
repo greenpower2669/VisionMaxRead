@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <atomic>
+#include <functional>
 
 namespace {
 std::mutex g_mutex;
@@ -35,7 +36,8 @@ void batch_set(llama_batch_ext *batch,const llama_token *tokens,int count,int po
     }
     llama_batch_ext_set_output_logits(batch,count-1,true);
 }
-std::string generate(const std::string &prompt,int limit){
+std::string generate(const std::string &prompt,int limit,
+    const std::function<void(const std::string&,int)>& callback = {}){
     if(!g_model||!g_vocab)fail("Model not loaded");
     if(prompt.empty()||prompt.size()>10000||limit<1||limit>512)fail("Invalid prompt size");
     // The QAD chat template uses the special im_start / im_end role delimiters.
@@ -71,6 +73,7 @@ std::string generate(const std::string &prompt,int limit){
             int n=llama_token_to_piece(g_vocab,token,buf,sizeof(buf),0,true);
             if(n<0||n>=(int)sizeof(buf))fail("Token output overflow");
             output.append(buf,n);g_lastTokens++;
+            if(callback)callback(output,g_lastTokens);
             batch_set(batch,&token,1,position);
             currentCount=1;
         }
@@ -130,4 +133,38 @@ Java_fr_visionmaxread_LiquidNative_lastGeneratedTokens(JNIEnv *,jclass){
 extern "C" JNIEXPORT jstring JNICALL
 Java_fr_visionmaxread_LiquidNative_lastFinishReason(JNIEnv *env,jclass){
     std::lock_guard<std::mutex> lock(g_mutex);return env->NewStringUTF(g_lastFinish.c_str());
+}
+
+/** Stream cumulative UTF-8 bytes per model token, avoiding invalid modified UTF-8. */
+extern "C" JNIEXPORT jbyteArray JNICALL
+Java_fr_visionmaxread_LiquidNative_inferStreaming(
+    JNIEnv *env,jclass,jstring prompt,jint maxTokens,jobject listener){
+    std::lock_guard<std::mutex> lock(g_mutex);
+    try{
+        if(listener==nullptr)fail("Missing text model token listener");
+        g_cancel=false;
+        jclass klass=env->GetObjectClass(listener);
+        if(!klass)fail("No token listener class");
+        jmethodID method=env->GetMethodID(klass,"onToken","([BI)V");
+        env->DeleteLocalRef(klass);
+        if(!method)fail("Token listener signature mismatch");
+        std::string s=generate(utf8(env,prompt),(int)maxTokens,
+            [&](const std::string &partial,int emitted){
+                jbyteArray segment=env->NewByteArray((jsize)partial.size());
+                if(!segment)fail("Streaming allocation failed");
+                if(!partial.empty())
+                    env->SetByteArrayRegion(segment,0,(jsize)partial.size(),
+                        reinterpret_cast<const jbyte*>(partial.data()));
+                env->CallVoidMethod(listener,method,segment,(jint)emitted);
+                env->DeleteLocalRef(segment);
+                if(env->ExceptionCheck()){
+                    env->ExceptionClear();fail("Java streaming callback rejected data");
+                }
+            });
+        jbyteArray data=env->NewByteArray((jsize)s.size());
+        if(!data)return nullptr;
+        env->SetByteArrayRegion(data,0,(jsize)s.size(),
+            reinterpret_cast<const jbyte*>(s.data()));
+        return data;
+    }catch(const std::exception &e){throwJava(env,e.what());return nullptr;}
 }
