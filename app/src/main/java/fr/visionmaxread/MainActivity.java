@@ -39,6 +39,7 @@ public final class MainActivity extends Activity {
     private volatile IndraOcrService.Scan lastScan;
     private volatile LiquidOcrReview.Result lastReview;
     private volatile HobbyMoeReview.Result lastMoeReview;
+    private MoeStreamDialog activeMoeStream;
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);DebugLog.session(this);prefs=getSharedPreferences("settings",MODE_PRIVATE);history=new HistoryStore(this);textSp=prefs.getInt("textSize",24);
         voice.selectVoice(prefs.getBoolean("voiceHD",true));buildUi();camera=new CameraController(this,preview,new CameraController.Listener(){
@@ -103,7 +104,7 @@ public final class MainActivity extends Activity {
     private long beginOcrProgress(int value){long id=progressGeneration.incrementAndGet();ui(()->{if(ocrProgress!=null&&progressGeneration.get()==id){ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(value);}});return id;}
     private void updateOcrProgress(long id,int value){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(Math.max(0,Math.min(100,value)));});}
     private void finishOcrProgress(long id){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setIndeterminate(false);ocrProgress.setProgress(100);ocrProgress.postDelayed(()->{if(progressGeneration.get()==id)ocrProgress.setVisibility(View.GONE);},900);});}
-    private long newDocument(){stopReading();camera.stop();cameraMode=false;maskedPreview="";lastTrace=null;lastScan=null;lastReview=null;lastMoeReview=null;compareBitmap=null;if(HobbyMoeNative.available())HobbyMoeNative.stop();if(copyLogs!=null)copyLogs.setEnabled(true);if(copyResults!=null)copyResults.setEnabled(false);if(LiquidNative.available())LiquidNative.stop();ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}if(liquid!=null){liquid.setEnabled(false);liquid.setVisibility(View.GONE);}if(moe!=null){moe.setEnabled(false);moe.setVisibility(View.GONE);}return sessions.replaceSource();}
+    private long newDocument(){if(activeMoeStream!=null){activeMoeStream.cancelAndClose();activeMoeStream=null;}stopReading();camera.stop();cameraMode=false;maskedPreview="";lastTrace=null;lastScan=null;lastReview=null;lastMoeReview=null;compareBitmap=null;if(HobbyMoeNative.available())HobbyMoeNative.stop();if(copyLogs!=null)copyLogs.setEnabled(true);if(copyResults!=null)copyResults.setEnabled(false);if(LiquidNative.available())LiquidNative.stop();ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}if(liquid!=null){liquid.setEnabled(false);liquid.setVisibility(View.GONE);}if(moe!=null){moe.setEnabled(false);moe.setVisibility(View.GONE);}return sessions.replaceSource();}
     private void startCamera(){
         newDocument();cameraMode=true;imageArea.setVisibility(View.VISIBLE);preview.setVisibility(View.VISIBLE);frozen.setVisibility(View.GONE);freeze.setVisibility(View.VISIBLE);freeze.setEnabled(true);setText("");status.setText("Vise le texte puis appuie sur Figer l’image.");
         if(checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION);
@@ -277,25 +278,31 @@ public final class MainActivity extends Activity {
             return;
         }
         if(!moe.isEnabled())return;
-        new AlertDialog.Builder(this).setTitle("Vrai MoE indépendant — expérimental")
+        new AlertDialog.Builder(this).setTitle("Vrai MoE indépendant — diffusion des jetons")
             .setMessage("HobbyLM-1B est un vrai réseau à experts routés (64 experts, 8 actifs par jeton), "+
-                "différent de Liquid. Son poids quantifié fait environ 729 Mo et sera copié dans "+
+                "différent de Liquid. Le format de conversation officiel est rétabli. "+
+                "La suite du texte généré apparaîtra au fil des jetons, avec Arrêter et Copier flux. "+
+                "Son poids quantifié fait environ 729 Mo et sera copié dans "+
                 "le stockage privé au premier essai. La génération sur CPU peut être lente et "+
                 "consommer beaucoup de mémoire. Pour ce premier test, seule la première zone "+
                 "de 460 caractères est examinée. Le reste de la page restera inchangé. "+
                 "La qualité en français est inconnue ; vérifie tout résultat avant utilisation.")
             .setPositiveButton("Lancer le MoE",(d,w)->{
                 moe.setEnabled(false);
-                status.setText("HobbyLM charge les poids locaux puis génère une proposition…");
+                final MoeStreamDialog stream=new MoeStreamDialog(this);
+                activeMoeStream=stream;stream.show();
+                status.setText("HobbyLM prépare le modèle ; la sortie apparaît en temps réel dans la fenêtre…");
                 long progress=beginOcrProgress(-1);
                 semanticWorker.execute(()->{
                     if(destroyed||!sessions.documentCurrent(ticket)){finishOcrProgress(progress);return;}
                     long start=SystemClock.elapsedRealtime();
                     try{
-                        String liquidHypothesis=lastReview==null?null:lastReview.proposal;
-                        DebugLog.append(this,"HOBBY_MOE begin engine=routed-hobbylm-1b inputChars="+scan.lmOrdered.length()+" pssMb="+formatMb(processPssMb()));
+                        DebugLog.append(this,"HOBBY_MOE begin engine=routed-hobbylm-1b inputChars="+scan.lmOrdered.length()+" chat_template=hobbylm-v1 streamed=true pssMb="+formatMb(processPssMb()));
                         HobbyMoeReview.Result r=HobbyMoeReview.run(
-                            this,scan.lmOrdered,liquidHypothesis,trace);
+                            this,scan.lmOrdered,trace,(delta,count)->{
+                                if(!destroyed&&sessions.documentCurrent(ticket))stream.token(delta,count);
+                                else HobbyMoeNative.stop();
+                            });
                         if(!sessions.documentCurrent(ticket)||destroyed)return;
                         lastMoeReview=r;finishOcrProgress(progress);
                         ui(()->{
@@ -303,23 +310,26 @@ public final class MainActivity extends Activity {
                             moe.setEnabled(true);
                             status.setText("Vrai MoE : "+r.ms+" ms, chiffres préservés="+r.numbersKept+
                                 ". Indra n'a pas été remplacé ; compare les versions.");
-                            new AlertDialog.Builder(this).setTitle("Vrai MoE — proposition")
-                                .setMessage("Les réponses du modèle peuvent halluciner. "+
-                                    "Vérifie les noms, lieux, dates et chiffres sur le document original.")
-                                .setPositiveButton("Voir texte MoE",(a,b)->
-                                    showComparisonText("HobbyLM MoE — proposition",r.proposed,ticket))
-                                .setNeutralButton("Voir comparaison",(a,b)->
-                                    showComparisonText("HobbyLM MoE — copie prudente",r.preview,ticket))
-                                .setNegativeButton("Fermer",null).show();
+                            // A rejected/hallucinated MoE draft remains visible and
+                            // copyable in the live window, but cannot be applied.
+                            boolean approved="candidate".equals(r.status);
+                            stream.finish("Terminé : "+r.ms+" ms. "+(approved?
+                                "Candidat à comparer à la photo avant usage.":
+                                "Proposition rejetée : texte Indra conservé."),
+                                approved?()->showComparisonText("MoE — candidat à vérifier",r.preview,ticket):null);
                         });
                     }catch(Exception|OutOfMemoryError e){
-                        DebugLog.exception(this,"HOBBY_MOE",e);
-                        trace.add(this,"P4_REAL_MOE_HOBBY","HobbyLM-1B-Instruct-Q4","error","",
-                                  SystemClock.elapsedRealtime()-start,processPssMb(),e.getClass().getSimpleName());
+                        boolean interrupted="Cancelled".equals(e.getMessage());
+                        if(!interrupted)DebugLog.exception(this,"HOBBY_MOE",e);
+                        // HobbyMoeReview already recorded the interrupted partial
+                        // output or error, with a token count and duration.
+                        stream.finish(interrupted?"Arrêt demandé. Flux partiel copiable.":
+                            "MoE en erreur : copie les logs techniques pour le diagnostic.",null);
                         finishOcrProgress(progress);
                         ui(()->{if(sessions.documentCurrent(ticket)){
                             moe.setEnabled(true);
-                            status.setText("MoE échoué ou trop lourd : Indra préservé. Copie les logs techniques.");
+                            status.setText(interrupted?"MoE arrêté : texte Indra préservé.":
+                                "MoE échoué : texte Indra préservé. Copie les logs techniques.");
                         }});
                     }
                 });
@@ -526,5 +536,5 @@ public final class MainActivity extends Activity {
     @Override protected void onPause(){super.onPause();if(camera!=null)camera.stop();if(freeze!=null)freeze.setEnabled(false);stopReading();}
     @Override protected void onResume(){super.onResume();if(cameraMode&&camera!=null&&checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED){camera.start(sessions.sourceTicket());freeze.setEnabled(true);}}
     @Override public void onTrimMemory(int level){super.onTrimMemory(level);if(level>=android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW)DebugLog.append(this,"MEMORY trim level="+level+" pssMb="+formatMb(processPssMb()));}
-    @Override protected void onDestroy(){destroyed=true;DebugLog.append(this,"SESSION destroy");sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();if(camera!=null)camera.destroy();if(LiquidNative.available())LiquidNative.stop();if(HobbyMoeNative.available())HobbyMoeNative.stop();semanticWorker.shutdownNow();worker.shutdownNow();paddleWorker.shutdownNow();indraWorker.shutdownNow();super.onDestroy();}
+    @Override protected void onDestroy(){destroyed=true;DebugLog.append(this,"SESSION destroy");sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();if(camera!=null)camera.destroy();if(LiquidNative.available())LiquidNative.stop();if(HobbyMoeNative.available())HobbyMoeNative.stop();if(activeMoeStream!=null)activeMoeStream.cancelAndClose();semanticWorker.shutdownNow();worker.shutdownNow();paddleWorker.shutdownNow();indraWorker.shutdownNow();super.onDestroy();}
 }
