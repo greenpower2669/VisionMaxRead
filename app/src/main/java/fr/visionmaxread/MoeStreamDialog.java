@@ -67,6 +67,14 @@ final class MoeStreamDialog {
         });
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener(v->dialog.dismiss());
     }
+    /** Called on activity shutdown or when a new photo replaces the source. */
+    void cancelAndClose(){
+        if(HobbyMoeNative.available())HobbyMoeNative.stop();
+        activity.runOnUiThread(()->{
+            if(dialog!=null&&dialog.isShowing())dialog.dismiss();
+            open=false;
+        });
+    }
     /** Called on the inference worker; marshals incremental updates to the UI. */
     void token(String delta,int count) {
         activity.runOnUiThread(()->{
