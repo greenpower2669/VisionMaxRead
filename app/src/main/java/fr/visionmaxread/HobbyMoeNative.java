@@ -18,13 +18,23 @@ final class HobbyMoeNative {
         void onToken(String delta,int tokenCount);
     }
     private static native byte[] infer(String model,String prompt,int maxTokens,TokenListener listener);
-    static native void stop();
+    private static final java.util.concurrent.atomic.AtomicBoolean cancelling=
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    private static native void reset();
+    private static native void nativeStop();
+    static void stop(){
+        cancelling.set(true);
+        if(enabled)nativeStop();
+    }
     static boolean available(){return enabled;}
     static String generate(Context context,String prompt,int maxTokens,TokenListener listener)throws Exception{
         if(!enabled)throw new IllegalStateException("Rust MoE engine unavailable");
         if(prompt.isEmpty()||prompt.length()>3500||maxTokens<1||maxTokens>128||listener==null)
             throw new IllegalArgumentException("MoE input invalid");
+        cancelling.set(false);
+        reset();
         File model=verifiedModel(context);
+        if(cancelling.get())throw new IllegalStateException("Cancelled");
         byte[] tokens=infer(model.getAbsolutePath(),prompt,maxTokens,listener);
         if(tokens==null)throw new IllegalStateException("MoE produced no output");
         return new String(tokens,StandardCharsets.UTF_8).trim();
