@@ -40,6 +40,7 @@ public final class MainActivity extends Activity {
     private volatile LiquidOcrReview.Result lastReview;
     private volatile HobbyMoeReview.Result lastMoeReview;
     private MoeStreamDialog activeMoeStream;
+    private TextModelStreamDialog activeTextStream;
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);DebugLog.session(this);prefs=getSharedPreferences("settings",MODE_PRIVATE);history=new HistoryStore(this);textSp=prefs.getInt("textSize",24);
         voice.selectVoice(prefs.getBoolean("voiceHD",true));buildUi();camera=new CameraController(this,preview,new CameraController.Listener(){
@@ -106,7 +107,7 @@ public final class MainActivity extends Activity {
     private long beginOcrProgress(int value){long id=progressGeneration.incrementAndGet();ui(()->{if(ocrProgress!=null&&progressGeneration.get()==id){ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(value);}});return id;}
     private void updateOcrProgress(long id,int value){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setVisibility(View.VISIBLE);ocrProgress.setIndeterminate(value<0);if(value>=0)ocrProgress.setProgress(Math.max(0,Math.min(100,value)));});}
     private void finishOcrProgress(long id){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setIndeterminate(false);ocrProgress.setProgress(100);ocrProgress.postDelayed(()->{if(progressGeneration.get()==id)ocrProgress.setVisibility(View.GONE);},900);});}
-    private long newDocument(){if(activeMoeStream!=null){activeMoeStream.cancelAndClose();activeMoeStream=null;}stopReading();camera.stop();cameraMode=false;maskedPreview="";lastTrace=null;lastScan=null;lastReview=null;lastMoeReview=null;compareBitmap=null;if(HobbyMoeNative.available())HobbyMoeNative.stop();if(copyLogs!=null)copyLogs.setEnabled(true);if(copyResults!=null)copyResults.setEnabled(false);if(LiquidNative.available())LiquidNative.stop();ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}if(liquid!=null){liquid.setEnabled(false);liquid.setVisibility(View.GONE);}if(moe!=null){moe.setEnabled(false);moe.setVisibility(View.GONE);}if(correction!=null){correction.setEnabled(false);correction.setVisibility(View.GONE);}return sessions.replaceSource();}
+    private long newDocument(){if(activeMoeStream!=null){activeMoeStream.cancelAndClose();activeMoeStream=null;}if(activeTextStream!=null){activeTextStream.cancelAndClose();activeTextStream=null;}stopReading();camera.stop();cameraMode=false;maskedPreview="";lastTrace=null;lastScan=null;lastReview=null;lastMoeReview=null;compareBitmap=null;if(HobbyMoeNative.available())HobbyMoeNative.stop();if(copyLogs!=null)copyLogs.setEnabled(true);if(copyResults!=null)copyResults.setEnabled(false);if(LiquidNative.available())LiquidNative.stop();ocrChoice.incrementAndGet();progressGeneration.incrementAndGet();if(ocrProgress!=null)ocrProgress.setVisibility(View.GONE);if(compare!=null){setCompareAvailable(false);compare.setVisibility(View.GONE);}if(indra!=null){setIndraAvailable(false);indra.setVisibility(View.GONE);}if(liquid!=null){liquid.setEnabled(false);liquid.setVisibility(View.GONE);}if(moe!=null){moe.setEnabled(false);moe.setVisibility(View.GONE);}if(correction!=null){correction.setEnabled(false);correction.setVisibility(View.GONE);}return sessions.replaceSource();}
     private void startCamera(){
         newDocument();cameraMode=true;imageArea.setVisibility(View.VISIBLE);preview.setVisibility(View.VISIBLE);frozen.setVisibility(View.GONE);freeze.setVisibility(View.VISIBLE);freeze.setEnabled(true);setText("");status.setText("Vise le texte puis appuie sur Figer l’image.");
         if(checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION);
@@ -281,15 +282,29 @@ public final class MainActivity extends Activity {
                 status.setText("Vérification et chargement du correcteur "+OfflineCorrectionModels.label(model)+"…");
                 final long loading=beginOcrProgress(-1);
                 final int chosen=mode[0];
+                final TextModelStreamDialog modelStream=new TextModelStreamDialog(this,
+                    OfflineCorrectionModels.label(model));
+                activeTextStream=modelStream;
+                modelStream.show();
                 semanticWorker.execute(()->{
                     try{
                         TextualDocumentReview.Result result=TextualDocumentReview.run(
                             this,scan.lmOrdered,trace,model,chosen<2?"fr":"en",chosen%2==0,
-                            (index,total,name)->ui(()->{
-                                if(!destroyed&&sessions.documentCurrent(ticket))
-                                    status.setText(name+" : phrase "+index+"/"+total+
-                                        " · correction en cours (OCR original conservé)");
-                            }));
+                            new TextualDocumentReview.Progress(){
+                                @Override public void onPhrase(int index,int total,String name){
+                                    modelStream.segment(index,total);
+                                    ui(()->{
+                                        if(!destroyed&&sessions.documentCurrent(ticket))
+                                            status.setText(name+" : phrase "+index+"/"+total+
+                                                " · correction en cours (OCR original conservé)");
+                                    });
+                                }
+                                @Override public void onToken(int index,int total,String cumulative,int emitted){
+                                    if(!destroyed&&sessions.documentCurrent(ticket))
+                                        modelStream.token(index,total,cumulative,emitted);
+                                    else LiquidNative.stop();
+                                }
+                            });
                         finishOcrProgress(loading);
                         ui(()->{
                             if(destroyed||!sessions.documentCurrent(ticket))return;
@@ -297,17 +312,11 @@ public final class MainActivity extends Activity {
                             status.setText(result.engine+" : "+result.accepted+
                                 " proposition(s) admissible(s), "+result.rejected+
                                 " rejet(s), "+result.elapsedMs+" ms. Vérifie avec l'image.");
-                            new AlertDialog.Builder(this).setTitle("Proposition à vérifier")
-                                .setMessage("Original Indra inchangé ; les propositions rejetées "+
-                                    "ne remplacent jamais sa lecture. Tout usage nécessite "+
-                                    "une comparaison visuelle et une confirmation.")
-                                .setPositiveButton("Voir corrections admissibles",(a,b)->
-                                    showComparisonText(result.engine+" — corrections candidates",
-                                        result.verifiedCandidates,ticket))
-                                .setNeutralButton("Voir sorties brutes (sensibles)",(a,b)->
-                                    showComparisonText(result.engine+" — sorties brutes",
-                                        result.proposal,ticket))
-                                .setNegativeButton("Fermer",null).show();
+                            modelStream.finish("Terminé : "+result.accepted+
+                                " candidat(s), "+result.rejected+" rejet(s) · "+result.elapsedMs+" ms.",
+                                result.accepted>0?()->showComparisonText(
+                                    result.engine+" — corrections candidates",
+                                    result.verifiedCandidates,ticket):null);
                         });
                     }catch(Exception|OutOfMemoryError e){
                         finishOcrProgress(loading);
@@ -318,7 +327,8 @@ public final class MainActivity extends Activity {
                         ui(()->{if(!destroyed&&sessions.documentCurrent(ticket)){
                             updateCorrectionButton();
                             status.setText("Correcteur indisponible ou arrêté. OCR Indra conservé ; "+
-                                "consulte les logs techniques.");
+                                "consulte les logs techniques.");modelStream.finish(
+                                    "Génération interrompue ou erreur : OCR inchangé.",null);
                         }});
                     }
                 });
@@ -682,5 +692,5 @@ public final class MainActivity extends Activity {
             if(HobbyMoeNative.available())HobbyMoeNative.stop();
             if(LiquidNative.available())LiquidNative.stop();
         }}
-    @Override protected void onDestroy(){destroyed=true;DebugLog.append(this,"SESSION destroy");sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();if(camera!=null)camera.destroy();if(LiquidNative.available())LiquidNative.stop();if(HobbyMoeNative.available())HobbyMoeNative.stop();if(activeMoeStream!=null)activeMoeStream.cancelAndClose();semanticWorker.shutdownNow();worker.shutdownNow();paddleWorker.shutdownNow();indraWorker.shutdownNow();super.onDestroy();}
+    @Override protected void onDestroy(){destroyed=true;DebugLog.append(this,"SESSION destroy");sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();if(camera!=null)camera.destroy();if(LiquidNative.available())LiquidNative.stop();if(HobbyMoeNative.available())HobbyMoeNative.stop();if(activeMoeStream!=null)activeMoeStream.cancelAndClose();if(activeTextStream!=null)activeTextStream.cancelAndClose();semanticWorker.shutdownNow();worker.shutdownNow();paddleWorker.shutdownNow();indraWorker.shutdownNow();super.onDestroy();}
 }
