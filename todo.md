@@ -493,3 +493,9 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [ ] Mesurer sur Samsung à partir de la même lettre et de lignes anglaises connues : load_ms, PSS après chargement et au pic, 3 latences individuelles, premier jeton, mémoire après fermeture, altération de chiffres et exactitude.
 - [ ] Deuxième expérimentation : Q4 natif mmap avec patch officiel llama.cpp BailingMoe2 QKV, ARM64, contrôler mémoire du modèle et page faults, comparer au Q8 ; en cas de compatibilité prouvée, examiner cache d'experts borné sans modifier routage.
 - [ ] Ne pas confondre réduction des rechargements avec réduction du pic Q8 ; aucune fusion main/Release sans accord.
+
+### VMR-016 — Preuve de livraison directe signée, 30/10/2026
+- [x] Run final `41058583152`, source `7f7a53f27b6107d911fbd1d42ecbf2075693e33c` : **SUCCESS**. VMR-015 et VMR-016 contrats, vrai smoke CPU HobbyLM, build Rust JNI ARM64, Java/Gradle/lint, sécurité des modèles, signature, offline tous validés.
+- [x] APK `VisionMaxRead-0.6.4-MOE-SESSION-FR-EN-LAB.apk`, artefact direct sans ZIP `12976964615` : **1 252 679 509 octets**, SHA256 `5fadf95c071f7048096de11cf76ecfed063a791fb69c7971f157021502cfc1d6`, code17, certificat LAB `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`.
+- [ ] **Essai réel Samsung** indispensable : succès des trois sous-passes, latence de chargement unique, comparaison PSS RAM, temps/token, qualité français/anglais, arrêt et sortie partielle, validité des chiffres. Ne pas confondre build vert avec gain mémoire ou qualité linguistique.
+- [ ] Phase suivante **Q4 natif**: tester patch officiel HobbyLM dans llama.cpp sous Android ARM64 (mmap/quantisation sans Q8 global), comparer pics RSS/PSS, qualité; cache d'experts selon mesures.
