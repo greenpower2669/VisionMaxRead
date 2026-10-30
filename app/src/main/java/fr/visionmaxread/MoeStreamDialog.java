@@ -22,6 +22,7 @@ final class MoeStreamDialog {
     private TextView tokensLabel,streamText;
     private ScrollView scroller;
     private boolean open,finished;
+    private int currentSegment=0,totalSegments=1;
     private Runnable compareAction;
     MoeStreamDialog(Activity activity){this.activity=activity;}
 
@@ -75,14 +76,26 @@ final class MoeStreamDialog {
             open=false;
         });
     }
+    /** Start of a new short FR/EN line; show segmentation as UI metadata. */
+    void segment(int index,int total,String language){
+        activity.runOnUiThread(()->{
+            if(!open||activity.isFinishing())return;
+            currentSegment=index;totalSegments=total;
+            if(index==1)streamText.setText("");
+            else streamText.append("\n");
+            streamText.append("〔"+(language.equals("en")?"English":"Français")+
+                " · ligne "+index+"/"+total+"〕\n");
+            tokensLabel.setText("Phrase "+index+"/"+total+" · modèle chargé une seule fois.");
+        });
+    }
     /** Called on the inference worker; marshals incremental updates to the UI. */
     void token(String delta,int count) {
         activity.runOnUiThread(()->{
             if(!open||activity.isFinishing())return;
-            if(count==1)streamText.setText("");
+            // Do not erase previous segments when the per-line token count resets.
             if(!delta.isEmpty())streamText.append(delta);
             long seconds=(SystemClock.elapsedRealtime()-started)/1000;
-            tokensLabel.setText("Jetons émis : "+count+" / 110 · "+seconds+" s. "+
+            tokensLabel.setText("Phrase "+currentSegment+"/"+totalSegments+" · jetons : "+count+" / 72 · "+seconds+" s. "+
                 "Flux réel, pas une chaîne de raisonnement cachée.");
             scroller.post(()->{if(open)scroller.fullScroll(View.FOCUS_DOWN);});
         });
