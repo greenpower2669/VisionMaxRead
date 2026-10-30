@@ -14,6 +14,8 @@ llama_model *g_model=nullptr;
 const llama_vocab *g_vocab=nullptr;
 std::atomic<bool> g_cancel{false};
 std::string g_error;
+std::string g_lastFinish="unknown";
+int g_lastTokens=0;
 void fail(const char *message){throw std::runtime_error(message);}
 void cleanup(){
     if(g_model){llama_model_free(g_model);g_model=nullptr;g_vocab=nullptr;}
@@ -35,7 +37,7 @@ void batch_set(llama_batch_ext *batch,const llama_token *tokens,int count,int po
 }
 std::string generate(const std::string &prompt,int limit){
     if(!g_model||!g_vocab)fail("Model not loaded");
-    if(prompt.empty()||prompt.size()>10000||limit<1||limit>320)fail("Invalid prompt size");
+    if(prompt.empty()||prompt.size()>10000||limit<1||limit>512)fail("Invalid prompt size");
     // The QAD chat template uses the special im_start / im_end role delimiters.
     std::string formatted="<|im_start|>user\n"+prompt+"<|im_end|>\n<|im_start|>assistant\n";
     int count=llama_tokenize(g_vocab,formatted.data(),(int)formatted.size(),nullptr,0,true,true);
@@ -55,6 +57,7 @@ std::string generate(const std::string &prompt,int limit){
     llama_sampler *sampler=llama_sampler_chain_init(llama_sampler_chain_default_params());
     llama_sampler_chain_add(sampler,llama_sampler_init_greedy());
     std::string output;
+    g_lastTokens=0;g_lastFinish="unknown";
     try{
         batch_set(batch,tokens.data(),count,0);
         int currentCount=count;
@@ -63,11 +66,11 @@ std::string generate(const std::string &prompt,int limit){
             if(llama_process(context,LLAMA_PROCESS_TYPE_DECODE,batch))fail("Native LFM2 decode error");
             position+=currentCount;
             llama_token token=llama_sampler_sample(sampler,context,-1);
-            if(llama_vocab_is_eog(g_vocab,token))break;
+            if(llama_vocab_is_eog(g_vocab,token)){g_lastFinish="eos";break;}
             char buf[2048];
             int n=llama_token_to_piece(g_vocab,token,buf,sizeof(buf),0,true);
             if(n<0||n>=(int)sizeof(buf))fail("Token output overflow");
-            output.append(buf,n);
+            output.append(buf,n);g_lastTokens++;
             batch_set(batch,&token,1,position);
             currentCount=1;
         }
@@ -75,7 +78,8 @@ std::string generate(const std::string &prompt,int limit){
         llama_sampler_free(sampler);llama_batch_ext_free(batch);llama_free(context);throw;
     }
     llama_sampler_free(sampler);llama_batch_ext_free(batch);llama_free(context);
-    if(g_cancel.load())fail("Cancelled");
+    if(g_cancel.load()){g_lastFinish="user_stop";fail("Cancelled");}
+    if(g_lastFinish=="unknown"&&g_lastTokens>=limit)g_lastFinish="token_limit";
     return output;
 }
 void throwJava(JNIEnv *env,const char *msg){
@@ -117,4 +121,13 @@ Java_fr_visionmaxread_LiquidNative_stop(JNIEnv *,jclass){g_cancel=true;}
 extern "C" JNIEXPORT void JNICALL
 Java_fr_visionmaxread_LiquidNative_unload(JNIEnv *,jclass){
     std::lock_guard<std::mutex> lock(g_mutex);cleanup();
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_fr_visionmaxread_LiquidNative_lastGeneratedTokens(JNIEnv *,jclass){
+    std::lock_guard<std::mutex> lock(g_mutex);return (jint)g_lastTokens;
+}
+extern "C" JNIEXPORT jstring JNICALL
+Java_fr_visionmaxread_LiquidNative_lastFinishReason(JNIEnv *env,jclass){
+    std::lock_guard<std::mutex> lock(g_mutex);return env->NewStringUTF(g_lastFinish.c_str());
 }
