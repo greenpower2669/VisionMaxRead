@@ -7,17 +7,29 @@ import java.util.List;
 
 /** VMR-017: bounded FR/EN segments, shared model weights and fresh KV per segment. */
 final class HobbyMoeReview {
+    /** Exact OCR/candidate pairs; kept in RAM only. */
+    static final class SegmentProposal{
+        final int ordinal;final String source,proposal,decision;
+        final boolean accepted;
+        SegmentProposal(int ordinal,String source,String proposal,String decision,boolean accepted){
+            this.ordinal=ordinal;this.source=source;this.proposal=proposal;
+            this.decision=decision;this.accepted=accepted;
+        }
+    }
     static final class Result{
         final String raw,proposed,preview,status;
         final boolean numbersKept;
         final long ms;
         final int cappedSegments,reviewOnlySegments,processedSegments;
+        final List<SegmentProposal> comparisons;
         Result(String raw,String proposed,String preview,boolean numbersKept,String status,long ms,
-               int cappedSegments,int reviewOnlySegments,int processedSegments){
+               int cappedSegments,int reviewOnlySegments,int processedSegments,
+               List<SegmentProposal> comparisons){
             this.raw=raw;this.proposed=proposed;this.preview=preview;
             this.numbersKept=numbersKept;this.status=status;this.ms=ms;
             this.cappedSegments=cappedSegments;this.reviewOnlySegments=reviewOnlySegments;
             this.processedSegments=processedSegments;
+            this.comparisons=java.util.Collections.unmodifiableList(new ArrayList<>(comparisons));
         }
     }
     interface SegmentListener {void onSegment(int index,int total,String language,int budget,int contextChars);}
@@ -39,6 +51,7 @@ final class HobbyMoeReview {
         StringBuilder suggestions=new StringBuilder(original.length()+1000);
         StringBuilder candidates=new StringBuilder(original.length()+1000);
         int cursor=0;
+        List<SegmentProposal> comparisons=new ArrayList<>();
         DocumentContextMemory memory=new DocumentContextMemory();
         int configuredCap=context.getSharedPreferences("settings",Context.MODE_PRIVATE)
             .getInt("moeTokenCap",AdaptiveTokenBudget.DEFAULT_SAFETY_CAP);
@@ -93,6 +106,9 @@ final class HobbyMoeReview {
                 boolean mayBeCapped=AdaptiveTokenBudget.outputMayBeCapped(tokenCount[0],budget);
                 if(mayBeCapped)capped++;
                 boolean valid=digits&&fidelity.accepted&&!mayBeCapped;
+                comparisons.add(new SegmentProposal(n+1,source,output,
+                    mayBeCapped?"budget_exhausted_unknown":
+                    !digits?"numbers_changed":fidelity.reason,valid));
                 if(!digits)allDigits=false;
                 if(valid){good++;candidates.append(output);}
                 else {
@@ -121,7 +137,7 @@ final class HobbyMoeReview {
             " manual_review="+reviewOnly+" source_preserved_on_reject=true");
         return new Result(original,proposal,accepted,allDigits,
             any?"candidate":"raw-fallback",SystemClock.elapsedRealtime()-started,capped,
-            reviewOnly,segments.size());
+            reviewOnly,segments.size(),comparisons);
     }
     static String buildPrompt(String line,String language){
         return MoePromptBuilder.build(line,language,"");

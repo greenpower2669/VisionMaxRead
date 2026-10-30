@@ -471,20 +471,21 @@ public final class MainActivity extends Activity {
     }
 
     /** Rejected drafts remain legible, but no direct Apply action is offered. */
+    /** Keep original/LLM pairs aligned even when the LLM emits newlines. */
     private void inspectUnvalidatedMoe(HobbyMoeReview.Result result,long ticket){
         if(!sessions.documentCurrent(ticket))return;
-        String[] original=result.raw.split("\n",-1);
-        String[] proposed=result.proposed.split("\n",-1);
         StringBuilder view=new StringBuilder(
-            "HobbyLM : hypothèses NON validées. Compare chaque ligne avec la photo. "+
-            "L'OCR Indra reste inchangé.\n\n");
+            "HobbyLM : hypothèses non validées. OCR Indra conservé.\n"+
+            "Chaque proposition correspond au segment original exact.\n\n");
         int changes=0;
-        for(int i=0;i<Math.min(original.length,proposed.length);i++){
-            if(original[i].equals(proposed[i]))continue;
+        for(HobbyMoeReview.SegmentProposal item:result.comparisons){
+            if(item.source.equals(item.proposal))continue;
             changes++;
-            view.append("Ligne ").append(i+1).append("\nOCR : ")
-                .append(original[i]).append("\nProposition : ")
-                .append(proposed[i]).append("\n\n");
+            view.append("Segment ").append(item.ordinal)
+                .append(item.accepted?" · Candidat à confirmer":" · Non validé")
+                .append(" (").append(item.decision).append(")\n")
+                .append("OCR : ").append(item.source).append("\n")
+                .append("Proposition : ").append(item.proposal).append("\n\n");
         }
         if(changes==0)view.append("Aucune proposition différente de l'OCR.");
         String report=view.toString();

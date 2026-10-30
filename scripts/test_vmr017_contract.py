@@ -98,3 +98,10 @@ assert "MoeSegmentPlanner.plan(original,requestedSegments)" in review
 assert "candidates.append(original,cursor,segment.start)" in review
 assert "reviewOnlySegments" in review
 print("VMR017 bounded OCR segments and manual review contract PASS")
+
+review=(base/"HobbyMoeReview.java").read_text()
+screen=(base/"MainActivity.java").read_text()
+assert "final List<SegmentProposal> comparisons" in review
+assert "comparisons.add(new SegmentProposal(" in review
+assert "for(HobbyMoeReview.SegmentProposal item:result.comparisons)" in screen
+print("VMR017 exact original/proposal pairing checks PASS")
