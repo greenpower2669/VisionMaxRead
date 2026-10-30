@@ -482,3 +482,14 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [x] GitHub Actions **run `41038502413` SUCCESS**, source code HEAD `2cd829b0445ab922037d91dc716f5146295392a8`. Test CPU réel HobbyLM sur prompt au format corrigé, Rust ARM64 JNI per-token, contrats de streaming, confidentialité, Gradle, lint, signature et vérification modèles/offline : tous verts.
 - [x] APK direct sans ZIP `VisionMaxRead-0.6.3-MOE-LIVE-LAB.apk`, artifact `12969740814`, **1 252 670 765 octets**, SHA256 `800f3460b53de7c62957718fcbef5921f308fee4bdb96ab672458b6c2d6851ca`, LAB versionCode 16, certificat SHA256 `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`. Pas de permission INTERNET ; Indra+Liquid+HobbyLM présents. `main` et Release non modifiés.
 - [ ] **À valider sur Samsung** : diffusion réelle de chaque jeton sur la fenêtre, stop pendant copie du modèle/génération, bouton Copier flux, qualité comparée sur la même lettre 1942, chiffres, PSS, temps premier jeton. La réussite CI ne prouve pas la précision de HobbyLM en français.
+
+
+## VMR-016 — mémoire MoE Q4, français–anglais et petits segments (30/10/2026)
+- [x] Branche indépendante `feature/vmr016-q4-bilingual-memory` depuis VMR-015 ; passation documentée dans `docs/VMR-016-q4-bilingual-memory.md`.
+- [ ] Baseline mesurée : raisons d'arrêt distinctes, PSS/RSS de pic, chargement/SHA, premier jeton, débit, numéros d'experts (sans texte sensible).
+- [ ] Session HobbyLM persistante : charge unique par document, arrêt propre, cancellation/trim et tests de non-régression.
+- [ ] Évaluer calcul Q4 natif vs conversion Q8, avec contrôle des routeurs FP32 et validation Android ARM64.
+- [ ] Traitement phrase/ligne court FR/EN (y compris manuscrit français) et comparaison CER/WER ou transcription de référence, préservation chiffres/noms.
+- [ ] Étude de routage et cache d'experts limité en RAM, sans supposer d'experts uniques par langue.
+- [ ] Tests CI Rust/Java/lint/signature/offline; essai Samsung avant tout avis sur qualité/RAM; documenter arbitrage et limites.
+- [ ] Aucun merge main, aucune GitHub Release ni livraison binaire non vérifiée sans accord distinct de Fab.
