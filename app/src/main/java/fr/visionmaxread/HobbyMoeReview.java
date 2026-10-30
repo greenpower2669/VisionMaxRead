@@ -24,7 +24,7 @@ final class HobbyMoeReview {
         if(!language.equals("fr")&&!language.equals("en"))throw new IllegalArgumentException("Language must be fr or en");
         final long started=SystemClock.elapsedRealtime();
         // Lines are independently checked: do not split inside a pension/reference.
-        String[] lines=original.split("\\n",-1);
+        String[] lines=original.split("\n",-1);
         List<Integer> indexes=new ArrayList<>();
         for(int i=0;i<lines.length&&indexes.size()<3;i++){
             if(!lines[i].trim().isEmpty())indexes.add(i);
@@ -98,12 +98,12 @@ final class HobbyMoeReview {
     }
     static String buildPrompt(String line,String language){
         if("en".equals(language))
-            return "<|user|>\\nFix obvious OCR spelling errors in this English line. "+
-                "Keep numbers, names and dates unchanged. Output ONLY the corrected line.\\n"+
-                line+"\\n<|assistant|>\\n";
-        return "<|user|>\\nCorrige les fautes OCR évidentes dans cette seule ligne française. "+
-            "Conserve exactement les nombres, noms propres et dates. Réponds uniquement par la ligne.\\n"+
-            line+"\\n<|assistant|>\\n";
+            return "<|user|>\nFix obvious OCR spelling errors in this English line. "+
+                "Keep numbers, names and dates unchanged. Output ONLY the corrected line.\n"+
+                line+"\n<|assistant|>\n";
+        return "<|user|>\nCorrige les fautes OCR évidentes dans cette seule ligne française. "+
+            "Conserve exactement les nombres, noms propres et dates. Réponds uniquement par la ligne.\n"+
+            line+"\n<|assistant|>\n";
     }
     // Legacy one-language builder is retained for old contract callers/test.
     static String buildPrompt(String text){return buildPrompt(text,"fr");}
