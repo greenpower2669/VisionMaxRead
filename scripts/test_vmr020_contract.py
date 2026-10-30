@@ -13,7 +13,7 @@ workflow=(root/'.github/workflows/android.yml').read_text()
 gradle=(root/'app/build.gradle').read_text()
 for required in ('HttpURLConnection','SHA-256','getUsableSpace','Content-Range',
                  'Range','partial.renameTo(target)','CancellationException',
-                 'NET_CAPABILITY_NOT_METERED','trustedHost','https','cloudfront.net'):
+                 'NET_CAPABILITY_NOT_METERED','TRANSPORT_WIFI','trustedHost','https','cloudfront.net'):
     assert required in installer, required
 for required in ('SpecialistOcrAutoInstaller.ensure','modelInstallCancel',
                  'requestAutoInstall','Modèles vérifiés','runSpecialistOcr',

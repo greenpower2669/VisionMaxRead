@@ -30,7 +30,9 @@ final class SpecialistOcrAutoInstaller {
         Network n=cm.getActiveNetwork();
         NetworkCapabilities capabilities=n==null?null:cm.getNetworkCapabilities(n);
         if(capabilities==null||!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                ||!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED))
+                ||!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+                ||!(capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                     ||capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)))
             throw new IOException("Wi-Fi non facturé ou réseau non limité requis pour installer les poids");
     }
 
@@ -56,6 +58,7 @@ final class SpecialistOcrAutoInstaller {
         String host=url.getHost().toLowerCase(Locale.ROOT);
         return host.equals("huggingface.co")||host.endsWith(".huggingface.co")||
             host.equals("xethub.hf.co")||host.endsWith(".xethub.hf.co")||
+            host.endsWith(".hf.co")|| // Includes the official cdn-lfs*.hf.co mirrors.
             host.endsWith(".cloudfront.net")||host.endsWith(".amazonaws.com");
     }
     private static HttpURLConnection connect(URL original,long resume,BooleanSupplier cancel)throws Exception {
