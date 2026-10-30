@@ -467,18 +467,18 @@ public final class MainActivity extends Activity {
     /** Rejected drafts remain legible, but no direct Apply action is offered. */
     private void inspectUnvalidatedMoe(HobbyMoeReview.Result result,long ticket){
         if(!sessions.documentCurrent(ticket))return;
-        String[] original=result.raw.split("\\n",-1);
-        String[] proposed=result.proposed.split("\\n",-1);
+        String[] original=result.raw.split("\n",-1);
+        String[] proposed=result.proposed.split("\n",-1);
         StringBuilder view=new StringBuilder(
             "HobbyLM : hypothèses NON validées. Compare chaque ligne avec la photo. "+
-            "L'OCR Indra reste inchangé.\\n\\n");
+            "L'OCR Indra reste inchangé.\n\n");
         int changes=0;
         for(int i=0;i<Math.min(original.length,proposed.length);i++){
             if(original[i].equals(proposed[i]))continue;
             changes++;
-            view.append("Ligne ").append(i+1).append("\\nOCR : ")
-                .append(original[i]).append("\\nProposition : ")
-                .append(proposed[i]).append("\\n\\n");
+            view.append("Ligne ").append(i+1).append("\nOCR : ")
+                .append(original[i]).append("\nProposition : ")
+                .append(proposed[i]).append("\n\n");
         }
         if(changes==0)view.append("Aucune proposition différente de l'OCR.");
         String report=view.toString();

@@ -26,7 +26,7 @@ assert "indexes.size()<3" in review and "source.length()>150" in review
 assert 'session.generate(buildPrompt(source,language,previous,opening),budget,(delta,count)->' in review
 assert "partial.append(delta)" in review
 assert '" budget="+budget+" tokens="+tokenCount[0]' in review
-assert 'stream.finish("Terminé' in ui
+assert 'stream.finish("Génération finie' in ui
 assert "stream.token(delta,count)" in ui
 assert "activeMoeStream.cancelAndClose()" in ui
 assert "new MoeStreamDialog(this)" in ui
