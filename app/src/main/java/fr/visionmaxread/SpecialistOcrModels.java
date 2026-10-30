@@ -1,10 +1,9 @@
 package fr.visionmaxread;
 import android.content.Context;
-import android.net.Uri;
 import java.io.*;
 import java.security.MessageDigest;
 import java.util.*;
-/** Pinned offline GGUF image-model/projector pairs; no network permissions. */
+/** Pinned local GGUF weights: the installer fetches only model assets on Wi-Fi; all document inference stays offline. */
 final class SpecialistOcrModels {
     enum Engine { SURYA2, LIGHTON3 }
     enum Part { MODEL, PROJECTOR }
@@ -43,29 +42,6 @@ final class SpecialistOcrModels {
     }
     static boolean verified(Context c,Spec s,Part p)throws Exception{
         return present(c,s,p)&&sha256(path(c,s,p)).equals(p==Part.MODEL?s.modelSha:s.projectorSha);
-    }
-    static void importFile(Context c,Spec s,Part p,Uri uri)throws Exception {
-        File d=directory(c,s);if(!d.isDirectory()&&!d.mkdirs())throw new IOException("Stockage indisponible");
-        File temp=new File(d,p==Part.MODEL?"model.partial":"projector.partial");
-        File dest=path(c,s,p);MessageDigest md=MessageDigest.getInstance("SHA-256");
-        long limit=p==Part.MODEL?s.maxModel:s.maxProjector;
-        try {
-            try(InputStream in=c.getContentResolver().openInputStream(uri);
-                OutputStream out=new BufferedOutputStream(new FileOutputStream(temp))){
-                if(in==null)throw new IOException("Fichier introuvable");
-                byte[] buf=new byte[1024*1024],header=new byte[4];int h=0,n;long count=0;
-                while((n=in.read(buf))!=-1){
-                    count+=n;if(count>limit)throw new IOException("Poids excessifs");
-                    if(h<4){int k=Math.min(n,4-h);System.arraycopy(buf,0,header,h,k);h+=k;}
-                    md.update(buf,0,n);out.write(buf,0,n);
-                }
-                if(count<1000000||h!=4||header[0]!='G'||header[1]!='G'||header[2]!='U'||header[3]!='F')
-                    throw new IOException("Format GGUF incorrect");
-                if(!hex(md.digest()).equals(p==Part.MODEL?s.modelSha:s.projectorSha))
-                    throw new SecurityException("SHA-256 différent de la source officielle");
-            }
-            if(!temp.renameTo(dest))throw new IOException("Copie atomique impossible");
-        }finally{temp.delete();}
     }
     private SpecialistOcrModels(){}
 }

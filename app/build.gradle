@@ -7,8 +7,8 @@ android {
         applicationId 'fr.visionmaxread'
         minSdk 26
         targetSdk 36
-        versionCode 22
-        versionName '0.6.9-vmr019-native-ocr-lab'
+        versionCode 23
+        versionName '0.7.0-vmr020-auto-models-lab'
         ndk { abiFilters 'arm64-v8a' }
     }
     signingConfigs {

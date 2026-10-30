@@ -5,8 +5,10 @@ root=pathlib.Path(__file__).resolve().parent.parent
 apk=pathlib.Path(sys.argv[1]);sdk=pathlib.Path(os.environ.get('ANDROID_HOME',os.environ.get('ANDROID_SDK_ROOT','')))
 tools=sorted((sdk/'build-tools').glob('*'))[-1]
 result=subprocess.check_output([str(tools/'aapt'),'dump','permissions',str(apk)],text=True)
-if 'android.permission.INTERNET' in result:
- raise AssertionError('Offline privacy regression: INTERNET permission found in merged APK manifest:\\n'+result)
+if 'android.permission.INTERNET' not in result:
+ raise AssertionError('Automatic model installation needs INTERNET permission')
+if 'android.permission.ACCESS_NETWORK_STATE' not in result:
+ raise AssertionError('Wi-Fi-only model installer needs ACCESS_NETWORK_STATE')
 if 'android.permission.CAMERA' not in result:
  raise AssertionError('Missing CAMERA permission in merged APK manifest:\\n'+result)
 subprocess.run([str(tools/'apksigner'),'verify',str(apk)],check=True)
@@ -37,4 +39,4 @@ with zipfile.ZipFile(apk) as z:
   assert elf.read(4)==bytes([0x7f,0x45,0x4c,0x46]), 'Not a native ELF binary'
  libs=[p for p in z.namelist() if p.startswith('lib/') and p.endswith('.so')]
  assert libs and all(p.startswith('lib/arm64-v8a/') for p in libs)
-print('APK verified: signed, ARM64, all model hashes match (including Indra), no INTERNET permission')
+print('APK verified: signed, ARM64, bundled Indra hashes, model-only Wi-Fi installer declared; no cleartext traffic')
