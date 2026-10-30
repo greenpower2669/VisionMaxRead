@@ -452,3 +452,7 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [ ] **BLOQUANT** CI VMR-014 compile réellement Rust aarch64, télécharge modèle public, valide APK et hash/signature, puis fournir APK direct non zip si succès. Ne pas livrer un APK de run échoué.
 - [ ] **BLOQUANT** Premier essai Samsung de chargement/inférence HobbyLM (moteur Rust créé à l'origine pour 500M) : mémoire, stabilité, qualité français manuscrit, sauvegarde Indra et débit; si échec, diagnostiquer via boutons de copie VMR-013.
 - [ ] Aucune fusion main ni publication de Release, éviter de déclarer le modèle Meta exécuté ; vérifier licences et utilité réelle avant Bonze.
+
+- [x] [VMR-014/CI] Inférence smoke CPU GitHub de HobbyLM-1B Q4 **réellement exécutée** et réussie dans run `40976686174`. Build Rust ARM64 réalisé. Le même modèle n'a **pas encore** été lancé sur Samsung.
+- [x] [VMR-014/UX] « Copier logs techniques » disponible avant OCR et après relance d'une application tuée, journal persistant et ligne début MoE pour détecter un kill Android ; textes OCR toujours absents des diagnostics standards.
+- [ ] [VMR-014/CI] Réussir le build final du correctif logs après relance, relever SHA et lien APK direct sans ZIP, effectuer essai utilisateur.
