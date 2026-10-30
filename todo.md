@@ -535,3 +535,11 @@ Branche de conception : `feature/vmr010-indra-liquid-moe-review` ; document cano
 - [ ] **BLOQUANT** Vérifier compilation CI HEAD après intégration Q4 : modèles réels absents de CI, validité du JNI streaming Android ARM64 et stabilité de l'interface non prouvées sur matériel.
 - [ ] Contrôler empreinte de modèle à chaque import/chargement et sécuriser l'indication utilisateur en cas de sortie incomplète ; faire tests Samsung et corpus FR/EN avant toute affirmation de fiabilité.
 - [ ] Finir continuation adaptative (étendre si nécessaire en conservant KV), segmentation plus profonde, mémoire entités/contradictions confirmées, benchmark CER/WER, optimisation Q4/mmap/pression mémoire.
+
+## VMR-017 — continuité HobbyLM (30/10/2026)
+- [x] Corriger le faux contexte annoncé mais non envoyé : `MoePromptBuilder` place le précédent OCR et l'ancre incertaine avant la phrase courante.
+- [x] Ajouter test JVM réel et logs `ctx_sent/ctx_chars`, comparaison non destructive des hypothèses.
+- [x] Préparer LAB 0.6.6/code19, même identifiant et signature.
+- [ ] Vérifier CI et APK direct du dernier HEAD ; tester sur Samsung même document, les lignes 2/3 avec contexte réel, fidélité et mémoire.
+- [ ] Toujours ouverts : EOS précis, continuation des jetons, plus de trois lignes, comparaison qualité et Q4 natif.
+- [ ] Aucun merge `main` ni Release sans accord.
