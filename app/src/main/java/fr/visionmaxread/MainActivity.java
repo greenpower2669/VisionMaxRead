@@ -592,7 +592,13 @@ public final class MainActivity extends Activity {
         }
     }
     private void ui(Runnable action){runOnUiThread(()->{if(!destroyed)action.run();});}
-    @Override protected void onPause(){super.onPause();if(camera!=null)camera.stop();if(freeze!=null)freeze.setEnabled(false);stopReading();}
+    @Override protected void onPause(){
+        if(installReceiverRegistered){unregisterReceiver(installEvents);installReceiverRegistered=false;}
+        if(camera!=null)camera.stop();
+        if(freeze!=null)freeze.setEnabled(false);
+        stopReading();
+        super.onPause();
+    }
     @Override protected void onResume(){super.onResume();
         if(!installReceiverRegistered){
             IntentFilter filter=new IntentFilter(SpecialistOcrInstallService.EVENT);
@@ -603,10 +609,6 @@ public final class MainActivity extends Activity {
         syncInstallState();
         if(cameraMode&&camera!=null&&checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED){camera.start(sessions.sourceTicket());freeze.setEnabled(true);}}
     @Override public void onTrimMemory(int level){super.onTrimMemory(level);if(level>=android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW)DebugLog.append(this,"MEMORY trim level="+level+" pssMb="+formatMb(processPssMb()));}
-    @Override protected void onPause(){
-        if(installReceiverRegistered){unregisterReceiver(installEvents);installReceiverRegistered=false;}
-        super.onPause();
-    }
     @Override protected void onDestroy(){destroyed=true;specialistOcr.stop();DebugLog.append(this,"SESSION destroy");
         sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();if(camera!=null)camera.destroy();
         // Keep the foreground installer alive when this Activity is destroyed.
