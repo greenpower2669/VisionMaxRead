@@ -1,4 +1,4 @@
-# VisionMaxRead — journal diagnostic actif, VMR-021
+# VisionMaxRead — journal diagnostic actif, VMR-022
 
 ## 30/10/2026 — état des preuves
 - VMR-019 (branche `feature/vmr019-native-ocr-surya-lighton`) : CI finale run 41117112603 `success`, signature LAB constante et APK direct `VisionMaxRead-0.6.9-VMR019-NATIVE-OCR-LAB.apk` (~396 Mo). Cela prouve uniquement la compilation et les contrôles statiques/archives, **pas** l'inférence des modèles sur Samsung.
@@ -18,3 +18,9 @@ Ouvrir les logs GitHub Actions du run exact, noter commit SHA, étape en défaut
 - VMR-021 : `SpecialistOcrDownloadService` remplace l'exécuteur d'installation lié à MainActivity ; `Network.openConnection` empêche les bascules involontaires vers les données mobiles, reprise HTTP et notification. CI du HEAD VMR-021 / installation réelle / mode avion non confirmés à ce stade.
 - Android 15+ : quota dataSync 6 h/24 h en arrière-plan ; `onTimeout` ajouté. Redémarrage après force-stop Android impossible à garantir ; vérifier Samsung 16/17.
 - Nemotron C-RADIOv4/NaViT+mBART reste non porté. Source architecture NVIDIA : https://huggingface.co/nvidia/Nemotron-3.5-Parse
+
+## 31/10/2026 — VMR-022 : comparaison OCR en une touche
+- VMR-021 HEAD `0bae7496` : CI verte run 41229567307, APK LAB 0.7.0/code23 selon pipeline ; aucun essai physique OCR.
+- Symptôme utilisateur : impossible de tester tous les moteurs facilement. Cause code : Surya/LightOn seulement via sous-menu individuel, pas de comparaison en série sur une même photo ; Nemotron listé malgré l'absence de décodeur Android.
+- Correctif source : bouton « Tester tous » et résultats, préparation des poids manquants par service, Indra+PP+LightOn+Surya séquentiels, contrôles session/annulation, Nemotron explicitement non testable. État CI code24 et tests sur Samsung à compléter.
+- Nouvelle piste Nemotron : dépôt tiers https://huggingface.co/XDcobra/Nemotron-3.5-Parse-ONNX ; export CPU ONNX INT8 mobile annoncé, mais compatibilité runtime, qualité et licence à vérifier avant intégration.
