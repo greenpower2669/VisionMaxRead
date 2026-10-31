@@ -67,8 +67,13 @@ public final class SpecialistOcrInstallService extends Service {
         if (!WORKING.compareAndSet(false, true)) return START_REDELIVER_INTENT;
         cancelled = false;
         // Must start foreground promptly even if Wi-Fi is temporarily unavailable.
-        startForeground(NOTIFICATION_ID, notification("Préparation des modèles OCR", true),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, notification("Préparation des modèles OCR", true),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+        } else {
+            // The explicit service-type overload was introduced in Android 10.
+            startForeground(NOTIFICATION_ID, notification("Préparation des modèles OCR", true));
+        }
         update("running", "Installation des poids en cours sur Wi-Fi.", true);
         final String[] targets = intent.getStringArrayExtra(EXTRA_TARGETS);
         task = executor.submit(() -> runInstall(targets));
