@@ -1,4 +1,4 @@
-# VisionMaxRead — ordres de mission actifs (30 octobre 2026)
+# VisionMaxRead — ordres de mission actifs (31 octobre 2026)
 
 ## Mission VMR-020 — priorité explicite de Fab
 « Intègre-les tous en mémoire ; l'utilisateur ne doit pas télécharger lui-même les fichiers ; mets à jour et optimise les mémoires vivantes, puis prompt de passation. »
@@ -13,3 +13,8 @@
 5. Tenir les cinq mémoires vivantes **légères**, toutes versions antérieures archivées à l'identique. Document de référence : `docs/VMR-020-auto-models.md` ; passation : `docs/VMR-020-passation.md`.
 
 [Ordres de mission historiques exacts](docs/memory-archives/2026-10-30-pre-vmr020/ordres-de-mission.md)
+
+## Mission VMR-021 — passation du 31 octobre
+Reprendre depuis VMR-020 HEAD b715440c, ne pas recommencer, conserver les cinq mémoires légères et leurs archives. Installer automatiquement Surya et LightOn avec service Android résistant à la sortie de l'Activity, un modèle lourd en RAM à la fois, sans manipulations GGUF. Ne qualifier d'OCR réel que les exécutions mesurées sur Samsung (lettre française de janvier 1942 : CER/WER, dates, noms, chiffres, PSS, chauffe). Porter Nemotron C-RADIOv4/NaViT+mBART séparément avant de l'activer ; étudier Play Asset Delivery sans gonfler l'APK direct. Livrer APK sans ZIP seulement après CI/signature réussies. Pas de merge main, Release ou Play sans nouvel accord.
+
+État : service foreground implémenté en source sur la branche VMR-021, essais Android et inférence à vérifier. Rapport : `docs/VMR-021-foreground-provisioning.md`.
