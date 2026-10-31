@@ -1,13 +1,15 @@
-# VisionMaxRead — carte centrale active (VMR-020, 30 octobre 2026)
+# VisionMaxRead — carte centrale active (VMR-022, 31 octobre 2026)
 
-**État** : branche `feature/vmr020-auto-provision-ocr` ; version cible 0.7.0 / code 23 ; CI du nouveau HEAD à vérifier ; ni `main` ni Release modifiés. Avant VMR-020, VMR-019 0.6.9/code22 avait une CI verte (run 41117112603), sans essai de reconnaissance Surya/LightOn sur Samsung.
+**État** : branche `feature/vmr021-background-model-installer`, fondée sur VMR-020 `b715440c` (CI verte 41135591282). LAB 0.7.1 / code 24 ; CI du HEAD VMR-022 et essais Samsung à vérifier ; ni `main` ni Release modifiés. Avant VMR-020, VMR-019 0.6.9/code22 avait une CI verte (run 41117112603), sans essai de reconnaissance Surya/LightOn sur Samsung.
 
 ## Tiroirs (n'ouvrir que celui nécessaire)
+- [VMR-022 : comparaison de tous les OCR testables](docs/VMR-022-compare-all-ocr.md) : bouton commun, protocole même photo, limites Nemotron et preuves.
+- [Rapport VMR-021 service de téléchargement](docs/VMR-021-foreground-provisioning.md) : réalisations, risques Android, preuves et essais restants.
 - [Architecture et décision VMR-020](docs/VMR-020-auto-models.md) : installation sur Wi-Fi, confidentialité, limites, acteurs.
 - [Passation VMR-020](docs/VMR-020-passation.md) : ordre de travail et preuves manquantes.
-- `app/src/main/java/fr/visionmaxread/SpecialistOcrAutoInstaller.java` : téléchargement HTTPS, Range, SHA et stockage privé.
+- `app/src/main/java/fr/visionmaxread/SpecialistOcrDownloadService.java` : foreground dataSync, notifications, reprise hors Activity ; `SpecialistOcrAutoInstaller.java` : HTTPS lié au réseau Wi-Fi validé, Range, SHA et stockage privé.
 - `SpecialistOcrModels.java` et `SpecialistOcrProcess.java` : modèles vérifiés et runtime natif image.
-- `MainActivity.java` : interface accessible et concurrence ; `.github/workflows/android.yml` : CI / APK.
+- `MainActivity.java` : comparaison séquentielle Indra / PP / LightOn / Surya, résultats individuels et concurrence ; `.github/workflows/android.yml` : CI / APK.
 - `brain.md` : invariants actifs ; `todo.md` : priorités ; `debughistorical.md` : régressions ; `ordres-de-mission.md` : mandat de Fab.
 - [Archives exactes des cinq mémoires précédentes](docs/memory-archives/2026-10-30-pre-vmr020/) : VMR-001 à VMR-019, à consulter seulement pour besoin historique précis.
 

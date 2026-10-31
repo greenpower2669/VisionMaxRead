@@ -6,6 +6,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# Keep only the newest revision's expensive native Android build per ref.
+concurrency:
+  group: vmr-android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
@@ -92,7 +96,11 @@ jobs:
         run: python3 scripts/test_vmr019_contract.py
       - name: VMR-020 auto-provisioning, HTTPS and privacy contract
         run: python3 scripts/test_vmr020_contract.py
-      - name: Tests, lint and signed APK (VMR-020)
+      - name: VMR-021 background model service and network contract
+        run: python3 scripts/test_vmr021_contract.py
+      - name: VMR-022 sequential comparison and automatic preparation contract
+        run: python3 scripts/test_vmr022_contract.py
+      - name: Tests, lint and signed APK (VMR-022)
         run: ./gradlew :core:check :app:lintDebug :app:assembleDebug --no-daemon
       - name: Lossless archive contract
         run: bash scripts/test-archive.sh
@@ -107,14 +115,14 @@ jobs:
           badging="$("$build_tools/aapt" dump badging "$apk" | head -n1)"
           echo "$badging"
           echo "$badging" | grep -F "name='fr.visionmaxread.labdebug'"
-          echo "$badging" | grep -F "versionCode='23'"
+          echo "$badging" | grep -F "versionCode='24'"
           cert="$("$build_tools/apksigner" verify --print-certs "$apk" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print tolower($2); exit}')"
           echo "APK_CERT_SHA256=$cert"
           test "$cert" = "$VMR_LAB_CERT_SHA256"
       - name: Name artifacts and record sizes
         run: |
           mkdir artifacts
-          apk="artifacts/VisionMaxRead-0.7.0-VMR020-AUTO-OCR-LAB.apk"
+          apk="artifacts/VisionMaxRead-0.7.1-VMR022-ALL-OCR-LAB.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "$apk"
           cp app/build/reports/lint-results-debug.html artifacts/
           {
@@ -124,13 +132,13 @@ jobs:
             echo "APK_BYTES=$(stat -c%s "$apk")"
             echo "APK_SHA256=$(sha256sum "$apk" | awk '{print $1}')"
             echo "APK_PACKAGE=fr.visionmaxread.labdebug"
-            echo "APK_VERSION_CODE=23"
+            echo "APK_VERSION_CODE=24"
             echo "APK_CERT_SHA256=$VMR_LAB_CERT_SHA256"
           } | tee artifacts/build-manifest.txt
       - name: Upload compact build metadata
         uses: actions/upload-artifact@v4
         with:
-          name: VisionMaxRead-0.7.0-VMR020-AUTO-OCR-LAB-metadata
+          name: VisionMaxRead-0.7.1-VMR022-ALL-OCR-LAB-metadata
           path: artifacts/build-manifest.txt
           retention-days: 14
       # GitHub Actions upload-artifact v7 supports *direct* single-file
@@ -139,7 +147,7 @@ jobs:
       - name: Upload signed LAB APK directly (no ZIP)
         uses: actions/upload-artifact@v7
         with:
-          path: artifacts/VisionMaxRead-0.7.0-VMR020-AUTO-OCR-LAB.apk
+          path: artifacts/VisionMaxRead-0.7.1-VMR022-ALL-OCR-LAB.apk
           archive: false
           if-no-files-found: error
           retention-days: 14

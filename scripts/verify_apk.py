@@ -9,6 +9,8 @@ if 'android.permission.INTERNET' not in result:
  raise AssertionError('Automatic model installation needs INTERNET permission')
 if 'android.permission.ACCESS_NETWORK_STATE' not in result:
  raise AssertionError('Wi-Fi-only model installer needs ACCESS_NETWORK_STATE')
+if 'android.permission.FOREGROUND_SERVICE' not in result or 'android.permission.FOREGROUND_SERVICE_DATA_SYNC' not in result:
+ raise AssertionError('Missing VMR-021 dataSync foreground service permissions')
 if 'android.permission.CAMERA' not in result:
  raise AssertionError('Missing CAMERA permission in merged APK manifest:\\n'+result)
 subprocess.run([str(tools/'apksigner'),'verify',str(apk)],check=True)

@@ -4,11 +4,12 @@ from pathlib import Path
 root=Path(__file__).resolve().parent.parent
 src=root/'app/src/main/java/fr/visionmaxread'
 main=(src/'MainActivity.java').read_text()
+service=(src/'SpecialistOcrDownloadService.java').read_text()
 models=(src/'SpecialistOcrModels.java').read_text()
 native=(src/'SpecialistOcrProcess.java').read_text()
 ci=(root/'.github/workflows/android.yml').read_text()
 verify=(root/'scripts/verify_apk.py').read_text()
-assert 'SpecialistOcrAutoInstaller.ensure' in main and 'SpecialistOcrModels.importFile' not in main
+assert 'SpecialistOcrAutoInstaller.ensure' in service and 'SpecialistOcrModels.importFile' not in main
 assert 'specialistOcr.recognize' in main
 assert 'showComparisonText' in main
 assert 'ProcessBuilder' in native and '--image' in native and '--mmproj' in native
