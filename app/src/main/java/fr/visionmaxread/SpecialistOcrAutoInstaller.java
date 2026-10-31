@@ -61,12 +61,18 @@ final class SpecialistOcrAutoInstaller {
             host.endsWith(".hf.co")|| // Includes the official cdn-lfs*.hf.co mirrors.
             host.endsWith(".cloudfront.net")||host.endsWith(".amazonaws.com");
     }
-    private static HttpURLConnection connect(URL original,long resume,BooleanSupplier cancel)throws Exception {
+    private static HttpURLConnection connect(Context context,URL original,long resume,BooleanSupplier cancel)throws Exception {
         URL at=original;
         for(int hop=0;hop<8;hop++){
             check(cancel);
             if(!trustedHost(at))throw new SecurityException("Hôte du modèle non autorisé");
-            HttpURLConnection c=(HttpURLConnection)at.openConnection();
+            // Bind each redirect to the currently validated unmetered Wi-Fi network.
+            // A cellular failover cannot silently carry a large model download.
+            requireUnmeteredNetwork(context);
+            ConnectivityManager cm=(ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            Network wifi=cm.getActiveNetwork();
+            if(wifi==null)throw new IOException("Wi-Fi indisponible");
+            HttpURLConnection c=(HttpURLConnection)wifi.openConnection(at);
             c.setInstanceFollowRedirects(false);
             c.setConnectTimeout(30000);
             c.setReadTimeout(60000);
@@ -79,6 +85,12 @@ final class SpecialistOcrAutoInstaller {
                 if(location==null)throw new IOException("Redirection de poids incomplète");
                 at=new URL(at,location);
                 continue;
+            }
+            if(status==416&&resume>0){
+                c.disconnect();
+                // The partial is ahead of the server representation: restart safely
+                // from byte zero and let SHA-256 authenticate the complete file.
+                return connect(context,original,0,cancel);
             }
             if(status!=200&&status!=206){
                 c.disconnect();throw new IOException("Serveur du modèle : HTTP "+status);
@@ -103,7 +115,7 @@ final class SpecialistOcrAutoInstaller {
                 " : libère de la place ou conserve Indra OCR");
 
         String label=part==SpecialistOcrModels.Part.MODEL?"modèle":"projecteur";
-        HttpURLConnection conn=connect(new URL(spec.url(part)),have,cancelled);
+        HttpURLConnection conn=connect(context,new URL(spec.url(part)),have,cancelled);
         try{
             int status=conn.getResponseCode();
             boolean append=have>0&&status==206;
@@ -113,6 +125,8 @@ final class SpecialistOcrAutoInstaller {
                     throw new IOException("Réponse HTTP Range incohérente");
             }
             long count=append?have:0;
+            long declared=conn.getContentLengthLong();
+            if(declared>max-count)throw new IOException("Poids serveur supérieurs à la limite");
             try(InputStream in=new BufferedInputStream(conn.getInputStream());
                 OutputStream out=new BufferedOutputStream(new FileOutputStream(partial,append))){
                 byte[] block=new byte[BUFFER];int n;
@@ -121,6 +135,11 @@ final class SpecialistOcrAutoInstaller {
                     check(cancelled);
                     count+=n;
                     if(count>max)throw new IOException("Taille du modèle supérieure à la limite");
+                    // Validate again while streaming: airplane mode and network changes
+                    // interrupt the transfer, leaving a resumable private .part file.
+                    requireUnmeteredNetwork(context);
+                    if(folder.getUsableSpace()<RESERVE_BYTES)
+                        throw new IOException("Stockage presque saturé ; téléchargement suspendu");
                     out.write(block,0,n);
                     long now=SystemClock.elapsedRealtime();
                     if(progress!=null&&(now-last>=900)){progress.update(spec.title,label,count,max);last=now;}
