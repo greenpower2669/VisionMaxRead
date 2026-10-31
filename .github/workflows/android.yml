@@ -92,7 +92,9 @@ jobs:
         run: python3 scripts/test_vmr019_contract.py
       - name: VMR-020 auto-provisioning, HTTPS and privacy contract
         run: python3 scripts/test_vmr020_contract.py
-      - name: Tests, lint and signed APK (VMR-020)
+      - name: VMR-021 background model service and network contract
+        run: python3 scripts/test_vmr021_contract.py
+      - name: Tests, lint and signed APK (VMR-021)
         run: ./gradlew :core:check :app:lintDebug :app:assembleDebug --no-daemon
       - name: Lossless archive contract
         run: bash scripts/test-archive.sh
@@ -114,7 +116,7 @@ jobs:
       - name: Name artifacts and record sizes
         run: |
           mkdir artifacts
-          apk="artifacts/VisionMaxRead-0.7.0-VMR020-AUTO-OCR-LAB.apk"
+          apk="artifacts/VisionMaxRead-0.7.0-VMR021-BG-OCR-LAB.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "$apk"
           cp app/build/reports/lint-results-debug.html artifacts/
           {
@@ -130,7 +132,7 @@ jobs:
       - name: Upload compact build metadata
         uses: actions/upload-artifact@v4
         with:
-          name: VisionMaxRead-0.7.0-VMR020-AUTO-OCR-LAB-metadata
+          name: VisionMaxRead-0.7.0-VMR021-BG-OCR-LAB-metadata
           path: artifacts/build-manifest.txt
           retention-days: 14
       # GitHub Actions upload-artifact v7 supports *direct* single-file
@@ -139,7 +141,7 @@ jobs:
       - name: Upload signed LAB APK directly (no ZIP)
         uses: actions/upload-artifact@v7
         with:
-          path: artifacts/VisionMaxRead-0.7.0-VMR020-AUTO-OCR-LAB.apk
+          path: artifacts/VisionMaxRead-0.7.0-VMR021-BG-OCR-LAB.apk
           archive: false
           if-no-files-found: error
           retention-days: 14
