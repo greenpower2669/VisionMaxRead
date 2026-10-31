@@ -30,8 +30,9 @@ public final class SpecialistOcrInstallService extends Service {
     private long lastNotify;
 
     static boolean isWorking(Context c) {
-        return WORKING.get() || "running".equals(c.getSharedPreferences(PREFS, MODE_PRIVATE)
-                                                        .getString(KEY_STATE, ""));
+        // Prefs retain display state across a process restart; only the in-process
+        // worker proves a live transfer. A stale "running" flag must not block retry.
+        return WORKING.get();
     }
 
     static void install(Context context, SpecialistOcrModels.Spec[] specs) {
@@ -60,7 +61,12 @@ public final class SpecialistOcrInstallService extends Service {
             cancelled = true;
             Future<?> f = task;
             if (f != null) f.cancel(true);
-            if (!WORKING.get()) stopSelf();
+            // Cancellation can race with a queued Future which will never enter
+            // runInstall(), so guarantee terminal state and release the service.
+            update("cancelled", "Installation arrêtée. Les fichiers partiels sont conservés.", false);
+            WORKING.set(false);
+            stopForeground(STOP_FOREGROUND_REMOVE);
+            stopSelf();
             return START_NOT_STICKY;
         }
         if (!ACTION_START.equals(intent.getAction())) return START_NOT_STICKY;
