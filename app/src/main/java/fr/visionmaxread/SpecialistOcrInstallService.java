@@ -25,6 +25,7 @@ public final class SpecialistOcrInstallService extends Service {
     private static final AtomicBoolean WORKING = new AtomicBoolean();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private volatile boolean cancelled;
+    private volatile boolean timeoutReached;
     private volatile Future<?> task;
     private long lastNotify;
 
@@ -105,10 +106,14 @@ public final class SpecialistOcrInstallService extends Service {
                 }
             }
         } catch (CancellationException e) {
-            state = "cancelled"; message = "Installation arrêtée. Reprise possible avec les fichiers partiels.";
+            state = timeoutReached ? "error" : "cancelled";
+            message = timeoutReached ? "Limite Android atteinte. Reprends l'installation sur Wi-Fi." :
+                "Installation arrêtée. Reprise possible avec les fichiers partiels.";
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            state = "cancelled"; message = "Installation interrompue. Fichiers partiels conservés.";
+            state = timeoutReached ? "error" : "cancelled";
+            message = timeoutReached ? "Limite Android atteinte. Reprends l'installation sur Wi-Fi." :
+                "Installation interrompue. Fichiers partiels conservés.";
         } catch (Exception e) {
             state = "error"; message = "Installation incomplète ("+e.getClass().getSimpleName()+
                 "). Vérifie le Wi-Fi et l'espace libre ; Indra reste disponible.";
@@ -180,6 +185,7 @@ public final class SpecialistOcrInstallService extends Service {
     }
 
     @Override public void onTimeout(int startId, int fgsType) {
+        timeoutReached=true;
         cancelled=true;
         Future<?> f=task;
         if (f!=null) f.cancel(true);
