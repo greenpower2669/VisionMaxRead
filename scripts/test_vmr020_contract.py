@@ -30,7 +30,7 @@ assert 'android.permission.INTERNET' in manifest
 assert 'android.permission.ACCESS_NETWORK_STATE' in manifest
 assert 'usesCleartextTraffic="false"' in manifest
 assert "android.permission.INTERNET' not in result" in verify
-assert 'versionCode 23' in gradle
+assert 'versionCode 24' in gradle
 assert 'test_vmr020_contract.py' in workflow
 assert 'model-Q4_K_M.gguf' in models and 'surya-2.gguf' in models
 print("VMR-020 static provisioning contract OK; no mobile network or image OCR measured")
