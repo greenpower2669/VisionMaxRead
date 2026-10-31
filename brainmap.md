@@ -1,8 +1,9 @@
-# VisionMaxRead — carte centrale active (VMR-020, 30 octobre 2026)
+# VisionMaxRead — carte centrale active (VMR-021, 31 octobre 2026)
 
-**État** : branche `feature/vmr020-auto-provision-ocr` ; version cible 0.7.0 / code 23 ; CI du nouveau HEAD à vérifier ; ni `main` ni Release modifiés. Avant VMR-020, VMR-019 0.6.9/code22 avait une CI verte (run 41117112603), sans essai de reconnaissance Surya/LightOn sur Samsung.
+**État VMR-021** : branche `feature/vmr021-persistent-ocr-install`, partie service/notifications/transferts modifiée. CI et tests Samsung à qualifier sur le HEAD final ; aucun modèle Nemotron actif.
 
 ## Tiroirs (n'ouvrir que celui nécessaire)
+- [VMR-021 — état technique et preuves](docs/VMR-021-implementation.md) : service Android foreground, Wi-Fi lié au transport, limites de six heures et pistes Nemotron ONNX/GGUF. Ne confondre source poussée, CI et test Samsung.
 - [Architecture et décision VMR-020](docs/VMR-020-auto-models.md) : installation sur Wi-Fi, confidentialité, limites, acteurs.
 - [Passation VMR-020](docs/VMR-020-passation.md) : ordre de travail et preuves manquantes.
 - `app/src/main/java/fr/visionmaxread/SpecialistOcrAutoInstaller.java` : téléchargement HTTPS, Range, SHA et stockage privé.
