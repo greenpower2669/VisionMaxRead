@@ -35,9 +35,9 @@ Sources : https://huggingface.co/nvidia/Nemotron-3.5-Parse et https://build.nvid
 
 ## Play Asset Delivery — étude seulement
 
-Les packs install-time sont livrés avec l'application Play comme split APK et lisibles via AssetManager dès l'installation ; ils ne sont pas effaçables isolément. Analyser contraintes de taille actuelles, stockage temporaire et couverture APK versus AAB. L'APK direct continue à préparer les poids par téléchargement contrôlé.
+Les packs install-time sont livrés avec l'application Play comme split APK et lisibles via AssetManager dès l'installation ; ils ne sont pas effaçables isolément. Google Play indique des limites de téléchargement compressé de 500 Mo pour la base AAB, 1,5 Go par pack et 4 Go cumulés (base, modules et packs install-time). Mesurer avec bundletool, prévoir au moins deux fois le volume des packs en stockage libre lors de l'installation et vérifier ces limites à la publication. L'APK direct continue à préparer les poids par téléchargement contrôlé.
 
-Sources : https://developer.android.com/guide/playcore/asset-delivery et https://developer.android.com/guide/playcore/asset-delivery/integrate-java
+Sources : https://support.google.com/googleplay/android-developer/answer/9859372?hl=en et https://developer.android.com/guide/playcore/asset-delivery et https://developer.android.com/guide/playcore/asset-delivery/integrate-java
 
 ## Limites Android
 
