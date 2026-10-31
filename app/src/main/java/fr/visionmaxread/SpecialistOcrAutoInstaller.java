@@ -25,6 +25,12 @@ final class SpecialistOcrAutoInstaller {
     private SpecialistOcrAutoInstaller(){}
 
     static void requireUnmeteredNetwork(Context context) throws IOException {
+        selectedUnmeteredNetwork(context);
+    }
+
+    // Bind each HTTPS socket to the checked Wi-Fi/Ethernet network. Otherwise
+    // Android could transparently use mobile data after the default route changes.
+    private static Network selectedUnmeteredNetwork(Context context) throws IOException {
         ConnectivityManager cm=(ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
         if(cm==null)throw new IOException("Gestionnaire réseau indisponible");
         Network n=cm.getActiveNetwork();
@@ -34,6 +40,7 @@ final class SpecialistOcrAutoInstaller {
                 ||!(capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
                      ||capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)))
             throw new IOException("Wi-Fi non facturé ou réseau non limité requis pour installer les poids");
+        return n;
     }
 
     static void ensure(Context context,SpecialistOcrModels.Spec spec,Progress progress,
@@ -61,12 +68,12 @@ final class SpecialistOcrAutoInstaller {
             host.endsWith(".hf.co")|| // Includes the official cdn-lfs*.hf.co mirrors.
             host.endsWith(".cloudfront.net")||host.endsWith(".amazonaws.com");
     }
-    private static HttpURLConnection connect(URL original,long resume,BooleanSupplier cancel)throws Exception {
+    private static HttpURLConnection connect(Context context,URL original,long resume,BooleanSupplier cancel)throws Exception {
         URL at=original;
         for(int hop=0;hop<8;hop++){
             check(cancel);
             if(!trustedHost(at))throw new SecurityException("Hôte du modèle non autorisé");
-            HttpURLConnection c=(HttpURLConnection)at.openConnection();
+            HttpURLConnection c=(HttpURLConnection)selectedUnmeteredNetwork(context).openConnection(at);
             c.setInstanceFollowRedirects(false);
             c.setConnectTimeout(30000);
             c.setReadTimeout(60000);
@@ -103,7 +110,7 @@ final class SpecialistOcrAutoInstaller {
                 " : libère de la place ou conserve Indra OCR");
 
         String label=part==SpecialistOcrModels.Part.MODEL?"modèle":"projecteur";
-        HttpURLConnection conn=connect(new URL(spec.url(part)),have,cancelled);
+        HttpURLConnection conn=connect(context,new URL(spec.url(part)),have,cancelled);
         try{
             int status=conn.getResponseCode();
             boolean append=have>0&&status==206;
