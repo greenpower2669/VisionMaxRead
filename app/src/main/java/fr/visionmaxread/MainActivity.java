@@ -608,6 +608,8 @@ public final class MainActivity extends Activity {
         stopReading();
         super.onPause();
     }
+    // SDK 26-32 has no exported-flag overload; the >=33 branch uses NOT_EXPORTED.
+    @android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag")
     @Override protected void onResume(){super.onResume();
         if(!installReceiverRegistered){
             IntentFilter filter=new IntentFilter(SpecialistOcrInstallService.EVENT);
