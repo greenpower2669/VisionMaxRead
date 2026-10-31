@@ -22,6 +22,12 @@ final class OcrTrace {
     OcrTrace(String tag){sessionTag=tag;}
     synchronized void add(Context context,String key,String engine,String status,String text,long ms,float pss,String detail) {
         Pass pass=new Pass(key,engine,status,text,ms,pss,detail);
+        // A real local OCR execution supersedes the earlier catalog-only placeholder.
+        if(status.equals("executed")&&(key.startsWith("VMR022_")||key.startsWith("VMR019_"))){
+            String engineId=key.substring(key.indexOf('_')+1);
+            passes.removeIf(previous->previous.key.equals("TARGET_"+engineId)
+                && previous.status.equals("unavailable"));
+        }
         passes.add(pass);
         DebugLog.append(context,"PIPELINE stage="+key+" engine="+engine+" outcome="+status+
             " ms="+ms+" chars="+pass.text.length()+" pssMb="+String.format(Locale.ROOT,"%.1f",pss)+
