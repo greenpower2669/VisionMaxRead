@@ -398,8 +398,6 @@ public final class MainActivity extends Activity {
         }
         items[results.size()]="Nemotron 3.5 Parse · portage Android encore nécessaire";
         new AlertDialog.Builder(this).setTitle("Résultats OCR · même photo")
-            .setMessage("Choisis un moteur pour lire et éventuellement retenir son texte. "+
-                "Un seul moteur lourd a été exécuté à la fois.")
             .setItems(items,(d,which)->{
                 if(!sessions.documentCurrent(ticket))return;
                 if(which==results.size()){
@@ -444,20 +442,23 @@ public final class MainActivity extends Activity {
         return SpecialistOcrModels.ready(this,spec)?"installé · lancement hors ligne":"installation automatique Wi-Fi";
     }
     private void showSpecialistActions(SpecialistOcrModels.Spec spec){
-        new AlertDialog.Builder(this).setTitle(spec.title)
-            .setMessage("L'application installe automatiquement les fichiers GGUF vérifiés sur Wi-Fi. "+
-                "Aucune manipulation de fichiers n'est nécessaire. Environ "+
-                (spec.engine==SpecialistOcrModels.Engine.SURYA2?"1,5 Go":"750 Mo")+
-                " de stockage ; un seul moteur chargé en RAM à la fois. "+
-                "Aucune photo ni transcription n'est envoyée. Tu peux lire avec Indra sans installer ce moteur.")
+        final String details="L'application installe automatiquement les modèles sur Wi-Fi. "+
+            "Aucune manipulation des GGUF, aucun envoi de photo. "+
+            "Stockage estimé : "+(spec.engine==SpecialistOcrModels.Engine.SURYA2?
+                "environ 1,5 Go":"environ 750 Mo")+
+            ". Les moteurs lourds sont lancés un par un.";
+        new AlertDialog.Builder(this).setTitle(spec.title+" · actions")
             .setItems(new String[]{
-                "Reconnaître la photo (installer automatiquement si nécessaire)",
-                "Installer maintenant sur Wi-Fi pour utilisation hors ligne",
-                "Libérer le stockage occupé par ce moteur"
+                "Reconnaître la photo (installation automatique si nécessaire)",
+                "Installer maintenant les poids sur Wi-Fi",
+                "Libérer le stockage occupé par ce moteur",
+                "Informations sur le modèle et le stockage"
             },(d,index)->{
                 if(index==0)runSpecialistOcr(spec);
                 else if(index==1)requestAutoInstall(new SpecialistOcrModels.Spec[]{spec},false,null);
-                else confirmDeleteModel(spec);
+                else if(index==2)confirmDeleteModel(spec);
+                else new AlertDialog.Builder(this).setTitle(spec.title)
+                    .setMessage(details).setPositiveButton("Compris",null).show();
             }).setNegativeButton("Fermer",null).show();
     }
     private void confirmDeleteModel(SpecialistOcrModels.Spec spec){
