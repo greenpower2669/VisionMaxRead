@@ -1,4 +1,4 @@
-# VisionMaxRead — journal diagnostic actif, VMR-020
+# VisionMaxRead — journal diagnostic actif, VMR-021
 
 ## 30/10/2026 — état des preuves
 - VMR-019 (branche `feature/vmr019-native-ocr-surya-lighton`) : CI finale run 41117112603 `success`, signature LAB constante et APK direct `VisionMaxRead-0.6.9-VMR019-NATIVE-OCR-LAB.apk` (~396 Mo). Cela prouve uniquement la compilation et les contrôles statiques/archives, **pas** l'inférence des modèles sur Samsung.
@@ -12,3 +12,9 @@
 Ouvrir les logs GitHub Actions du run exact, noter commit SHA, étape en défaut, correctif ciblé, run suivant. Pour les essais sur Samsung, utiliser « Copier logs techniques » et le rapport des passes, anonymiser toute copie sensible. Ne pas s'appuyer sur des captures d'écran uniquement.
 
 [Historique complet des diagnostics, corrections et essais](docs/memory-archives/2026-10-30-pre-vmr020/debughistorical.md)
+
+## 31/10/2026 — VMR-021, service foreground (preuves limitées)
+- HEAD VMR-020 `b715440c` : CI `success`, run 41135591282 ; APK et métadonnées disponibles via Actions. **Ne prouve aucun OCR sur Samsung.**
+- VMR-021 : `SpecialistOcrDownloadService` remplace l'exécuteur d'installation lié à MainActivity ; `Network.openConnection` empêche les bascules involontaires vers les données mobiles, reprise HTTP et notification. CI du HEAD VMR-021 / installation réelle / mode avion non confirmés à ce stade.
+- Android 15+ : quota dataSync 6 h/24 h en arrière-plan ; `onTimeout` ajouté. Redémarrage après force-stop Android impossible à garantir ; vérifier Samsung 16/17.
+- Nemotron C-RADIOv4/NaViT+mBART reste non porté. Source architecture NVIDIA : https://huggingface.co/nvidia/Nemotron-3.5-Parse
