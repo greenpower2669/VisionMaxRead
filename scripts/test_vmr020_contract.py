@@ -15,10 +15,13 @@ for required in ('HttpURLConnection','SHA-256','getUsableSpace','Content-Range',
                  'Range','partial.renameTo(target)','CancellationException',
                  'NET_CAPABILITY_NOT_METERED','TRANSPORT_WIFI','trustedHost','https','cloudfront.net'):
     assert required in installer, required
-for required in ('SpecialistOcrAutoInstaller.ensure','modelInstallCancel',
-                 'requestAutoInstall','Modèles vérifiés','runSpecialistOcr',
-                 'beginAutoInstall','modelInstallWorker'):
+for required in ('SpecialistOcrDownloadService.start','SpecialistOcrDownloadService.cancel',
+                 'requestAutoInstall','runSpecialistOcr',
+                 'beginAutoInstall','installStatusWatcher'):
     assert required in main, required
+service=(src/'SpecialistOcrDownloadService.java').read_text()
+assert 'SpecialistOcrAutoInstaller.ensure' in service
+assert 'START_REDELIVER_INTENT' in service
 assert 'chooseSpecialistFile' not in main
 assert 'IMPORT_SURYA_MODEL' not in main
 assert 'SpecialistOcrModels.importFile' not in main
