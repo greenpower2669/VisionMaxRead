@@ -169,6 +169,13 @@ public final class SpecialistOcrDownloadService extends Service {
             stopSelf(startId);
         }
     }
+    /** Android 15+ enforces a cumulative dataSync foreground-service timeout. */
+    @Override public void onTimeout(int startId,int fgsType){
+        cancelled.set(true);
+        state(this).edit().putBoolean("active",false).putBoolean("complete",false)
+            .putString("status","Délai Android atteint ; reprendre l'installation depuis l'application.").commit();
+        stopSelf();
+    }
     @Override public void onDestroy(){
         executor.shutdownNow();
         super.onDestroy();
