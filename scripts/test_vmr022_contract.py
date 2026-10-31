@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """VMR-022 static regression gate. Does not replace OCR tests on Samsung."""
 from pathlib import Path
+import re
 root=Path(__file__).resolve().parent.parent
 main=(root/'app/src/main/java/fr/visionmaxread/MainActivity.java').read_text()
 service=(root/'app/src/main/java/fr/visionmaxread/SpecialistOcrDownloadService.java').read_text()
@@ -21,6 +22,12 @@ for required in (
 assert main.count('specialistOcr.recognize(this,spec,image)')==1
 assert 'newSingleThreadExecutor()' in main and 'specialistWorker.execute' in main
 assert 'SpecialistOcrAutoInstaller.ensure' in service
+# Android AlertDialog only guarantees clickable list items when no message view hides the list.
+for start,end in (('private void showSpecialistActions(', 'private void confirmDeleteModel('),
+                  ('private void showBatchResults(', 'private void showOcrEngines(')):
+    section=main.split(start,1)[1].split(end,1)[0]
+    assert '.setItems(' in section, 'selection UI missing: '+start
+    assert not re.search(r'\\.setMessage\\([\\s\\S]*?\\.setItems\\(',section), 'message masks selectable list: '+start
 assert 'Nemotron' not in service and 'NEMOTRON' not in models
 assert 'SpecialistOcrModels.verified' in native
 print('VMR-022 static batch contract OK; physical OCR, CPU memory and CER/WER remain unverified')
