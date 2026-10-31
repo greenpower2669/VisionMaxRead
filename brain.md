@@ -1,4 +1,4 @@
-# VisionMaxRead — cerveau opérationnel (VMR-020)
+# VisionMaxRead — cerveau opérationnel (VMR-021)
 
 ## Objectif actuel
 Lire des documents historiques et manuscrits en français, hors ligne une fois les modèles installés. Fab refuse de manipuler ou télécharger lui-même les fichiers GGUF : le téléphone doit installer les poids automatiquement avec son consentement, vérifier l'intégrité, puis les garder dans son stockage privé. **Stockage persistant ≠ trois modèles en RAM simultanée**. Budget faible RAM/stockage, un seul gros OCR chargé à la fois.
@@ -15,3 +15,7 @@ VMR-019/code22 : build ARM64 signé vert, run GitHub 41117112603, APK ≈396 Mo 
 Protéger identité LAB `fr.visionmaxread.labdebug` et certificat SHA256 `2004c354038a441292e861ff1513391d26d3dfc011289dea16dee1d72f145182`. Conserver bouton Arrêter, lisibilité, français, Wi-Fi non facturé pour acquisition, SHA256 à la copie et avant inférence, authentification amont et licences. Pas de fusion main, pas de Release sans accord. Référence détaillée : `docs/VMR-020-auto-models.md`.
 
 [Historique intégral archivé](docs/memory-archives/2026-10-30-pre-vmr020/brain.md)
+
+## Nouveau VMR-021
+Les téléchargements Surya/LightOn s'exécutent dans `SpecialistOcrInstallService` Android foreground, et non plus dans l'exécuteur de l'Activity. Notification, état local, pause sur perte de Wi-Fi, reprise de `.part` et HTTPS lié au `Network` Wi-Fi/Ethernet non facturé. Pas de stockage de photo pour une reprise ultérieure après destruction Activity. À valider sur Samsung ; Android 15+ peut imposer une limite dataSync cumulée de 6 h/24 h et stopper l'application. Comparer l'option UIDT Android 14+ dans la suite.
+Pistes Nemotron : pack ONNX INT8 tiers ~753 Mo (ORT 1.31 vs ORT Android 1.27), GGUF Q8 ~866 Mo via moteur tiers SkyVision.cpp ; **aucune inférence Android ni licence finale vérifiée**. Rapport : `docs/VMR-021-implementation.md`.
