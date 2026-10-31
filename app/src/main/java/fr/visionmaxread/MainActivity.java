@@ -337,6 +337,15 @@ public final class MainActivity extends Activity {
         String message=p.getString(SpecialistOcrInstallService.KEY_MESSAGE,"");
         if(state.isEmpty())return;
         boolean running="running".equals(state);
+        if(running && !SpecialistOcrInstallService.isWorking(this)){
+            // A process death may leave a persisted "running" UI state, but no
+            // active worker. Preserve .part files and offer a new user-initiated start.
+            running=false;
+            state="interrupted";
+            message="Installation interrompue. Tu peux reprendre sur Wi-Fi.";
+            p.edit().putString(SpecialistOcrInstallService.KEY_STATE,state)
+                .putString(SpecialistOcrInstallService.KEY_MESSAGE,message).apply();
+        }
         specialistStop.setVisibility(running?View.VISIBLE:View.GONE);
         if(running || pendingInstallOcr!=null)status.setText(message);
         if("done".equals(state) && pendingInstallOcr!=null){
