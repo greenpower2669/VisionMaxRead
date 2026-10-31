@@ -19,7 +19,7 @@ import fr.visionmaxread.core.SessionGate;
 import fr.visionmaxread.core.ReaderSessions;
 
 public final class MainActivity extends Activity {
-    private static final int CAMERA_PERMISSION=10,PHOTO=20;
+    private static final int CAMERA_PERMISSION=10,PHOTO=20,NOTIFICATION_PERMISSION=11;
     private static final int INK=Color.rgb(16,44,60),PAPER=Color.rgb(255,249,238),TEAL=Color.rgb(0,105,92),RED=Color.rgb(179,38,32),DISABLED=Color.rgb(145,145,145);
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private final ExecutorService paddleWorker=Executors.newSingleThreadExecutor();
@@ -28,6 +28,9 @@ public final class MainActivity extends Activity {
     private final Handler installStatusHandler=new Handler(Looper.getMainLooper());
     private long installRequest,installTicket;
     private SpecialistOcrModels.Spec installAfter;
+    private SpecialistOcrModels.Spec[] pendingInstallTargets;
+    private SpecialistOcrModels.Spec pendingInstallSelected;
+    private boolean pendingInstallRunAfter;
     private final Runnable installStatusWatcher=new Runnable(){
         @Override public void run(){
             if(destroyed)return;
@@ -142,7 +145,22 @@ public final class MainActivity extends Activity {
     }
     private void choosePhoto(){newDocument();Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE);try{startActivityForResult(pick,PHOTO);}catch(ActivityNotFoundException e){status.setText("Aucun sélecteur de photos disponible.");}}
     private void manualText(){newDocument();imageArea.setVisibility(View.GONE);freeze.setVisibility(View.GONE);status.setText("Colle ou écris ton texte, puis appuie sur Lire.");text.requestFocus();}
-    @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results){super.onRequestPermissionsResult(request,permissions,results);if(request==CAMERA_PERMISSION&&cameraMode){if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());else{freeze.setEnabled(false);status.setText("Caméra refusée. Photo et Texte restent disponibles.");}}}
+    @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results){
+        super.onRequestPermissionsResult(request,permissions,results);
+        if(request==CAMERA_PERMISSION&&cameraMode){
+            if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED)camera.start(sessions.sourceTicket());
+            else{freeze.setEnabled(false);status.setText("Caméra refusée. Photo et Texte restent disponibles.");}
+        }
+        if(request==NOTIFICATION_PERMISSION&&pendingInstallTargets!=null){
+            SpecialistOcrModels.Spec[] targets=pendingInstallTargets;
+            SpecialistOcrModels.Spec selected=pendingInstallSelected;
+            boolean runAfter=pendingInstallRunAfter;
+            pendingInstallTargets=null;pendingInstallSelected=null;
+            // Foreground installation is still allowed if Android notifications are declined;
+            // in that case progress remains visible in the application.
+            startApprovedAutoInstall(targets,runAfter,selected);
+        }
+    }
     @Override protected void onActivityResult(int request,int result,Intent data){
         super.onActivityResult(request,result,data);
         if(request==PHOTO && result==RESULT_OK && data!=null&&data.getData()!=null){
@@ -320,6 +338,17 @@ public final class MainActivity extends Activity {
     }
     private void beginAutoInstall(SpecialistOcrModels.Spec[] targets,boolean runAfter,
                                   SpecialistOcrModels.Spec selected){
+        if(Build.VERSION.SDK_INT>=33&&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){
+            pendingInstallTargets=targets;pendingInstallRunAfter=runAfter;
+            pendingInstallSelected=selected;
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},NOTIFICATION_PERMISSION);
+            return;
+        }
+        startApprovedAutoInstall(targets,runAfter,selected);
+    }
+    private void startApprovedAutoInstall(SpecialistOcrModels.Spec[] targets,boolean runAfter,
+                                          SpecialistOcrModels.Spec selected){
         try{
             installRequest=SpecialistOcrDownloadService.start(this,targets);
             installTicket=sessions.documentTicket();
