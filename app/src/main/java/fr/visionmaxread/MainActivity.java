@@ -25,9 +25,13 @@ public final class MainActivity extends Activity {
     private final ExecutorService paddleWorker=Executors.newSingleThreadExecutor();
     private final ExecutorService indraWorker=Executors.newSingleThreadExecutor();
     private final ExecutorService specialistWorker=Executors.newSingleThreadExecutor();
-    private final ExecutorService modelInstallWorker=Executors.newSingleThreadExecutor();
-    private final java.util.concurrent.atomic.AtomicBoolean modelInstallActive=new java.util.concurrent.atomic.AtomicBoolean(false);
-    private final java.util.concurrent.atomic.AtomicBoolean modelInstallCancel=new java.util.concurrent.atomic.AtomicBoolean(false);
+    // Model downloads live in a foreground Service, not this Activity.
+    private SpecialistOcrModels.Spec pendingInstallOcr;
+    private long pendingInstallTicket=-1;
+    private boolean installReceiverRegistered;
+    private final BroadcastReceiver installEvents=new BroadcastReceiver(){
+        @Override public void onReceive(Context c,Intent intent){syncInstallState();}
+    };
     private final SpecialistOcrProcess specialistOcr=new SpecialistOcrProcess();
     private final AtomicLong ocrChoice=new AtomicLong(),progressGeneration=new AtomicLong();
     private final ReaderSessions sessions=new ReaderSessions();
@@ -89,7 +93,8 @@ public final class MainActivity extends Activity {
             ()->requestAutoInstall(new SpecialistOcrModels.Spec[]{
                 SpecialistOcrModels.LIGHTON,SpecialistOcrModels.SURYA},false,null)));
         specialistStop=button("■ Arrêter l’OCR spécialisé",RED,()->{
-            modelInstallCancel.set(true);specialistOcr.stop();
+            if(SpecialistOcrInstallService.isWorking(this))SpecialistOcrInstallService.cancel(this);
+            specialistOcr.stop();
             status.setText("Arrêt demandé. La copie partielle reste disponible pour une reprise ultérieure.");
         });
         specialistStop.setVisibility(View.GONE);content.addView(specialistStop);
@@ -113,7 +118,8 @@ public final class MainActivity extends Activity {
     private void finishOcrProgress(long id){ui(()->{if(ocrProgress==null||progressGeneration.get()!=id)return;ocrProgress.setIndeterminate(false);ocrProgress.setProgress(100);ocrProgress.postDelayed(()->{if(progressGeneration.get()==id)ocrProgress.setVisibility(View.GONE);},900);});}
     private long newDocument(){
         specialistOcr.stop();
-        if(specialistStop!=null)specialistStop.setVisibility(View.GONE);
+        if(specialistStop!=null)specialistStop.setVisibility(
+            SpecialistOcrInstallService.isWorking(this)?View.VISIBLE:View.GONE);
         stopReading();camera.stop();cameraMode=false;maskedPreview="";
         lastTrace=null;lastScan=null;compareBitmap=null;
         if(copyLogs!=null)copyLogs.setEnabled(true);
@@ -278,7 +284,7 @@ public final class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("Supprimer les poids locaux de "+spec.title+" ?")
             .setMessage("La reconnaissance Indra reste utilisable. Le modèle pourra être réinstallé automatiquement sur Wi-Fi.")
             .setPositiveButton("Libérer le stockage",(d,w)->{
-                if(modelInstallActive.get()){status.setText("Arrête d'abord l'installation en cours.");return;}
+                if(SpecialistOcrInstallService.isWorking(this)){status.setText("Arrête d'abord l'installation en cours.");return;}
                 specialistOcr.stop();
                 long removed=0;
                 for(SpecialistOcrModels.Part part:SpecialistOcrModels.Part.values()){
@@ -292,15 +298,15 @@ public final class MainActivity extends Activity {
     }
     private void requestAutoInstall(SpecialistOcrModels.Spec[] targets,boolean runAfter,
                                     SpecialistOcrModels.Spec selected){
-        if(modelInstallActive.get()){
-            status.setText("Installation déjà en cours : les fichiers sont gérés par l'application.");return;
+        if(SpecialistOcrInstallService.isWorking(this)){
+            status.setText("Installation déjà en cours en arrière-plan ; voir la notification Android.");return;
         }
         String message=(targets.length==2?"Installer automatiquement LightOnOCR-3 et Surya OCR 2 (environ 2,2 Go) ?":
             "Installer automatiquement "+targets[0].title+" ?")+
             "\n\nConnexion Wi-Fi non facturée et espace libre nécessaires. "+
             "Une seule installation initiale ; les prochaines lectures fonctionnent sans réseau. "+
             "Aucun document n'est transféré. Les fichiers sont vérifiés par SHA-256. "+
-            "Ne quitte pas l'application pendant le transfert expérimental.";
+            "Tu peux quitter cet écran : le service Android conserve le téléchargement et ses fichiers partiels.";
         new AlertDialog.Builder(this).setTitle("Préparer les modèles OCR")
             .setMessage(message)
             .setPositiveButton("Installer automatiquement",(d,w)->beginAutoInstall(targets,runAfter,selected))
@@ -308,41 +314,41 @@ public final class MainActivity extends Activity {
     }
     private void beginAutoInstall(SpecialistOcrModels.Spec[] targets,boolean runAfter,
                                   SpecialistOcrModels.Spec selected){
-        if(!modelInstallActive.compareAndSet(false,true))return;
-        modelInstallCancel.set(false);
+        pendingInstallOcr=runAfter?selected:null;
+        pendingInstallTicket=runAfter?sessions.documentTicket():-1;
         specialistStop.setVisibility(View.VISIBLE);
-        status.setText("Installation automatique des moteurs OCR sur Wi-Fi…");
-        final long ticket=sessions.documentTicket();
-        modelInstallWorker.execute(()->{
-            boolean installed=false;
-            try{
-                for(SpecialistOcrModels.Spec spec:targets){
-                    SpecialistOcrAutoInstaller.ensure(getApplicationContext(),spec,(name,component,bytes,max)->{
-                        ui(()->{
-                            if(!modelInstallCancel.get())status.setText(name+" : "+component+
-                                " · "+(bytes/(1024*1024))+" Mo reçus · vérification automatique.");
-                        });
-                    },()->modelInstallCancel.get()||destroyed);
-                }
-                installed=true;
-            }catch(java.util.concurrent.CancellationException e){
-                ui(()->status.setText("Téléchargement interrompu. Reprise possible sur Wi-Fi."));
-            }catch(Exception e){
-                DebugLog.append(this,"VMR020_INSTALL failed type="+e.getClass().getSimpleName());
-                ui(()->status.setText("Installation incomplète : "+e.getMessage()+
-                    ". Vérifie le Wi-Fi et l'espace libre ; Indra reste utilisable."));
-            }finally{
-                modelInstallActive.set(false);
-                final boolean success=installed;
-                ui(()->{
-                    specialistStop.setVisibility(View.GONE);
-                    if(success){
-                        status.setText("Modèles vérifiés. OCR désormais utilisable hors ligne.");
-                        if(runAfter&&selected!=null&&sessions.documentCurrent(ticket))runSpecialistOcr(selected);
-                    }
-                });
-            }
-        });
+        status.setText("Installation en arrière-plan sur Wi-Fi ; progression dans les notifications.");
+        try {
+            SpecialistOcrInstallService.install(this,targets);
+            if(Build.VERSION.SDK_INT>=33 &&
+               checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)
+                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},11);
+        } catch(RuntimeException e) {
+            pendingInstallOcr=null;
+            specialistStop.setVisibility(View.GONE);
+            status.setText("Démarrage du service refusé par Android : réessaie depuis l'application.");
+            DebugLog.append(this,"VMR021_INSTALL start failed="+e.getClass().getSimpleName());
+        }
+    }
+    private void syncInstallState(){
+        if(destroyed || status==null)return;
+        SharedPreferences p=getSharedPreferences(SpecialistOcrInstallService.PREFS,MODE_PRIVATE);
+        String state=p.getString(SpecialistOcrInstallService.KEY_STATE,"");
+        String message=p.getString(SpecialistOcrInstallService.KEY_MESSAGE,"");
+        if(state.isEmpty())return;
+        boolean running="running".equals(state);
+        specialistStop.setVisibility(running?View.VISIBLE:View.GONE);
+        if(running || pendingInstallOcr!=null)status.setText(message);
+        if("done".equals(state) && pendingInstallOcr!=null){
+            SpecialistOcrModels.Spec spec=pendingInstallOcr;
+            long ticket=pendingInstallTicket;
+            pendingInstallOcr=null; pendingInstallTicket=-1;
+            if(sessions.documentCurrent(ticket))runSpecialistOcr(spec);
+            else status.setText("Modèles prêts hors ligne ; sélectionne à nouveau la photo.");
+        }else if(!running && !"done".equals(state)){
+            pendingInstallOcr=null; pendingInstallTicket=-1;
+            status.setText(message);
+        }
     }
     private void runSpecialistOcr(SpecialistOcrModels.Spec spec){
         final Bitmap snapshot=compareBitmap;
@@ -587,10 +593,22 @@ public final class MainActivity extends Activity {
     }
     private void ui(Runnable action){runOnUiThread(()->{if(!destroyed)action.run();});}
     @Override protected void onPause(){super.onPause();if(camera!=null)camera.stop();if(freeze!=null)freeze.setEnabled(false);stopReading();}
-    @Override protected void onResume(){super.onResume();if(cameraMode&&camera!=null&&checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED){camera.start(sessions.sourceTicket());freeze.setEnabled(true);}}
+    @Override protected void onResume(){super.onResume();
+        if(!installReceiverRegistered){
+            IntentFilter filter=new IntentFilter(SpecialistOcrInstallService.EVENT);
+            if(Build.VERSION.SDK_INT>=33)registerReceiver(installEvents,filter,Context.RECEIVER_NOT_EXPORTED);
+            else registerReceiver(installEvents,filter);
+            installReceiverRegistered=true;
+        }
+        syncInstallState();
+        if(cameraMode&&camera!=null&&checkSelfPermission(Manifest.permission.CAMERA)==PackageManager.PERMISSION_GRANTED){camera.start(sessions.sourceTicket());freeze.setEnabled(true);}}
     @Override public void onTrimMemory(int level){super.onTrimMemory(level);if(level>=android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW)DebugLog.append(this,"MEMORY trim level="+level+" pssMb="+formatMb(processPssMb()));}
-    @Override protected void onDestroy(){destroyed=true;modelInstallCancel.set(true);specialistOcr.stop();DebugLog.append(this,"SESSION destroy");
+    @Override protected void onPause(){
+        if(installReceiverRegistered){unregisterReceiver(installEvents);installReceiverRegistered=false;}
+        super.onPause();
+    }
+    @Override protected void onDestroy(){destroyed=true;specialistOcr.stop();DebugLog.append(this,"SESSION destroy");
         sessions.replaceSource();sessions.clearHistory();speech.next();voice.release();if(camera!=null)camera.destroy();
-        modelInstallCancel.set(true);modelInstallWorker.shutdownNow();
+        // Keep the foreground installer alive when this Activity is destroyed.
         specialistWorker.shutdownNow();worker.shutdownNow();paddleWorker.shutdownNow();indraWorker.shutdownNow();super.onDestroy();}
 }
