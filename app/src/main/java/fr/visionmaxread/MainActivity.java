@@ -333,8 +333,11 @@ public final class MainActivity extends Activity {
                     long start=SystemClock.elapsedRealtime();
                     try{
                         String value=new OcrService().recognize(this,image);
-                        results.add(new BatchOcrResult("PP-OCRv6-Small",value,"",
-                            SystemClock.elapsedRealtime()-start));
+                        long elapsed=SystemClock.elapsedRealtime()-start;
+                        results.add(new BatchOcrResult("PP-OCRv6-Small",value,"",elapsed));
+                        if(lastTrace!=null&&sessions.documentCurrent(ticket))
+                            lastTrace.add(this,"VMR022_PADDLE","PP-OCRv6-Small","executed",
+                                value,elapsed,processPssMb(),"same-image-sequential-ocr");
                     }catch(Exception|OutOfMemoryError e){
                         DebugLog.append(this,"VMR022_BATCH PADDLE error="+e.getClass().getSimpleName());
                         results.add(new BatchOcrResult("PP-OCRv6-Small","","Échec "+e.getClass().getSimpleName(),
