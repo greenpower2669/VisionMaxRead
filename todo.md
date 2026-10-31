@@ -1,4 +1,4 @@
-# VisionMaxRead — TODO actif VMR-020 (30 octobre 2026)
+# VisionMaxRead — TODO actif VMR-021 (31 octobre 2026)
 
 ## Terminé en source
 - [x] VMR-019 : pont d'inférence image CPU ARM64 mtmd pour Surya OCR 2 et LightOnOCR-3 Q4, import manuel ancien, compilation Android CI verte code22 / run 41117112603.
@@ -20,3 +20,14 @@
 **Contrainte** : aucune publication Release/merge `main` sans validation explicite de Fab ; aucun APK présenté comme « trois OCR fonctionnels » sans preuves.
 
 [TODO et réalisations historiques intégraux](docs/memory-archives/2026-10-30-pre-vmr020/todo.md)
+
+## VMR-021 — avancement strict
+- [x] Code ajouté : service Android foreground de téléchargement indépendant de l'Activity, notification, arrêt, reprise sur Wi-Fi et liaison des sockets HTTPS au réseau vérifié.
+- [x] Interface liée au service ; pas d'annulation involontaire à la destruction de l'Activity ; récupération d'état sans persistance d'images privées.
+- [ ] Valider CI de l'ultime HEAD VMR-021 : test statique, lint/compilation, APK direct, certificat LAB constant.
+- [ ] Tests Samsung SM-A576B : transfert réel, SHA, veille, kill, Wi-Fi interrompu, refus de notifications, limite FGS Android 15+, température.
+- [ ] Mesurer Surya/LightOn sur lettre 1942 : référence humaine, CER/WER, erreurs critiques, PSS/RSS, temps et chauffe.
+- [ ] Audit et port Nemotron : ONNX INT8 753 Mo ORT1.31 / GGUF Q8 866 Mo SkyVision.cpp, licences, tokenizer NaViT, ABI arm64 et test local avant activation.
+- [ ] Étudier `JobScheduler` UIDT API34+ pour les longs transferts / AAB asset packs install-time, sans APK massif.
+- [ ] Mode avion post-installation ; confirmer absence de connexion d'images/texte, sous-titres, TTS, Indra/PP-OCR et comparaisons.
+- [ ] APK LAB direct uniquement après CI verte HEAD ; pas de Release, merge main ni Play.
